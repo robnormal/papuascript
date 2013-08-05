@@ -72,27 +72,6 @@ module.exports = {
 		assert.equal('FN_LIT_PARAM', toks[5][0], 'all parameters marked');
 	},
 
-	'Turns function definitions into function literal assignments': function(b, assert) {
-		var text = 'foo.bar arg1 arg2 = foo.get (arg1 + arg2)'
-		var toks = R.literalizeFunctions(getTokens(text));
-
-		assert.equal('=', toks[3][0], 'Arguments moved to after equal sign');
-		assert.equal('\\', toks[4][1], 'Function literal created after equal sign');
-		assert.equal('arg1', toks[5][1], 'arguments moved to literal param list');
-		assert.equal('arg2', toks[6][1], 'all arguments moved');
-		assert.equal('->', toks[7][1]);
-	},
-
-
-	'Adds markers to multivariable function definitions': function(b, assert) {
-		var text = 'foo.bar arg1 arg2 = foo.get (arg1 + arg2)'
-		var toks = R.markFunctionParams(getTokens(text));
-
-		assert.equal('FN_DEF_PARAM', toks[3][0], 'FN_DEF_PARAM added after function name');
-		assert.equal('FN_DEF_PARAM', toks[5][0], 'FN_DEF_PARAM added after arguments');
-		assert.equal('FN_DEF_PARAM', toks[7][0], 'arguments all marked');
-	},
-
 	'Puts function bodies in a single block': function(b, assert) {
 		var text = 'foo \\bar spam -> return 3';
 		var toks = R.resolveBlocks(getTokens(text));

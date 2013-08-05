@@ -68,7 +68,7 @@ function cpsArrow(tokens) {
 		identifier = false, // current identifier, if any
 		tag; // current token's tag
 
-	while (i < len) {
+	while (i < tokens.length) {
 		tag = tokens[i][0];
 
 		// ident at start of line is a possible CPS
@@ -127,66 +127,12 @@ function cpsArrow(tokens) {
 		} else {
 			line_start = false;
 		}
-
-		len = tokens.length; // recalculate, in case this changed
 	}
 
 	return tokens;
 }
 
 var BLOCK_TAGS = ['FOR', 'WHILE', 'DO', 'IF', 'ELSE', 'SWITCH', 'TRY', 'CATCH'];
-
-// convert function definitions to function literals
-function literalizeFunctions(tokens) {
-	var
-		i = 0,
-		tag; // current token's tag
-
-	while (i < tokens.length) {
-		tag = tokens[i][0];
-
-		// multivariable function must have an identifier before '='
-		if ('=' === tag && tokens[i-1][0] === 'IDENTIFIER') {
-			// check if the token before the last identifier is spaced.
-			// If so, we have a function definition
-			var j = i - 2;
-
-			// walk backwards to last non-identifier before '='
-			while (tokens[j] && tokens[j].spaced) {
-				j--;
-			}
-
-			/* We are now 1 token behind first spaced token. That is
-			 * the name (or the end of the name) of the function. The
-			 * rest are arguments. They start at j+2 */
-
-			var func_name_end = j + 1;
-			var arity = i - func_name_end - 1;
-
-			if (arity > 0) {
-				var replace_pos = func_name_end + 1;
-				var loc_info = loc(tokens[replace_pos]);
-
-				// remove arguments from after '='
-				// the '=' will now be at replace_pos
-				var identifiers = tokens.splice(replace_pos, arity);
-
-				var new_tokens = [ ['IDENTIFIER', '\\', loc_info] ]
-					.concat(identifiers)
-					.concat([ ['IDENTIFIER', '->', loc_info] ]);
-
-				// we have to give n+2 arguments to splice in n things, so...
-				tokens.splice.apply(tokens, [replace_pos + 1, 0].concat(new_tokens));
-
-				i += 2; // we created two extra tokens
-			}
-		}
-
-		i++;
-	}
-
-	return tokens;
-}
 
 function fixFunctionOneLiner(tokens, arrow_pos, break_pos) {
 	var extra_chars = 0;
@@ -316,6 +262,21 @@ function resolveBlocks(tokens) {
 	return tokens;
 }
 
+function endsFactor(tok) {
+	return H.has(
+		['IDENTIFIER', 'STRING', 'THIS', 'NUMBER', 'BOOL', 'NULL', 'UNDEFINED', 'REGEX', ']',')','}' ],
+		tok[0]
+	);
+}
+
+function startsFactor(tok) {
+	return H.has(
+		['\\', 'IDENTIFIER', 'STRING', 'THIS', 'NUMBER', 'BOOL', 'NULL', 'UNDEFINED', 'REGEX', '[','(','{' ],
+		tok[0]
+	);
+}
+
+
 // FIXME: This solves a problem I had writing the grammar.
 // It could probably be solved in the grammar, since it's
 // not an ambiguity, but I don't want to do it right now
@@ -327,8 +288,10 @@ function markFunctionParams(tokens) {
 		len = tokens.length,
 		param_list = false; // whether we are waiting for a block (e.g., in a WHILE condition)
 
+	// arrays and objects can be 
 	while (i < len) {
 		var tag = tokens[i][0];
+		var prev = tokens[i-1];
 
 		if (param_list) {
 			if ('->' === tag) {
@@ -345,21 +308,16 @@ function markFunctionParams(tokens) {
 			}
 		} else if ('\\' === tag) {
 			param_list = true;
-		} else if ('=' === tag) {
-			var j = i;
-
-			// walk backwards, marking identifiers
-			while (tokens[j-1] && 'IDENTIFIER' === tokens[j-1][0]) {
-				tokens.splice(j, 0,
-					['FN_DEF_PARAM', '', loc(tokens[j])]
-				);
-
-				i++; // pass the FN_DEF_PARAM token
-				j--; // go backwards to next token
-			}
 		}
 
-		len = tokens.length; // recalculate, in case this changed
+		// mark function calls
+		if (prev && prev.spaced && endsFactor(prev) && startsFactor(tokens[i])) {
+			tokens.splice(i, 0,
+				['WS', '', loc(tokens[i])]
+			);
+			i++;
+		}
+
 		i++;
 	}
 
@@ -367,7 +325,7 @@ function markFunctionParams(tokens) {
 }
 
 function rewrite(tokens) {
-	return markFunctionParams(resolveBlocks(literalizeFunctions(cpsArrow(tokens))));
+	return markFunctionParams(resolveBlocks(cpsArrow(tokens)));
 }
 
 
@@ -375,7 +333,6 @@ module.exports = {
 	rewriteCpsArrow: cpsArrow,
 	resolveBlocks: resolveBlocks,
 	markFunctionParams: markFunctionParams,
-	literalizeFunctions: literalizeFunctions,
 	rewrite: rewrite
 };
 

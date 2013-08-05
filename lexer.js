@@ -1,4 +1,4 @@
-/*jshint regexp: false */
+/*jshint regexp: false, indent: false */
 var H = require('./helpers.js');
 var R = require('./rewriter.js');
 
@@ -12,8 +12,7 @@ var BALANCED_PAIRS = [
   ['(', ')'],
   ['[', ']'],
   ['{', '}'],
-  ['INDENT', 'OUTDENT'],
-  ['INDEX_START', 'INDEX_END']
+  ['INDENT', 'OUTDENT']
 ]
 
 for (var i = 0, len = BALANCED_PAIRS.length; i < len; i++) {
@@ -497,13 +496,10 @@ Lexer.prototype = {
 			tag = 'UNARY';
 		} else if (H.has(SHIFT, value)) {
 			tag = 'SHIFT';
-		} else if (H.has(LOGIC, value) || value === '?' && (prev ? prev.spaced : void 0)) {
+		} else if (H.has(LOGIC, value)) {
 			tag = 'LOGIC';
-		} else if (prev && !prev.spaced) {
-			if (value === '[' && H.has(INDEXABLE, prev[0])) {
-				tag = 'INDEX_START';
-			}
 		}
+
 		switch (value) {
 			case '(':
 			case '{':
@@ -614,6 +610,38 @@ Lexer.prototype = {
 		} else {
 			return this.ends.pop();
 		}
+	},
+
+	outdentToken: function(moveOut, noNewlines, outdentLength) {
+		var dent, len;
+		while (moveOut > 0) {
+			len = this.indents.length - 1;
+			if (this.indents[len] === void 0) {
+				moveOut = 0;
+			} else if (this.indents[len] === this.outdebt) {
+				moveOut -= this.outdebt;
+				this.outdebt = 0;
+			} else if (this.indents[len] < this.outdebt) {
+				this.outdebt -= this.indents[len];
+				moveOut -= this.indents[len];
+			} else {
+				dent = this.indents.pop() + this.outdebt;
+				moveOut -= dent;
+				this.outdebt = 0;
+				this.pair('OUTDENT');
+				this.token('OUTDENT', dent, 0, outdentLength);
+			}
+		}
+		if (dent) {
+			this.outdebt -= moveOut;
+		}
+		while (this.prevValue() === ';') {
+			this.tokens.pop();
+		}
+		if (!(this.prevTag() === 'TERMINATOR' || noNewlines)) {
+			this.token('TERMINATOR', '\n', outdentLength, 0);
+		}
+		return this;
 	}
 };
 

@@ -38,6 +38,7 @@ var N = require('./nodes.js');
 %token TRY
 %token UNDEFINED
 %token FN_LIT_PARAM
+%token WS
 
 
 /* Precedence
@@ -112,30 +113,38 @@ Statement
 
 Expression
 	: Term
-	| Operation
+	| Op
+	| Code
 	;
 
-Operation
+Op
 	: Term Binary Term
     { $$ = new N.Operation($2, $1, $3); }
-	| Operation Binary Term
+	| Op Binary Term
     { $$ = new N.Operation($2, $1, $3); }
 	;
 
 Term
-	: Value
+	: Atom
 	| Invocation
-	| Code
 	| If
 	| Switch
 	;
 
+Atom 
+	: Literal
+	| Object
+	| Array
+	;
+
 Invocation
-	: Value '(' ')'
+	: Atom '(' ')'
 		{ $$ = new N.FuncCall($1); }
-	| Value Value
+	| Atom WS Atom
 		{ $$ = new N.FuncCall($1, [$2]); }
-	| Invocation Value
+	| Atom WS Code
+		{ $$ = new N.FuncCall($1, [$2]); }
+	| Invocation WS Atom
 		{ $$ = $1.addArg($2); }
 	;
 
@@ -178,11 +187,7 @@ Literal
 /* Assignment of a variable, property, or index to a value.
 /* increment and decrement are forms of assignment */
 Assignment
-	: Definable '=' Block
-    { $$ = new N.Assign($1, $3, $2); }
-	| Definable '=' Expression
-    { $$ = new N.Assign($1, $3, $2); }
-	| Definable '=' Expression Block
+	: Assignable '=' Expression
     { $$ = new N.Assign($1, $3, $2); }
 	| "--" Assignable
     { $$ = new N.Assign($2, null, '--'); }
@@ -199,14 +204,6 @@ Assignment
 Identifier
 	: IDENTIFIER
     { $$ = new N.Literal($1); }
-	;
-
-/* multivariable function definition */
-Definable
-	: Assignable FN_DEF_PARAM
-		{ $$ = [$1]; }
-	| Definable Identifier FN_DEF_PARAM
-		{ $$ = $1.concat($2); }
 	;
 
 /* Comma-separated assignments */
@@ -239,7 +236,6 @@ ObjectPropDef
 ObjProp
 	: Identifier
 	| AlphaNumeric
-	| ThisProperty
 	;
 
 /* A return statement from a function body. */
@@ -268,25 +264,9 @@ FnLitParams
 /* Variables and properties that can be assigned to. */
 Assignable
 	: Identifier
-	| Value Accessor
+	| Atom Accessor
 		{ $$ = $1.add($2); }
 	| ThisProperty
-	;
-
-/* The types of things that can be treated as values -- assigned to, invoked
-/* as functions, indexed into, named as a class, etc. */
-Value
-	: Assignable
-	| Literal
-		{ $$ = new N.Value($1); }
-	| Parenthetical
-		{ $$ = new N.Value($1); }
-	| Array
-		{ $$ = new N.Value($1); }
-	| Object
-		{ $$ = new N.Value($1); }
-	| THIS
-    { $$ = new N.Value(new Literal('this')); }
 	;
 
 /* The general group of accessors into an object, by property
