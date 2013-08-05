@@ -1,0 +1,36 @@
+// this is legal; toInt = \x -> a = b
+toInt x = a = b
+
+// NOT legal: nullary functions must be literals
+// x = j = 10 // syntax error
+
+/*
+DBEmptyFailure query params =
+	// assignments are not values
+	@err = { query: query, params: params }
+	// returns undefined
+
+DBEmptyFailure = \query params ->
+	@err = { query: query, params: params }
+
+util.inherits DBEmptyFailure nodam.AsyncFailure
+
+util.inherits
+	DBEmptyFailure
+	nodam.AsyncFailure
+
+DBMissingFailure table condition =
+  @err = { table: table, condition: condition }
+
+util.inherits  DBMissingFailure  DBEmptyFailure
+
+errMissing table condition = new DBMissingFailure table condition
+
+getDB file = cont              //  function getDB(file) {
+	db <- (nodam.get 'db').pipe  //  nadam.get('db').pipe(function(db) {
+	if db
+		Async.result db
+	else
+		db_open <- (sql.database file).pipe
+		nodam.set 'db' db_open
+*/
