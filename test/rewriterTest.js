@@ -126,5 +126,13 @@ module.exports = {
 		assert.equal(toks[5][0], 'NUMBER', 'Removes TERMINATOR after OUTDENT');
 		assert.equal(toks[7][0], 'STRING', 'Removes TERMINATOR after TERMINATOR');
 		assert.equal(toks[8][0], 'TERMINATOR', 'Ensures that document ends with a single TERMINATOR');
+
+		var toks = mkTokens(
+			'\\ IDENTIFIER -> INDENT STRING OUTDENT NUMBER'
+		);
+		R.cleanTerminators(toks);
+
+		assert.equal(toks[6][0], 'TERMINATOR',
+			'adds TERMINATOR after function body, since that always ends the line');
 	}
 };

@@ -350,7 +350,7 @@ function cleanTerminators(tokens) {
 			var end_of_func = func_body_indents.pop();
 			if (end_of_func) {
 				if (! tokens[i+1] || 'TERMINATOR' !== tokens[i+1][0]) {
-					tokens.splice(i, 0, ['TERMINATOR', '', H.loc(tokens[i])]);
+					tokens.splice(i+1, 0, ['TERMINATOR', '', H.loc(tokens[i])]);
 				}
 
 				// skip the TERMINATOR that now definitely follows this function
