@@ -64,12 +64,27 @@ module.exports = {
 		);
 	},
 
+	'Adds WS between function call arguments': function(b, assert) {
+		var text = 'foo.bar spam potatoes';
+		var toks = R.markFunctionParams(getTokens(text));
+
+		assert.equal('WS', toks[3][0], 'WS added after function name');
+		assert.equal('WS', toks[5][0], 'WS added after arguments');
+		assert.equal('TERMINATOR', toks[7][0], 'no WS after last argument');
+
+		var text = 'map \\ f xs ->\n  f xs';
+		var toks = R.markFunctionParams(getTokens(text));
+
+		assert.equal('WS', toks[1][0], 'WS added before argument that is a function literal');
+		assert.equal('WS', toks[10][0], 'WS added to arguments within function literal');
+	},
+
 	'Adds markers to literal function parameters': function(b, assert) {
 		var text = 'foo \\bar spam -> return 3';
 		var toks = R.markFunctionParams(getTokens(text));
 
-		assert.equal('FN_LIT_PARAM', toks[3][0], 'FN_LIT_PARAM added after parameters in function');
-		assert.equal('FN_LIT_PARAM', toks[5][0], 'all parameters marked');
+		assert.equal('FN_LIT_PARAM', toks[4][0], 'FN_LIT_PARAM added after parameters in function');
+		assert.equal('FN_LIT_PARAM', toks[6][0], 'all parameters marked');
 	},
 
 	'Puts function bodies in a single block': function(b, assert) {

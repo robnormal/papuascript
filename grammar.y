@@ -133,19 +133,24 @@ Term
 
 Atom 
 	: Literal
-	| Identifier
+	| Assignable
 	| Object
 	| Array
+	| Parenthetical
 	;
 
 Invocation
 	: Atom '(' ')'
 		{ $$ = new N.FuncCall($1); }
-	| Atom WS Atom
+	| ArityInvocation
+	;
+
+ArityInvocation
+	: Atom WS Atom
 		{ $$ = new N.FuncCall($1, [$2]); }
 	| Atom WS Code
 		{ $$ = new N.FuncCall($1, [$2]); }
-	| Invocation WS Atom
+	| Atom WS ArityInvocation
 		{ $$ = $1.addArg($2); }
 	;
 

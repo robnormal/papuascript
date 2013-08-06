@@ -10,7 +10,8 @@
 	that takes no arguments and calls that
 */
 
-map f
+map \f xs ->
+	f xs
 
 /*
 DBEmptyFailure = \query params ->

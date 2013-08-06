@@ -63,7 +63,6 @@ function outdentNextOutdent(tokens, i) {
 function cpsArrow(tokens) {
 	var
 		i = 0,
-		len = tokens.length,
 		line_start = true, // whether any nonwhitespace has been encountered on this line
 		identifier = false, // current identifier, if any
 		tag; // current token's tag
@@ -92,7 +91,7 @@ function cpsArrow(tokens) {
 				tokens.splice(i, 2);
 
 				// read tokens to end of line
-				while (i < len && tokens[i][0] !== 'TERMINATOR') i++;
+				while (i < tokens.length && tokens[i][0] !== 'TERMINATOR') i++;
 
 				// fix last token info
 				var last_on_line = tokens[i-1];
@@ -167,7 +166,6 @@ function fixFunctionOneLiner(tokens, arrow_pos, break_pos) {
 function resolveBlocks(tokens) {
 	var
 		i = 0,
-		len = tokens.length,
 		pre_block = false, // whether we are waiting for a block (e.g., in a WHILE condition)
 		paren_level, // while conditions, etc., can be broken over lines if in parens
 		ignore_newlines = [], // stack that answers that question for indentation levels
@@ -285,11 +283,10 @@ function startsFactor(tok) {
 function markFunctionParams(tokens) {
 	var
 		i = 0,
-		len = tokens.length,
 		param_list = false; // whether we are waiting for a block (e.g., in a WHILE condition)
 
 	// arrays and objects can be 
-	while (i < len) {
+	while (i < tokens.length) {
 		var tag = tokens[i][0];
 		var prev = tokens[i-1];
 
