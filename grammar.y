@@ -53,8 +53,8 @@ var N = require('./nodes.js');
 /*
 /*     (2 + 3) * 4 */
 %left      "."
-%nonassoc  "++" "--"
-%right     "UNARY"
+%nonassoc  "UNARY_ASSIGN"
+%right     "UNARY" 
 %left      "MATH"
 %left      "+" "-"
 %left      "SHIFT"
@@ -196,14 +196,10 @@ Literal
 Assignment
 	: Assignable '=' Expression
     { $$ = new N.Assign($1, $3, $2); }
-	| "--" Assignable
-    { $$ = new N.Assign($2, null, '--'); }
-	| "++" Assignable
-    { $$ = new N.Assign($2, null, '++'); }
-	| Assignable "--"
-    { $$ = new N.Assign($2, null, '--'); }
-	| Assignable "++"
-    { $$ = new N.Assign($2, null, '++'); }
+	| UNARY_ASSIGN Assignable
+    { $$ = new N.Assign($2, null, $2); }
+	| Assignable UNARY_ASSIGN
+    { $$ = new N.Assign($2, null, $2); }
 	| Assignable COMPOUND_ASSIGN Expression
     { $$ = new N.Assign($1, $3, $2); }
 	;

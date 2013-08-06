@@ -15,9 +15,6 @@ toInt = \x -> parseInt x 10
 DBEmptyFailure = \query params ->
 	@err = { query: query, params: params }
 
-
-util.inherits DBEmptyFailure nodam.AsyncFailure
-
 util.inherits DBEmptyFailure nodam.AsyncFailure
 
 DBMissingFailure = \table condition ->
@@ -33,3 +30,5 @@ getDB = \file -> //  function getDB(file) {
 		db_open <- (sql.database file).pipe
 		nodam.set 'db' db_open
 
+while x < 3
+	x ++

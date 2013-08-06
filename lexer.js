@@ -1,4 +1,4 @@
-/*jshint regexp: false, indent: false */
+/*jshint regexp: false, indent: false, boss: true */
 var H = require('./helpers.js');
 var R = require('./rewriter.js');
 
@@ -81,14 +81,15 @@ COMPOUND_ASSIGN = [
 ];
 
 LOGIC   = ['&&', '||', '&', '|', '^'];
-SHIFT   = ['<<', '>>', '>>>'];
+SHIFT   = ['<<', '>>>', '>>'];
 PAPUA_OPS = ['->', '<-'];
 COMPARE = ['==', '!=', '<', '>', '<=', '>='];
 MATH    = ['*', '/', '%'];
+UNARY_ASSIGN = ['++', '--'];
 
-OPERATORS  = COMPOUND_ASSIGN.concat(LOGIC).concat(SHIFT).concat(PAPUA_OPS).concat(COMPARE).concat(MATH);
-
+OPERATORS  = COMPOUND_ASSIGN.concat(LOGIC).concat(SHIFT).concat(PAPUA_OPS).concat(COMPARE).concat(MATH).concat(UNARY_ASSIGN);
 UNARY   = ['!', '~', 'NEW', 'TYPEOF', 'DELETE'];
+
 RELATION = ['IN', 'INSTANCEOF'];
 BOOL = ['TRUE', 'FALSE'];
 
@@ -495,6 +496,8 @@ Lexer.prototype = {
 			tag = 'COMPARE';
 		} else if (H.has(COMPOUND_ASSIGN, value)) {
 			tag = 'COMPOUND_ASSIGN';
+		} else if (H.has(UNARY_ASSIGN, value)) {
+			tag = 'UNARY_ASSIGN';
 		} else if (H.has(UNARY, value)) {
 			tag = 'UNARY';
 		} else if (H.has(SHIFT, value)) {
