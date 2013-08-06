@@ -100,20 +100,28 @@ module.exports = {
 
 	'Puts function bodies in a single block': function(b, assert) {
 		var text = 'foo \\bar spam -> return 3';
-		var toks = R.resolveBlocks(getTokens(text));
+		var toks = R.fixFunctionBlocks(getTokens(text));
 
 		assert.equal('INDENT', toks[5][0]);
 		assert.equal('OUTDENT', toks[8][0]);
 
 		var text2 = 'foo \\bar spam -> j = 3\n  return bar + spam + j';
-		var toks2 = R.resolveBlocks(getTokens(text2));
+		var raw = getTokens(text2);
+		var toks2 = R.fixFunctionBlocks(raw);
 
 		assert.equal('INDENT', toks2[5][0], 'adds indent after arrow');
-		assert.equal('RETURN', toks2[9][0], 'Removes indent of associated block');
+		assert.equal('RETURN', toks2[10][0], 'Removes indent of associated block');
+	},
 
+	'Removes non-semantic TERMINATORs': function(b, assert) {
 		var nl_text = '\n\nsome code';
 		var nl_toks = R.resolveBlocks(getTokens(nl_text));
 		assert.equal('some', nl_toks[0][1], 'Eliminates initial TERMINATORs');
+
+		nl_text = 'a = \\b ->\n  c';
+		nl_toks = R.resolveBlocks(getTokens(nl_text));
+
+		assert.equal('INDENT', nl_toks[5][0], 'leaves function blocks intact');
 	},
 
 	'Removes redundant TERMINATORs': function(b, assert) {

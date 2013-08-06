@@ -5,6 +5,14 @@ function error(msg, token) {
 	throw new Error(msg + ' in line ' + (token[2].first_line+1) + ' column ' + (token[2].first_column+1));
 }
 
+var BR = ['TERMINATOR', 'INDENT', 'OUTDENT'];
+
+// undefined (the beginning of the file) returns TRUE here
+function startsNewLine(tok) {
+	return ! tok || H.has(BR, tok[0]);
+}
+
+
 // matches the first indent AFTER i
 function closingOutdent(tokens, i) {
 	var
@@ -126,6 +134,53 @@ function cpsArrow(tokens) {
 
 var BLOCK_TAGS = ['FOR', 'WHILE', 'DO', 'IF', 'ELSE', 'SWITCH', 'TRY', 'CATCH'];
 
+function fixFunctionBlocks(tokens) {
+	var i = 0, tag, start, line;
+
+	while (tokens[i]) {
+		tag = tokens[i][0];
+		if (tag === '->') {
+			start = i;
+			do { i++; } while (!startsNewLine(tokens[i]));
+
+			// remove indent from block, and move it up to the arrow
+			if (i > start) {
+
+				// one-liners
+				if (!tokens[i] || tokens[i][0] === 'TERMINATOR') {
+					var outdent = ['OUTDENT', '', H.loc(tokens[i-1])];
+					if (tokens[i]) {
+						tokens.splice(i, 1, outdent);
+					} else {
+						tokens.splice(i, 0, outdent);
+					}
+					tokens.splice(start+1, 0, ['INDENT', '', H.loc(tokens[start])]);
+					i += 2;
+
+				} else {
+
+					// replace indent with newline
+					var indent = tokens.splice(i, 1, ['TERMINATOR', '', H.loc(tokens[i])])[0];
+
+					// add indent after ->
+					tokens.splice(start + 1, 0, indent);
+					i++;
+				}
+
+			// for empty function, create an indent and an outdent
+			} else if (tokens[i][0] !== 'INDENT') {
+				tokens.splice(i, 0, ['INDENT', '', H.loc(tokens[start])]);
+				tokens.splice(i+1, 0, ['OUTDENT', '', H.loc(tokens[start])]);
+				i += 2;
+			}
+		}
+
+		i++;
+	}
+
+	return tokens;
+}
+
 function fixFunctionOneLiner(tokens, arrow_pos, break_pos) {
 	var extra_chars = 0;
 
@@ -159,10 +214,9 @@ function fixFunctionOneLiner(tokens, arrow_pos, break_pos) {
 function resolveBlocks(tokens) {
 	var
 		i = 0,
-		pre_block = false, // whether we are waiting for a block (e.g., in a WHILE condition)
-		paren_level, // while conditions, etc., can be broken over lines if in parens
+		pre_blocks = [], // whether we are waiting for a block (e.g., in a WHILE condition)
+		pair_levels = [], // while conditions, etc., can be broken over lines if in parens
 		ignore_newlines = [], // stack that answers that question for indentation levels
-		fn_first_line = false, // whether we are on the first line of a literal function
 		tag; // current token's tag
 
 	// eliminate leading TERMINATORs
@@ -174,51 +228,38 @@ function resolveBlocks(tokens) {
 		tag = tokens[i][0];
 
 		if (H.has(BLOCK_TAGS, tag)) {
-			pre_block = true;
-			paren_level = 0; // start counting parens
+			pre_blocks.push(true);
+			pair_levels.push(0); // start counting parens
 		}
 
 		switch (tag) {
 			case '(':
-				if (pre_block) paren_level++;
+			case '[':
+			case '{':
+				pre_blocks.push(false);
 				break;
 
 			case ')':
-				if (pre_block) paren_level--;
+			case ']':
+			case '}':
+				if (H.last(pre_blocks)) {
+					H.throwSyntaxError('Bad block');
+				}
+				pre_blocks.pop();
 				break;
 
 			case 'INDENT':
-				if (pre_block && 0 === paren_level) {
+				if (pre_blocks.pop()) {
 					ignore_newlines.push(false);
-					pre_block = false;
-				} else if (false !== fn_first_line) {
-					ignore_newlines.push(false);
-
-					// if some of the function content is on the first line,
-					// move it into the block
-					if ('->' !== tokens[i-1][0]) {
-						// remove indent from block
-						var indent = tokens.splice(i, 1)[0];
-
-						// and add it after the arrow
-						tokens.splice(fn_first_line + 1, 0, indent);
-					}
-
-					fn_first_line = false;
 				} else {
 					ignore_newlines.push(i);
 					// remove indent
 					tokens.splice(i, 1);
+					i--;
 				}
 				break;
 
 			case 'OUTDENT':
-				if (false !== fn_first_line) {
-					var extra_chars = fixFunctionOneLiner(tokens, fn_first_line, i);
-					i += extra_chars;
-					fn_first_line = false;
-				}
-
 				var ignore_from = ignore_newlines.pop();
 
 				if (false !== ignore_from) {
@@ -229,21 +270,19 @@ function resolveBlocks(tokens) {
 				break;
 
 			case 'TERMINATOR':
-				// if we get this then there is no indent, so forget about getting a block
-				pre_block = false;
+				if (H.last(pre_blocks)) {
+					H.throwSyntaxError('Bad block');
+				}
 
-				if (false !== fn_first_line) {
-					var extra_chars = fixFunctionOneLiner(tokens, fn_first_line, i);
-					i += extra_chars;
-
-					fn_first_line = false;
-				} else if (H.last(ignore_newlines)) {
+				// remove newline if ignoring
+				if (H.last(ignore_newlines)) {
 					tokens.splice(i, 1);
+					i--;
 				}
 				break;
 
 			case '->':
-				fn_first_line = i;
+				pre_blocks.push(true);
 				break;
 		}
 
@@ -314,14 +353,6 @@ function markFunctionParams(tokens) {
 	return tokens;
 }
 
-
-var BR = ['TERMINATOR', 'INDENT', 'OUTDENT'];
-
-// undefined (the beginning of the file) returns TRUE here
-function startsNewLine(tok) {
-	return ! tok || H.has(BR, tok[0]);
-}
-
 // eliminate terminators following INDENT or OUTDENT
 // but leave a TERMINATOR at the end of the file
 function cleanTerminators(tokens) {
@@ -375,7 +406,11 @@ function cleanTerminators(tokens) {
 }
 
 function rewrite(tokens) {
-	return markFunctionParams(cleanTerminators(resolveBlocks(cpsArrow(tokens))));
+	return markFunctionParams(
+		cleanTerminators(
+			resolveBlocks(
+				cpsArrow(
+					fixFunctionBlocks(tokens)))));
 }
 
 
@@ -383,6 +418,7 @@ module.exports = {
 	rewriteCpsArrow: cpsArrow,
 	resolveBlocks: resolveBlocks,
 	markFunctionParams: markFunctionParams,
+	fixFunctionBlocks: fixFunctionBlocks,
 	cleanTerminators: cleanTerminators,
 	rewrite: rewrite
 };

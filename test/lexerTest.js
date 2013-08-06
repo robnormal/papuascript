@@ -68,4 +68,5 @@ module.exports = {
 		assert.equal(returns2[1], 'name');
 		*/
 	}
+
 };
