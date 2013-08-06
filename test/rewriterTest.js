@@ -136,12 +136,16 @@ module.exports = {
 		assert.equal(toks[7][0], 'STRING', 'Removes TERMINATOR after TERMINATOR');
 		assert.equal(toks[8][0], 'TERMINATOR', 'Ensures that document ends with a single TERMINATOR');
 
-		var toks = mkTokens(
-			'\\ IDENTIFIER -> INDENT STRING OUTDENT NUMBER'
+
+		toks = mkTokens(
+			'IDENTIFIER = \\ b -> INDENT TERMINATOR IF IDENTIFIER INDENT IDENTIFIER OUTDENT TERMINATOR ELSE INDENT IDENTIFIER OUTDENT OUTDENT TERMINATOR'
 		);
+		var x = R.resolveBlocks( R.fixFunctionBlocks( R.rewriteCpsArrow( toks)));
 		R.cleanTerminators(toks);
 
-		assert.equal(toks[6][0], 'TERMINATOR',
-			'adds TERMINATOR after function body, since that always ends the line');
+		assert.equal(toks[5][0], 'INDENT', 'preserves function indent');
+		assert.equal(toks[6][0], 'IF');
+		assert.equal(toks[8][0], 'INDENT', 'preserves IF indent');
+		assert.equal(toks[11][0], 'ELSE', 'Removes redundant terminator between IF block and ELSE');
 	}
 };

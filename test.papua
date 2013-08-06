@@ -10,7 +10,6 @@
 	that takes no arguments and calls that
 */
 
-/*
 toInt = \x -> parseInt x 10
 
 DBEmptyFailure = \query params ->
@@ -25,7 +24,12 @@ DBMissingFailure = \table condition ->
   @err = { table: table, condition: condition }
 
 util.inherits  DBMissingFailure  DBEmptyFailure
-*/
 
 getDB = \file -> //  function getDB(file) {
-	nodam.get 'db'
+	db <- (nodam.get 'db').pipe  //  nadam.get('db').pipe(function(db) {
+	if db
+		Async.result db
+	else
+		db_open <- (sql.database file).pipe
+		nodam.set 'db' db_open
+

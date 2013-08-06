@@ -388,7 +388,6 @@ function cleanTerminators(tokens) {
 				i++;
 			} else if (tokens[i+1] && 'TERMINATOR' === tokens[i+1][0]) {
 				tokens.splice(i+1, 1);
-				i--;
 			}
 			break;
 		}
@@ -409,8 +408,9 @@ function rewrite(tokens) {
 	return markFunctionParams(
 		cleanTerminators(
 			resolveBlocks(
-				cpsArrow(
-					fixFunctionBlocks(tokens)))));
+				fixFunctionBlocks(
+					cpsArrow(
+						tokens)))));
 }
 
 
