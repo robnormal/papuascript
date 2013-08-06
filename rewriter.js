@@ -217,6 +217,18 @@ function deletePrecedingBR(tokens, i) {
 	return i;
 }
 
+function isWhileForDo(tokens, i, last_block) {
+	// will already have added TERMINATOR after OUTDENT,
+	// so must account for that here
+	return last_block === 'DO' &&
+		tokens[i] &&
+		tokens[i-1] &&
+		tokens[i-2] &&
+		'WHILE' === tokens[i][0] &&
+		'TERMINATOR' === tokens[i-1][0] &&
+		'OUTDENT' === tokens[i-2][0];
+}
+
 // remove indent, newlines, and subsequent outdent from expressions
 // make all functions take a block
 function resolveBlocks(tokens) {
@@ -226,6 +238,7 @@ function resolveBlocks(tokens) {
 		blocks = [], // what type of block we are in
 		pair_levels = [], // while conditions, etc., can be broken over lines if in parens
 		ignore_newlines = [false], // stack that answers that question for indentation levels
+		last_block,
 		tag; // current token's tag
 
 	// eliminate leading TERMINATORs
@@ -236,7 +249,16 @@ function resolveBlocks(tokens) {
 	while (i < tokens.length) {
 		tag = tokens[i][0];
 
+		// get this condition early
+		if (isWhileForDo(tokens, i, last_block)) {
+			i = deletePrecedingBR(tokens, i);
+			i++;
+
+			continue;
+		}
+		
 		if (H.has(BLOCK_TAGS, tag)) {
+			// avoid borking tail WHILE condition on DO loop
 			pre_blocks.push(true);
 			blocks.push(tag);
 			pair_levels.push(0); // start counting parens
@@ -253,7 +275,7 @@ function resolveBlocks(tokens) {
 			case ']':
 			case '}':
 				if (H.last(pre_blocks)) {
-					H.throwSyntaxError('Bad block');
+					H.throwSyntaxError('Unexpected ' + tag + ' at head of block');
 				}
 				pre_blocks.pop();
 				break;
@@ -281,14 +303,14 @@ function resolveBlocks(tokens) {
 						tokens.splice(i+1, 0, ['TERMINATOR', '', H.loc(tokens[i])]);
 					}
 
-					blocks.pop();
+					last_block = blocks.pop();
 				}
 					
 				break;
 
 			case 'TERMINATOR':
 				if (H.last(pre_blocks)) {
-					H.throwSyntaxError('Bad block');
+					H.throwSyntaxError('Unexpected ' + tag + ' at head of block');
 				}
 
 				// remove newline if ignoring
@@ -315,12 +337,6 @@ function resolveBlocks(tokens) {
 			case 'FINALLY':
 				// remove TERMINATOR before these keywords
 				i = deletePrecedingBR(tokens, i);
-				break;
-
-			case 'WHILE':
-				if ('DO' === H.last(blocks)) {
-					i = deletePrecedingBR(tokens, i);
-				}
 				break;
 		}
 

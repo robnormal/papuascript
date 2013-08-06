@@ -175,6 +175,22 @@ module.exports = {
 			'IDENTIFIER = \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER OUTDENT TERMINATOR IDENTIFIER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Inserts required TERMINATOR after OUTDENT when newlines matter');
+	},
+
+	'Treats DO WHILE correctly': function(b, assert) {
+
+		toks = mkTokens(
+			'DO INDENT IDENTIFIER OUTDENT WHILE IDENTIFIER TERMINATOR NUMBER'
+		);
+		try {
+			R.resolveBlocks(toks);
+		} catch (e) {
+			assert.ok(false, 'Knows that the WHILE goes with the preceding DO');
+		}
+		expected = mkTokens(
+			'DO INDENT IDENTIFIER OUTDENT WHILE IDENTIFIER TERMINATOR NUMBER TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Knows that the WHILE goes with the preceding DO');
 	}
 
 };

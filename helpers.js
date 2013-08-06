@@ -34,15 +34,18 @@ function loc(token) {
 }
 
 function throwSyntaxError(message, location) {
-	if (! location.last_line) {
-		location.last_line = location.first_line;
-	}
-	if (! location.last_column) {
-		location.last_column = location.first_column;
-	}
-
 	var error = new SyntaxError(message);
-	error.location = location;
+
+	if (location) {
+		if (! location.last_line) {
+			location.last_line = location.first_line;
+		}
+		if (! location.last_column) {
+			location.last_column = location.first_column;
+		}
+
+		error.location = location;
+	}
 
 	throw error;
 }
