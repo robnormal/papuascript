@@ -133,6 +133,7 @@ Term
 
 Atom 
 	: Literal
+	| Identifier
 	| Object
 	| Array
 	;
