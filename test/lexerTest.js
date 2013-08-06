@@ -58,15 +58,6 @@ module.exports = {
 			;
 
 		assert.equal(true, eq(tags1, [ID, '=', NUM, BR]));
-
-		/*
-		assert.equal(selects1, 'id,name,id AS id0,address', 'selectList returns string for SELECT query fields');
-		assert.equal(_.uniq(returns1).length, returns1.length, 'selectList creates list of unique names');
-
-		assert.equal(selects2, 'joe.id,joe.name,bob.id AS id0,address');
-		assert.equal(_.uniq(returns2).length, returns2.length);
-		assert.equal(returns2[1], 'name');
-		*/
 	}
 
 };

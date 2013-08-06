@@ -30,5 +30,8 @@ getDB = \file -> //  function getDB(file) {
 		db_open <- (sql.database file).pipe
 		nodam.set 'db' db_open
 
-while x < 3
-	x ++
+while y
+	x
+
+5
+

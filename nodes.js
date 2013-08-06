@@ -31,7 +31,10 @@ function Index()     { this.args = arguments; }
 function Arr()       { this.args = arguments; }
 function Try()       { this.args = arguments; }
 function Throw()     { this.args = arguments; }
-function While()     { this.args = arguments; }
+function While(cond, block) {
+	this.cond = cond;
+	this.block = block;
+}
 function Switch()    { this.args = arguments; }
 function For()       { this.args = arguments; }
 

@@ -29,6 +29,21 @@ function getTags(tokens) {
 	return map(tokens, function(x) { return x[0]; });
 }
 
+function tags_equal(xs, ys) {
+	var len = xs.length;
+	if (len !== ys.length) {
+		return false;
+	} else {
+		for (var i = 0; i < len; i++) {
+			if (xs[i][0] !== ys[i][0]) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+}
+
 function eq(x, y) {
 	for (var i in x) { if (x.hasOwnProperty(i)) {
 		if (x[i] !== y[i]) return false;
@@ -128,24 +143,28 @@ module.exports = {
 		var toks = mkTokens(
 			'IF IDENTIFIER INDENT TERMINATOR STRING OUTDENT TERMINATOR NUMBER TERMINATOR TERMINATOR STRING'
 		);
-		R.cleanTerminators(toks);
-
-		assert.equal(toks[3][0], 'STRING', 'Removes TERMINATOR after INDENT');
-		assert.equal(toks[4][0], 'OUTDENT', 'Leaves OUTDENT intact');
-		assert.equal(toks[5][0], 'NUMBER', 'Removes TERMINATOR after OUTDENT');
-		assert.equal(toks[7][0], 'STRING', 'Removes TERMINATOR after TERMINATOR');
-		assert.equal(toks[8][0], 'TERMINATOR', 'Ensures that document ends with a single TERMINATOR');
-
+		R.resolveBlocks(toks);
+		var expected = mkTokens(
+			'IF IDENTIFIER INDENT STRING OUTDENT TERMINATOR NUMBER TERMINATOR STRING TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected));
 
 		toks = mkTokens(
 			'IDENTIFIER = \\ b -> INDENT TERMINATOR IF IDENTIFIER INDENT IDENTIFIER OUTDENT TERMINATOR ELSE INDENT IDENTIFIER OUTDENT OUTDENT TERMINATOR'
 		);
-		var x = R.resolveBlocks( R.fixFunctionBlocks( R.rewriteCpsArrow( toks)));
-		R.cleanTerminators(toks);
+		R.resolveBlocks(toks);
+		expected = mkTokens(
+			'IDENTIFIER = \\ b -> INDENT IF IDENTIFIER INDENT IDENTIFIER OUTDENT ELSE INDENT IDENTIFIER OUTDENT OUTDENT TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected));
 
-		assert.equal(toks[5][0], 'INDENT', 'preserves function indent');
-		assert.equal(toks[6][0], 'IF');
-		assert.equal(toks[8][0], 'INDENT', 'preserves IF indent');
-		assert.equal(toks[11][0], 'ELSE', 'Removes redundant terminator between IF block and ELSE');
+		toks = mkTokens(
+			'WHILE IDENTIFIER INDENT IF IDENTIFIER INDENT IDENTIFIER OUTDENT TERMINATOR ELSE INDENT IDENTIFIER OUTDENT TERMINATOR NUMBER OUTDENT TERMINATOR'
+		);
+		R.resolveBlocks(toks);
+		expected = mkTokens(
+			'WHILE IDENTIFIER INDENT IF IDENTIFIER INDENT IDENTIFIER OUTDENT ELSE INDENT IDENTIFIER OUTDENT TERMINATOR NUMBER OUTDENT TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Leaves terminators that separate "Line"s in a block');
 	}
 };

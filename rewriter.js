@@ -208,15 +208,24 @@ function fixFunctionOneLiner(tokens, arrow_pos, break_pos) {
 	return extra_chars;
 }
 
+function deletePrecedingBR(tokens, i) {
+	while ('TERMINATOR' === tokens[i-1][0]) {
+		tokens.splice(i-1, 1);
+		i--;
+	}
+
+	return i;
+}
 
 // remove indent, newlines, and subsequent outdent from expressions
 // make all functions take a block
 function resolveBlocks(tokens) {
 	var
 		i = 0,
-		pre_blocks = [], // whether we are waiting for a block (e.g., in a WHILE condition)
+		pre_blocks = [false], // whether we are waiting for a block (e.g., in a WHILE condition)
+		blocks = [], // what type of block we are in
 		pair_levels = [], // while conditions, etc., can be broken over lines if in parens
-		ignore_newlines = [], // stack that answers that question for indentation levels
+		ignore_newlines = [false], // stack that answers that question for indentation levels
 		tag; // current token's tag
 
 	// eliminate leading TERMINATORs
@@ -229,6 +238,7 @@ function resolveBlocks(tokens) {
 
 		if (H.has(BLOCK_TAGS, tag)) {
 			pre_blocks.push(true);
+			blocks.push(tag);
 			pair_levels.push(0); // start counting parens
 		}
 
@@ -265,6 +275,8 @@ function resolveBlocks(tokens) {
 				if (false !== ignore_from) {
 					// remove outdent
 					tokens.splice(i, 1);
+				} else {
+					blocks.pop();
 				}
 					
 				break;
@@ -275,7 +287,15 @@ function resolveBlocks(tokens) {
 				}
 
 				// remove newline if ignoring
-				if (H.last(ignore_newlines)) {
+				// or if more than one in a row
+				// TERMINATORs after OUTDENTs are not redundant unless we are ignoring newlines
+				// because they separate one Line from another
+				if (
+					H.last(ignore_newlines) || 
+					!tokens[i-1] ||
+					'TERMINATOR' === tokens[i-1][0] ||
+					'INDENT' === tokens[i-1][0]
+				) {
 					tokens.splice(i, 1);
 					i--;
 				}
@@ -284,9 +304,28 @@ function resolveBlocks(tokens) {
 			case '->':
 				pre_blocks.push(true);
 				break;
+
+			case 'ELSE':
+			case 'CATCH':
+			case 'FINALLY':
+				// remove TERMINATOR before these keywords
+				i = deletePrecedingBR(tokens, i);
+				break;
+
+			case 'WHILE':
+				if ('DO' === H.last(blocks)) {
+					i = deletePrecedingBR(tokens, i);
+				}
+				break;
 		}
 
 		i++;
+	}
+
+	// ensure one last TERMINATOR
+	var last_tok = tokens[i-1];
+	if (last_tok[0] !== 'TERMINATOR') {
+		tokens.splice(i, 0, ['TERMINATOR', '', H.loc(last_tok)]);
 	}
 
 	return tokens;
@@ -406,11 +445,10 @@ function cleanTerminators(tokens) {
 
 function rewrite(tokens) {
 	return markFunctionParams(
-		cleanTerminators(
-			resolveBlocks(
-				fixFunctionBlocks(
-					cpsArrow(
-						tokens)))));
+		resolveBlocks(
+			fixFunctionBlocks(
+				cpsArrow(
+					tokens))));
 }
 
 
