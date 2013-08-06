@@ -325,13 +325,43 @@ function startsNewLine(tok) {
 // eliminate terminators following INDENT or OUTDENT
 // but leave a TERMINATOR at the end of the file
 function cleanTerminators(tokens) {
-	var i = 0;
+	var
+		i = 0,
+		func_body_indents = [];
+
 	while (i < tokens.length) {
 		var prev = tokens[i-1];
-		if ('TERMINATOR' === tokens[i][0] && startsNewLine(prev)) {
-			tokens.splice(i, 1);
-			continue;
+
+		switch (tokens[i][0]) {
+		case 'TERMINATOR':
+			if (startsNewLine(prev)) {
+				tokens.splice(i, 1);
+				i--;
+			}
+			break;
+
+		case 'INDENT':
+			// record whether entering a function body
+			func_body_indents.push('->' === prev[0]);
+			break;
+		case 'OUTDENT':
+			// always put a TERMINATOR after a function body,
+			// since it always ends the line
+			var end_of_func = func_body_indents.pop();
+			if (end_of_func) {
+				if (! tokens[i+1] || 'TERMINATOR' !== tokens[i+1][0]) {
+					tokens.splice(i, 0, ['TERMINATOR', '', H.loc(tokens[i])]);
+				}
+
+				// skip the TERMINATOR that now definitely follows this function
+				i++;
+			} else if (tokens[i+1] && 'TERMINATOR' === tokens[i+1][0]) {
+				tokens.splice(i, 1);
+				i--;
+			}
+			break;
 		}
+
 		i++;
 	}
 

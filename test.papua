@@ -25,10 +25,12 @@ DBMissingFailure = \table condition ->
   @err = { table: table, condition: condition }
 
 util.inherits  DBMissingFailure  DBEmptyFailure
-
-errMissing = \table condition -> new (DBMissingFailure table condition)
 */
 
+\table -> 4
+
+x
+/*
 getDB = \file -> //  function getDB(file) {
 	db <- (nodam.get 'db').pipe  //  nadam.get('db').pipe(function(db) {
 	if db
@@ -36,4 +38,5 @@ getDB = \file -> //  function getDB(file) {
 	else
 		db_open <- (sql.database file).pipe
 		nodam.set 'db' db_open
+*/
 
