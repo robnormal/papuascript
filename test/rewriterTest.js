@@ -123,6 +123,7 @@ module.exports = {
 		R.cleanTerminators(toks);
 
 		assert.equal(toks[3][0], 'STRING', 'Removes TERMINATOR after INDENT');
+		assert.equal(toks[4][0], 'OUTDENT', 'Leaves OUTDENT intact');
 		assert.equal(toks[5][0], 'NUMBER', 'Removes TERMINATOR after OUTDENT');
 		assert.equal(toks[7][0], 'STRING', 'Removes TERMINATOR after TERMINATOR');
 		assert.equal(toks[8][0], 'TERMINATOR', 'Ensures that document ends with a single TERMINATOR');

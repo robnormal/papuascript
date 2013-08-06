@@ -356,7 +356,7 @@ function cleanTerminators(tokens) {
 				// skip the TERMINATOR that now definitely follows this function
 				i++;
 			} else if (tokens[i+1] && 'TERMINATOR' === tokens[i+1][0]) {
-				tokens.splice(i, 1);
+				tokens.splice(i+1, 1);
 				i--;
 			}
 			break;
