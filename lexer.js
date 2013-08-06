@@ -430,9 +430,6 @@ Lexer.prototype = {
 		if (dent) {
 			this.outdebt -= moveOut;
 		}
-		while (this.prevValue() === ';') {
-			this.tokens.pop();
-		}
 		if (!(this.prevTag() === 'TERMINATOR' || noNewlines)) {
 			this.token('TERMINATOR', '\n', outdentLength, 0);
 		}
@@ -487,10 +484,7 @@ Lexer.prototype = {
 			}
 		}
 
-		if (value === ';') {
-			this.seenFor = false;
-			tag = 'TERMINATOR';
-		} else if (H.has(MATH, value)) {
+		if (H.has(MATH, value)) {
 			tag = 'MATH';
 		} else if (H.has(COMPARE, value)) {
 			tag = 'COMPARE';
@@ -640,9 +634,6 @@ Lexer.prototype = {
 		}
 		if (dent) {
 			this.outdebt -= moveOut;
-		}
-		while (this.prevValue() === ';') {
-			this.tokens.pop();
 		}
 		if (!(this.prevTag() === 'TERMINATOR' || noNewlines)) {
 			this.token('TERMINATOR', '\n', outdentLength, 0);

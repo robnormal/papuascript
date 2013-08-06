@@ -10,7 +10,6 @@
 	that takes no arguments and calls that
 */
 
-/*
 toInt = \x -> parseInt x 10
 
 DBEmptyFailure = \query params ->
@@ -31,10 +30,11 @@ getDB = \file -> //  function getDB(file) {
 		db_open <- (sql.database file).pipe
 		nodam.set 'db' db_open
 
-*/
 do
 	x
 while y
 
-5
+for x = 2; x<5; x++
+	z
+
 

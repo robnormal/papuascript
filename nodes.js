@@ -36,7 +36,12 @@ function While(cond, block) {
 	this.block = block;
 }
 function Switch()    { this.args = arguments; }
-function For()       { this.args = arguments; }
+function For(loop) {
+	this.loop = loop;
+}
+For.prototype.setBlock = function(block) {
+	this.block = block;
+}
 
 function If(cond, block) {
 	this.condition = cond;

@@ -13,7 +13,7 @@ var N = require('./nodes.js');
 %token FINALLY
 %token FN_DEF_PARAM
 %token FOR
-%token FORIN
+%token IN
 %token IDENTIFIER
 %token IF
 %token INDENT
@@ -63,7 +63,7 @@ var N = require('./nodes.js');
 %left      "LOGIC"
 %nonassoc  "INDENT" "OUTDENT"
 %right     "=" ":" "COMPOUND_ASSIGN" "RETURN" "THROW"
-%right     "FORIN" "CASE"
+%right     "IN" "CASE"
 %right     "IF" "ELSE" "FOR" "WHILE"
 
 %start Root
@@ -343,17 +343,17 @@ While
 /* Comprehensions can either be normal, with a block of expressions to execute
 /* or postfix, with a single expression. */
 For
-	: ForBody Block
-    { $$ = new N.For($1, $2); }
+	: ForHead Block
+    { $$ = $1.setBlock($2); }
 	;
 
-ForBody
-	: FOR Identifier FORIN Block
-		{ $$ = { in: true, id: $2, block: $4} }
-	| FOR OWN Identifier FORIN Block
-		{ $$ = { in: true, own: true, id: $2, block: $4} }
-	| FOR AssignList ';' Expression ';' AssignList Block
-		{ $$ = { init: $2, check: $4, step: $6, block: $7} }
+ForHead
+	: FOR Identifier IN Expression
+    { $$ = new N.For({ in: true, id: $2}); }
+	| FOR OWN Identifier IN Expression
+    { $$ = new N.For({ in: true, own: true, id: $2}); }
+	| FOR AssignList ';' Expression ';' AssignList
+    { $$ = new N.For({ init: $2, check: $4, step: $6}); }
 	;
 
 Switch
