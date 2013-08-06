@@ -41,6 +41,7 @@ function For(loop) {
 }
 For.prototype.setBlock = function(block) {
 	this.block = block;
+	return this;
 }
 
 function If(cond, block) {
@@ -49,6 +50,7 @@ function If(cond, block) {
 }
 If.prototype.addElse = function(block) {
 	this.elseBlock = block;
+	return this;
 }
 
 function FuncCall(name, args) {

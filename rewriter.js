@@ -256,9 +256,15 @@ function resolveBlocks(tokens) {
 
 			continue;
 		}
+
+		// don't add new block when IF follows ELSE
+		if ('IF' === tokens[i][0] && tokens[i-1] && 'ELSE' === tokens[i-1][0]) {
+			i++;
+
+			continue;
+		}
 		
 		if (H.has(BLOCK_TAGS, tag)) {
-			// avoid borking tail WHILE condition on DO loop
 			pre_blocks.push(true);
 			blocks.push(tag);
 			pair_levels.push(0); // start counting parens

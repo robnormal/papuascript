@@ -37,4 +37,12 @@ while y
 for x = 2; x<5; x++
 	z
 
+if a
+	b
+else if c
+	d
+else if e
+	f
+else
+	g
 
