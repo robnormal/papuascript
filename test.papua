@@ -10,20 +10,17 @@
 	that takes no arguments and calls that
 */
 
-map \f xs ->
-	f xs
+toInt = \x -> parseInt x 10
 
-/*
 DBEmptyFailure = \query params ->
 	@err = { query: query, params: params }
 
 
 util.inherits DBEmptyFailure nodam.AsyncFailure
 
-util.inherits
-	DBEmptyFailure
-	nodam.AsyncFailure
+util.inherits DBEmptyFailure nodam.AsyncFailure
 
+/*
 DBMissingFailure table condition =
   @err = { table: table, condition: condition }
 

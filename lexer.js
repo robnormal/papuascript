@@ -371,10 +371,16 @@ Lexer.prototype = {
   // Keeps track of the level of indentation, because a single outdent token
   // can close multiple indents, so we need to know how far in we happen to be.
 	line: function() {
-		var diff, indent, match, size;
+		var diff, indent, match, size,
+			prev = H.last(this.tokens);
+
 		if (!(match = MULTI_DENT.exec(this.chunk))) {
 			return 0;
 		}
+
+		// mark token before newline as spaced
+		if (prev) prev.spaced = true;
+
 		indent = match[0];
 		this.seenFor = false;
 		size = indent.length - 1 - indent.lastIndexOf('\n');
@@ -445,9 +451,6 @@ Lexer.prototype = {
 
   // Generate a newline token. Consecutive newlines get merged together.
 	newlineToken: function(offset) {
-		while (this.prevValue() === ';') {
-			this.tokens.pop();
-		}
 		if (this.prevTag() !== 'TERMINATOR') {
 			this.token('TERMINATOR', '\n', offset, 0);
 		}

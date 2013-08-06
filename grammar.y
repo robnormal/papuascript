@@ -151,7 +151,7 @@ ArityInvocation
 	| Atom WS Code
 		{ $$ = new N.FuncCall($1, [$2]); }
 	| Atom WS ArityInvocation
-		{ $$ = $1.addArg($2); }
+		{ $$ = $3.addArg($1); }
 	;
 
 /* An indented block of expressions. Note that the [Rewriter](rewriter.html)
@@ -271,7 +271,7 @@ FnLitParams
 Assignable
 	: Identifier
 	| Atom Accessor
-		{ $$ = $1.add($2); }
+		{ $$ = new N.Value($1).add($2); }
 	| ThisProperty
 	;
 
