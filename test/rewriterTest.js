@@ -166,5 +166,15 @@ module.exports = {
 			'WHILE IDENTIFIER INDENT IF IDENTIFIER INDENT IDENTIFIER OUTDENT ELSE INDENT IDENTIFIER OUTDENT TERMINATOR NUMBER OUTDENT TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Leaves terminators that separate "Line"s in a block');
+
+		toks = mkTokens(
+			'IDENTIFIER = \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER OUTDENT IDENTIFIER TERMINATOR'
+		);
+		R.resolveBlocks(toks);
+		expected = mkTokens(
+			'IDENTIFIER = \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER OUTDENT TERMINATOR IDENTIFIER TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Inserts required TERMINATOR after OUTDENT when newlines matter');
 	}
+
 };

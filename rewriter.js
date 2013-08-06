@@ -276,6 +276,11 @@ function resolveBlocks(tokens) {
 					// remove outdent
 					tokens.splice(i, 1);
 				} else {
+					// make sure TERMINATOR follows OUTDENT
+					if ('TERMINATOR' !== tokens[i+1][0] && 'OUTDENT' !== tokens[i+1][0]) {
+						tokens.splice(i+1, 0, ['TERMINATOR', '', H.loc(tokens[i])]);
+					}
+
 					blocks.pop();
 				}
 					
@@ -291,7 +296,7 @@ function resolveBlocks(tokens) {
 				// TERMINATORs after OUTDENTs are not redundant unless we are ignoring newlines
 				// because they separate one Line from another
 				if (
-					H.last(ignore_newlines) || 
+					H.last(ignore_newlines) ||
 					!tokens[i-1] ||
 					'TERMINATOR' === tokens[i-1][0] ||
 					'INDENT' === tokens[i-1][0]
