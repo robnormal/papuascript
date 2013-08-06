@@ -25,6 +25,14 @@ function find_init(xs, str) {
 	return false;
 }
 
+function here(line, col) {
+	return {first_line: line, first_column: col, last_line: line, last_column: col};
+}
+
+function loc(token) {
+	return here(token[2].first_line, token[2].first_column);
+}
+
 function throwSyntaxError(message, location) {
 	if (! location.last_line) {
 		location.last_line = location.first_line;
@@ -44,6 +52,8 @@ module.exports = {
 	last: last,
 	count: count,
 	find_init: find_init,
+	here: here,
+	loc: loc,
 	throwSyntaxError: throwSyntaxError
 };
 

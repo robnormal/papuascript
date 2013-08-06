@@ -33,8 +33,15 @@ function Try()       { this.args = arguments; }
 function Throw()     { this.args = arguments; }
 function While()     { this.args = arguments; }
 function Switch()    { this.args = arguments; }
-function If()        { this.args = arguments; }
 function For()       { this.args = arguments; }
+
+function If(cond, block) {
+	this.condition = cond;
+	this.block = block;
+}
+If.prototype.addElse = function(block) {
+	this.elseBlock = block;
+}
 
 function FuncCall(name, args) {
 	this.name = name;

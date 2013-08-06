@@ -1,15 +1,8 @@
+/*jshint indent: false */
 var H = require('./helpers.js');
 
 function error(msg, token) {
 	throw new Error(msg + ' in line ' + (token[2].first_line+1) + ' column ' + (token[2].first_column+1));
-}
-
-function here(line, col) {
-	return {first_line: line, first_column: col, last_line: line, last_column: col};
-}
-
-function loc(token) {
-	return here(token[2].first_line, token[2].first_column);
 }
 
 // matches the first indent AFTER i
@@ -54,7 +47,7 @@ function outdentNextOutdent(tokens, i) {
 	}
 
 	tokens.splice(out, 0,
-		['OUTDENT', '', loc(out_tok)]
+		['OUTDENT', '', H.loc(out_tok)]
 	);
 
 	return tokens;
@@ -105,10 +98,10 @@ function cpsArrow(tokens) {
 				// do one whole insertion, so include TERMINATOR and add INDENT after
 				// replace newline with whole thing
 				tokens.splice(i, 1,
-					['\\', '', here(line, column)],
+					['\\', '', H.here(line, column)],
 					ident_token,
-					{0: '->', 1:'', 2: here(line, column), newLine: true},
-					['INDENT', '', here(line + 1, 0)]
+					{0: '->', 1:'', 2: H.here(line, column), newLine: true},
+					['INDENT', '', H.here(line + 1, 0)]
 				);
 
 				tokens = outdentNextOutdent(tokens, i);
@@ -140,7 +133,7 @@ function fixFunctionOneLiner(tokens, arrow_pos, break_pos) {
 	if ('->' !== tokens[break_pos - 1][0]) {
 		// add an indent before the content
 		tokens.splice(arrow_pos + 1, 0,
-			['INDENT', '', loc(tokens[arrow_pos + 1])]
+			['INDENT', '', H.loc(tokens[arrow_pos + 1])]
 		);
 
 		// line break position has advanced by one due to the splice
@@ -149,7 +142,7 @@ function fixFunctionOneLiner(tokens, arrow_pos, break_pos) {
 
 		// add OUTDENT
 		tokens.splice(break_pos, 0,
-			['OUTDENT', '', loc(tokens[break_pos])]
+			['OUTDENT', '', H.loc(tokens[break_pos])]
 		);
 
 		// line break position has advanced by one due to the splice
@@ -295,7 +288,7 @@ function markFunctionParams(tokens) {
 				param_list = false;
 			} else if (tag === 'IDENTIFIER') {
 				tokens.splice(i + 1, 0,
-					['FN_LIT_PARAM', '', here(tokens[i].first_line, tokens[i].first_column)]
+					['FN_LIT_PARAM', '', H.here(tokens[i].first_line, tokens[i].first_column)]
 				);
 
 				// pass the FN_LIT_PARAM token
@@ -310,7 +303,7 @@ function markFunctionParams(tokens) {
 		// mark function calls
 		if (prev && prev.spaced && endsFactor(prev) && startsFactor(tokens[i])) {
 			tokens.splice(i, 0,
-				['WS', '', loc(tokens[i])]
+				['WS', '', H.loc(tokens[i])]
 			);
 			i++;
 		}
@@ -321,8 +314,38 @@ function markFunctionParams(tokens) {
 	return tokens;
 }
 
+
+var BR = ['TERMINATOR', 'INDENT', 'OUTDENT'];
+
+// undefined (the beginning of the file) returns TRUE here
+function startsNewLine(tok) {
+	return ! tok || H.has(BR, tok[0]);
+}
+
+// eliminate terminators following INDENT or OUTDENT
+// but leave a TERMINATOR at the end of the file
+function cleanTerminators(tokens) {
+	var i = 0;
+	while (i < tokens.length) {
+		var prev = tokens[i-1];
+		if ('TERMINATOR' === tokens[i][0] && startsNewLine(prev)) {
+			tokens.splice(i, 1);
+			continue;
+		}
+		i++;
+	}
+
+	// ensure one last TERMINATOR
+	var last_tok = tokens[i-1];
+	if (last_tok[0] !== 'TERMINATOR') {
+		tokens.splice(i, 0, ['TERMINATOR', '', H.loc(last_tok)]);
+	}
+
+	return tokens;
+}
+
 function rewrite(tokens) {
-	return markFunctionParams(resolveBlocks(cpsArrow(tokens)));
+	return markFunctionParams(cleanTerminators(resolveBlocks(cpsArrow(tokens))));
 }
 
 
@@ -330,6 +353,7 @@ module.exports = {
 	rewriteCpsArrow: cpsArrow,
 	resolveBlocks: resolveBlocks,
 	markFunctionParams: markFunctionParams,
+	cleanTerminators: cleanTerminators,
 	rewrite: rewrite
 };
 

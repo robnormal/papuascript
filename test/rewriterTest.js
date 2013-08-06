@@ -1,5 +1,6 @@
 var L = require('../lexer.js');
 var R = require('../rewriter.js');
+var H = require('../helpers.js');
 var ID = 'IDENTIFIER', NUM = 'NUMBER', BR = 'TERMINATOR';
 
 function doesntThrow(assert, f, err) {
@@ -37,6 +38,16 @@ function eq(x, y) {
 	}}
 
 	return true;
+}
+
+var nowhere = H.here(0,0);
+function mkTokens(str) {
+	var toks = [], tags = str.split(/\s/);
+	for (var i = 0, len = tags.length; i < len; i++) {
+		toks.push([tags[i], '', nowhere]);
+	}
+
+	return toks;
 }
 
 module.exports = {
@@ -103,5 +114,17 @@ module.exports = {
 		var nl_text = '\n\nsome code';
 		var nl_toks = R.resolveBlocks(getTokens(nl_text));
 		assert.equal('some', nl_toks[0][1], 'Eliminates initial TERMINATORs');
+	},
+
+	'Removes redundant TERMINATORs': function(b, assert) {
+		var toks = mkTokens(
+			'IF IDENTIFIER INDENT TERMINATOR STRING OUTDENT TERMINATOR NUMBER TERMINATOR TERMINATOR STRING'
+		);
+		R.cleanTerminators(toks);
+
+		assert.equal(toks[3][0], 'STRING', 'Removes TERMINATOR after INDENT');
+		assert.equal(toks[5][0], 'NUMBER', 'Removes TERMINATOR after OUTDENT');
+		assert.equal(toks[7][0], 'STRING', 'Removes TERMINATOR after TERMINATOR');
+		assert.equal(toks[8][0], 'TERMINATOR', 'Ensures that document ends with a single TERMINATOR');
 	}
 };

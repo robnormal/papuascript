@@ -129,6 +129,7 @@ Term
 	| Invocation
 	| If
 	| Switch
+	| UNARY Term
 	;
 
 Atom 
