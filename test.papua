@@ -46,3 +46,11 @@ else if e
 else
 	g
 
+switch a
+	case 1:
+		b
+		b++
+	case 2:
+		c
+	default:
+		d

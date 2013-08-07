@@ -6,6 +6,10 @@ function error(msg, token) {
 }
 
 var BR = ['TERMINATOR', 'INDENT', 'OUTDENT'];
+var BLOCK_TAGS = [
+	'FOR', 'WHILE', 'DO', 'IF', 'ELSE',
+	'SWITCH', 'CASE', 'DEFAULT', 'TRY', 'CATCH', 'FINALLY'
+];
 
 // undefined (the beginning of the file) returns TRUE here
 function startsNewLine(tok) {
@@ -131,8 +135,6 @@ function cpsArrow(tokens) {
 
 	return tokens;
 }
-
-var BLOCK_TAGS = ['FOR', 'WHILE', 'DO', 'IF', 'ELSE', 'SWITCH', 'TRY', 'CATCH'];
 
 function fixFunctionBlocks(tokens) {
 	var i = 0, tag, start, line;
@@ -339,6 +341,8 @@ function resolveBlocks(tokens) {
 				break;
 
 			case 'ELSE':
+			case 'CASE':
+			case 'DEFAULT':
 			case 'CATCH':
 			case 'FINALLY':
 				// remove TERMINATOR before these keywords

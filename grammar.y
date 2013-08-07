@@ -359,7 +359,7 @@ ForHead
 Switch
 	: SWITCH Expression INDENT Cases OUTDENT
     { $$ = new N.Switch($2, $4, null); }
-	| SWITCH Expression INDENT Cases DEFAULT Expression ':' Block OUTDENT
+	| SWITCH Expression INDENT Cases DEFAULT ':' Block OUTDENT
     { $$ = new N.Switch($2, $4, [$6, $8]); }
 	;
 
