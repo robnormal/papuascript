@@ -1,11 +1,36 @@
+var $ = require('underscore');
+
+var to_list = function(xs) {
+	return xs.join(', ');
+}
+
+var objs_to_list = function(xs) {
+	var strs = [];
+	for (var i = 0, len = xs.length; i < len; i++) {
+		strs.push(xs[i].toString());
+	}
+
+	return to_list(strs);
+}
+
+var in_parens = function(xs) {
+	return '(' + to_list(xs) + ')';
+}
+
 function LOC() {}
+
+function Arr(xs) {
+	this.xs = xs;
+}
+$.extend(Arr.prototype, {
+	toString: function() {
+		return '[' + to_list(this.xs) + ']';
+	}
+});
+
 
 function Block(nodes) {
 	this.nodes = nodes;
-}
-Block.prototype.push = function(nodes) {
-	this.nodes.push(nodes);
-	return this;
 }
 
 Block.wrap = function(nodes) {
@@ -15,65 +40,29 @@ Block.wrap = function(nodes) {
 	return new Block(nodes);
 };
 
-function Assign(assignee, value, op) {
-	this.assignee = assignee;
-	this.value = value;
-	this.op = op;
-}
-function Operation() { this.args = arguments; }
+$.extend(Block.prototype, {
+	push: function(nodes) {
+		this.nodes.push(nodes);
+		return this;
+	},
+	toString: function() {
+		var str = '';
+		for (var i = 0, len = this.nodes.length; i < len; i++) {
+			str += this.nodes[i].toString() + '\n';
+		}
 
-function Code(params, body) {
-	this.params = params;
-	this.body = body;
-}
-
-function Obj()       { this.args = arguments; }
-function Access()    { this.args = arguments; }
-function Index()     { this.args = arguments; }
-function Arr()       { this.args = arguments; }
-function Try()       { this.args = arguments; }
-function Throw()     { this.args = arguments; }
-function Switch()    { this.args = arguments; }
-
-
-function While(cond, block) {
-	this.cond = cond;
-	this.block = block;
-}
-
-function For(loop) {
-	this.loop = loop;
-}
-For.prototype.setBlock = function(block) {
-	this.block = block;
-	return this;
-}
-
-function If(cond, block) {
-	this.condition = cond;
-	this.block = block;
-}
-If.prototype.addElse = function(block) {
-	this.elseBlock = block;
-	return this;
-}
-
-function FuncCall(name, args) {
-	this.name = name;
-	this.args = args;
-}
-FuncCall.prototype.addArg = function(arg) {
-	this.args.push(arg);
-
-	return this;
-}
+		return str;
+	}
+});
 
 function Literal(value) {
 	this.value = value;
 }
-Literal.prototype.toString = function() {
-	return ' "' + this.value + '"';
-};
+$.extend(Literal.prototype, {
+	toString: function() {
+		return ' "' + this.value + '"';
+	}
+});
 
 function Undefined() { }
 Undefined.prototype.isAssignable = false;
@@ -87,13 +76,84 @@ function Bool(val) {
 	this.val = val;
 }
 
+function Operation(op, a, b) {
+	this.op = op;
+	this.a = a;
+	this.b = b;
+}
+$.extend(Operation.prototype, {
+	toString: function() {
+		return this.a.toString() + ' ' + this.op.toString() + ' ' + this.b.toString();
+	}
+});
+
+function FuncCall(name, args) {
+	this.name = name;
+	this.args = args;
+}
+$.extend(FuncCall.prototype, {
+	addArg: function(arg) {
+		this.args.push(arg);
+
+		return this;
+	},
+	toString: function() {
+		return this.name + in_parens(this.args);
+	}
+});
+
+
+function Assign(assignee, op, value) {
+	this.assignee = assignee;
+	this.value = value;
+	this.op = op;
+}
+
+$.extend(Assign.prototype, {
+	toString: function() {
+		var str = this.assignee.toString() + this.op;
+		if (this.value) str += this.value.toString();
+
+		return str;
+	}
+});
+
+function Obj(props) {
+	this.props = props;
+}
+$.extend(Obj.prototype, {
+	toString: function() {
+		var strs = [];
+		for (var i = 0, len = this.props.length; i < len; i++) {
+			strs.push(this.props[i][0].toString() + ': ' + this.props[i][1].toString());
+		}
+
+		return '{ ' + to_list(strs) + '}';
+	}
+});
+
 function Return(expr) {
 	if (expr && !expr.unwrap().isUndefined) {
 		this.expression = expr;
 	}
 }
-Return.prototype.children = ['expression'];
-Return.prototype.isStatement = true;
+$.extend(Return.prototype, {
+	children: ['expression'],
+	isStatement: true,
+	toString: function() {
+		return 'return ' + this.expression.toString();
+	}
+});
+
+function Code(params, block) {
+	this.params = params;
+	this.block = block;
+}
+$.extend(Code.prototype, {
+	toString: function() {
+		return 'function' + in_parens(this.params) + ' {' + this.block.toString() + '}';
+	}
+});
 
 function Value(base, props, tag) {
 	if (!props && base instanceof Value) {
@@ -107,63 +167,198 @@ function Value(base, props, tag) {
 	return this;
 }
 
-Value.prototype.children = ['base', 'properties'];
-Value.prototype.add = function(props) {
-	this.properties = this.properties.concat(props);
-	return this;
-};
-
-Value.prototype.hasProperties = function() {
-	return !!this.properties.length;
-};
-
-Value.prototype.isArray = function() {
-	return !this.properties.length && this.base instanceof Arr;
-};
-
-Value.prototype.isComplex = function() {
-	return this.hasProperties() || this.base.isComplex();
-};
-
-Value.prototype.isAssignable = function() {
-	return this.hasProperties() || this.base.isAssignable();
-};
-
-Value.prototype.isAtomic = function() {
-	var node, _i, _len, _ref2;
-	_ref2 = this.properties.concat(this.base);
-	for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
-		node = _ref2[_i];
-	}
-	return true;
-};
-
-Value.prototype.isStatement = function(o) {
-	return !this.properties.length && this.base.isStatement(o);
-};
-
-Value.prototype.assigns = function(name) {
-	return !this.properties.length && this.base.assigns(name);
-};
-
-Value.prototype.jumps = function(o) {
-	return !this.properties.length && this.base.jumps(o);
-};
-
-Value.prototype.isObject = function(onlyGenerated) {
-	if (this.properties.length) {
-		return false;
-	}
-	return (this.base instanceof Obj) && (!onlyGenerated || this.base.generated);
-};
-
-Value.prototype.unwrap = function() {
-	if (this.properties.length) {
+$.extend(Value.prototype, {
+	children: ['base', 'properties'],
+	add: function(props) {
+		this.properties = this.properties.concat(props);
 		return this;
-	} else {
-		return this.base;
+	},
+
+	hasProperties: function() {
+		return !!this.properties.length;
+	},
+
+	isArray: function() {
+		return !this.properties.length && this.base instanceof Arr;
+	},
+
+	isComplex: function() {
+		return this.hasProperties() || this.base.isComplex();
+	},
+
+	isAssignable: function() {
+		return this.hasProperties() || this.base.isAssignable();
+	},
+
+	isAtomic: function() {
+		var node, _i, _len, _ref2;
+		_ref2 = this.properties.concat(this.base);
+		for (_i = 0, _len = _ref2.length; _i < _len; _i++) {
+			node = _ref2[_i];
+		}
+		return true;
+	},
+
+	isStatement: function(o) {
+		return !this.properties.length && this.base.isStatement(o);
+	},
+
+	assigns: function(name) {
+		return !this.properties.length && this.base.assigns(name);
+	},
+
+	jumps: function(o) {
+		return !this.properties.length && this.base.jumps(o);
+	},
+
+	isObject: function(onlyGenerated) {
+		if (this.properties.length) {
+			return false;
+		}
+		return (this.base instanceof Obj) && (!onlyGenerated || this.base.generated);
+	},
+
+	unwrap: function() {
+		if (this.properties.length) {
+			return this;
+		} else {
+			return this.base;
+		}
 	}
-};
+});
+
+
+function Access(member) {
+	this.member = member;
+}
+
+$.extend(Access.prototype, {
+	toString: function() {
+		return '.' + this.member;
+	}
+});
+
+function Index(i) {
+	this.i = i;
+}
+$.extend(Index.prototype, {
+	toString: function() {
+		return '[' + this.i + ']';
+	}
+});
+
+function Try(block, caught, catchBlock, finallyBlock) {
+	this.block = block;
+	this.caught = caught;
+	this.catchBlock = catchBlock;
+	this.finallyBlock = finallyBlock;
+}
+
+$.extend(Try.prototype, {
+	toString: function() {
+		var str = 'try ' + this.block.toString();
+		if (this.caught) {
+			str += 'catch(' + this.caught.toString() + ')' + this.catchBlock.toString();
+		}
+		if (this.finallyBlock) {
+			str += 'finally ' + this.finallyBlock.toString();
+		}
+
+		return str;
+	}
+});
+
+
+function Throw(expr) {
+	this.expr = expr;
+}
+
+$.extend(Throw.prototype, {
+	toString: function() {
+		return 'throw ' + this.expr.toString();
+	}
+});
+
+function While(cond, block) {
+	this.cond = cond;
+	this.block = block;
+}
+
+$.extend(While.prototype, {
+	toString: function() {
+		return 'while (' + this.cond.toString() + ') ' + this.block.toString();
+	}
+});
+
+function For(loop) {
+	this.loop = loop;
+}
+$.extend(For.prototype, {
+	setBlock: function(block) {
+		this.block = block;
+		return this;
+	},
+
+	toString: function() {
+		var blk = this.block.toString(), str;
+
+		if (this.loop.in) {
+			str = 'var _obj; for (' + this.loop.id + ' in (_obj=' + this.loop.obj.toString() + '))';
+
+			if (this.loop.own) {
+				str += '{ if (_obj.hasOwnProperty(' + this.loop.id + '))' +
+					blk + '}';
+			} else {
+				str += blk;
+			}
+		} else {
+			str = 'for (' +
+				this.loop.init.toString() + '; ' +
+				this.loop.check.toString() + '; ' +
+				this.loop.step.toString() + ')' + blk;
+		}
+
+		return str;
+	}
+});
+
+function Switch(expr, cases, deflt) {
+	this.expr = expr;
+	this.cases = cases;
+	this.deflt = deflt;
+}
+
+$.extend(Switch.prototype, {
+	toString: function() {
+		var str = 'switch (' + this.expr + ') {\n';
+		for (var i = 0, len = this.cases.length; i < len; i++) {
+			str += 'case ' + objs_to_list(this.cases[i][0]) + ':' +
+				this.cases[i][1].toString() + 'break;'
+		}
+
+		return str + '}';
+	}
+});
+
+function If(cond, block) {
+	this.condition = cond;
+	this.block = block;
+	this.elses = [];
+}
+$.extend(If.prototype, {
+	addElse: function(if_or_block) {
+		this.elses.push(if_or_block);
+		return this;
+	},
+	toString: function() {
+		var str = 'if (' + this.condition.toString() + ')' + this.block.toString();
+		for (var i = 0, len = this.elses; i < len; i++) {
+			str += 'else ' + this.elses[i].toString();
+		}
+
+		return str;
+	}
+});
 
 module.exports = {
 	LOC: LOC,

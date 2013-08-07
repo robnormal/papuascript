@@ -148,9 +148,9 @@ Invocation
 
 ArityInvocation
 	: Atom WS Atom
-		{ $$ = new N.FuncCall($1, [$2]); }
+		{ $$ = new N.FuncCall($1, [$3]); }
 	| Atom WS Code
-		{ $$ = new N.FuncCall($1, [$2]); }
+		{ $$ = new N.FuncCall($1, [$3]); }
 	| Atom WS ArityInvocation
 		{ $$ = $3.addArg($1); }
 	;
@@ -195,13 +195,13 @@ Literal
 /* increment and decrement are forms of assignment */
 Assignment
 	: Assignable '=' Expression
-    { $$ = new N.Assign($1, $3, $2); }
+    { $$ = new N.Assign($1, $2, $3); }
 	| UNARY_ASSIGN Assignable
-    { $$ = new N.Assign($2, null, $2); }
+    { $$ = new N.Assign($2, $1); }
 	| Assignable UNARY_ASSIGN
-    { $$ = new N.Assign($2, null, $2); }
+    { $$ = new N.Assign($1, $2); }
 	| Assignable COMPOUND_ASSIGN Expression
-    { $$ = new N.Assign($1, $3, $2); }
+    { $$ = new N.Assign($1, $2, $3); }
 	;
 
 Identifier
@@ -223,17 +223,16 @@ Object
 	;
 
 ObjectPropList
-	: 
-	| ObjectPropDef
+	: ObjectPropDef
 		{ $$ = [$1]; }
 	| ObjectPropList ',' ObjectPropDef
-		{ $$ = $1.concat($2); }
+		{ $$ = $1.concat([$3]); }
 	;
 
 /* definition of a property in an object literal */
 ObjectPropDef
 	: ObjProp ':' Expression
-    { $$ = new N.Assign(new N.Value($1), $3, 'object'); }
+    { $$ = [$1, $3]; }
 	;
 
 ObjProp
@@ -334,7 +333,7 @@ While
 	: "WHILE" Expression Block
 		{ $$ = new N.While($2, $3); }
 	| "DO" Block "WHILE" Expression 
-		{ $$ = new N.While($3, $2, true); }
+		{ $$ = new N.While($4, $2, true); }
 	;
 
 /* Array, object, and range comprehensions, at the most generic level.
@@ -347,9 +346,9 @@ For
 
 ForHead
 	: FOR Identifier IN Expression
-    { $$ = new N.For({ in: true, id: $2}); }
+    { $$ = new N.For({ in: true, id: $2, obj: $4}); }
 	| FOR OWN Identifier IN Expression
-    { $$ = new N.For({ in: true, own: true, id: $2}); }
+    { $$ = new N.For({ in: true, own: true, id: $2, obj: $4}); }
 	| FOR AssignList ';' Expression ';' AssignList
     { $$ = new N.For({ init: $2, check: $4, step: $6}); }
 	;
@@ -358,20 +357,20 @@ Switch
 	: SWITCH Expression INDENT Cases OUTDENT
     { $$ = new N.Switch($2, $4, null); }
 	| SWITCH Expression INDENT Cases DEFAULT ':' Block OUTDENT
-    { $$ = new N.Switch($2, $4, [$6, $8]); }
+    { $$ = new N.Switch($2, $4, $7); }
 	;
 
 Cases
 	: Case
 		{ $$ = [$1]; }
 	| Cases Case
-		{ $$ = $1.concat($2); }
+		{ $$ = $1.concat([$2]); }
 	;
 
 /* An individual **Case** clause, with action. */
 Case
 	: CASE ExpressionList ':' Block
-		{ $$ = $1.concat($2); }
+		{ $$ = [$2, $4]; }
 	;
 
 ExpressionList

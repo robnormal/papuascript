@@ -13,7 +13,7 @@
 toInt = \x -> parseInt x 10
 
 DBEmptyFailure = \query params ->
-	@err = { query: query, params: params }
+	@err = { query: q, params: xs }
 
 util.inherits DBEmptyFailure nodam.AsyncFailure
 
@@ -64,4 +64,6 @@ finally
 
 j = z[3]
 k = {a: 2, b: 4, c: { y: 'asrt' } }
+
+y + a 5 'yes'
 
