@@ -272,17 +272,15 @@ Assignable
 	| ThisProperty
 	;
 
-/* The general group of accessors into an object, by property
-/* or by array index */
+/* Indexing into an object or array using bracket notation. */
 Accessor
 	: '.' Identifier
     { $$ = new N.Access($2); }
 	| Index
 	;
 
-/* Indexing into an object or array using bracket notation. */
 Index
-	: INDEX_START Expression INDEX_END
+	: '[' Expression ']'
 		{ $$ = new N.Index($2); }
 	;
 

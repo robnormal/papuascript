@@ -54,3 +54,14 @@ switch a
 		c
 	default:
 		d
+
+try
+	a
+catch b
+	c
+finally
+	d
+
+j = z[3]
+k = {a: 2, b: 4, c: { y: 'asrt' } }
+

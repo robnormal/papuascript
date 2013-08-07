@@ -1,5 +1,4 @@
 function LOC() {}
-function Obj()       { this.args = arguments; }
 
 function Block(nodes) {
 	this.nodes = nodes;
@@ -22,20 +21,26 @@ function Assign(assignee, value, op) {
 	this.op = op;
 }
 function Operation() { this.args = arguments; }
+
 function Code(params, body) {
 	this.params = params;
 	this.body = body;
 }
+
+function Obj()       { this.args = arguments; }
 function Access()    { this.args = arguments; }
 function Index()     { this.args = arguments; }
 function Arr()       { this.args = arguments; }
 function Try()       { this.args = arguments; }
 function Throw()     { this.args = arguments; }
+function Switch()    { this.args = arguments; }
+
+
 function While(cond, block) {
 	this.cond = cond;
 	this.block = block;
 }
-function Switch()    { this.args = arguments; }
+
 function For(loop) {
 	this.loop = loop;
 }
@@ -66,7 +71,6 @@ FuncCall.prototype.addArg = function(arg) {
 function Literal(value) {
 	this.value = value;
 }
-
 Literal.prototype.toString = function() {
 	return ' "' + this.value + '"';
 };
