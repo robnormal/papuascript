@@ -44,8 +44,12 @@ var can_define_vars = function(node) {
 }
 
 var vars_defined = function(node) {
-	if (node instanceof Assign) {
-		return [node.assignee];
+	// := does not define a new variable
+	if (node instanceof Assign &&
+		node.op !== ':=' &&
+		(! node.assignee.properties || 0 === node.assignee.properties.length)
+	) {
+		return [node.assignee.toString()];
 	} else if (node instanceof Array) {
 		var defined = [];
 
@@ -53,7 +57,7 @@ var vars_defined = function(node) {
 			defined = defined.concat(vars_defined(node[i]));
 		}
 
-		return defined;
+		return $.uniq(defined);
 	} else if (can_define_vars(node) && node.children) {
 		return vars_defined(node.children());
 	} else {
@@ -104,11 +108,14 @@ $.extend(Block.prototype, {
 		var line_indent = Block.indent > 0 ? (brace_indent + '  ') : '';
 
 		var str = '';
+		if (Block.indent === 0) {
+			str = var_string(this);
+		}
+
 		for (var i = 0, len = this.nodes.length; i < len; i++) {
 			str += line_indent +
 				this.nodes[i].toString() + (this.nodes[i].needsSemicolon ? ';' : '') +
 				'\n';
-				// '  // ' + this.nodes[i].constructor.name + '\n';
 		}
 
 		if (braces) {
@@ -286,6 +293,12 @@ $.extend(Return.prototype, {
 	}
 });
 
+var var_string = function(node) {
+	var vars = vars_defined(node);
+
+	return vars.length ? 'var ' + vars.join(',') + ';\n' : '';
+};
+
 function Code(params, block) {
 	this.params = params;
 	this.block = block;
@@ -297,7 +310,8 @@ $.extend(Code.prototype, {
 	},
 
 	toString: function() {
-		return 'function' + in_parens(this.params) + ' {' + this.block.toString() + '}';
+		return 'function' + in_parens(this.params) + ' { ' + var_string(this) +
+			this.block.toString() + '}';
 	}
 });
 
