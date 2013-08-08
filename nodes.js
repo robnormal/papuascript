@@ -1,21 +1,35 @@
 var $ = require('underscore');
 
-var to_list = function(xs) {
-	return xs.join(', ');
-}
+var concat = function(xs) {
+	var str = '';
+	for (var i = 0, len = xs.length; i < len; i++) {
+		str += xs[i].toString();
+	}
 
-var objs_to_list = function(xs) {
+	return str;
+};
+
+var to_list = function(xs) {
 	var strs = [];
 	for (var i = 0, len = xs.length; i < len; i++) {
 		strs.push(xs[i].toString());
 	}
 
-	return to_list(strs);
-}
+	return strs.join(', ');
+};
 
 var in_parens = function(xs) {
 	return '(' + to_list(xs) + ')';
-}
+};
+
+var repeat = function(str, n) {
+	var res = '';
+	for(var i = 0; i < n; i++) {
+		res += str;
+	}
+
+	return res;
+};
 
 function LOC() {}
 
@@ -39,18 +53,34 @@ Block.wrap = function(nodes) {
 	}
 	return new Block(nodes);
 };
+Block.indent = -1;
 
 $.extend(Block.prototype, {
 	push: function(nodes) {
 		this.nodes.push(nodes);
 		return this;
 	},
-	toString: function() {
+
+	toString: function(braces) {
+		Block.indent++;
+		var brace_indent = repeat('  ', Block.indent - 1);
+		var line_indent = Block.indent > 0 ? (brace_indent + '  ') : '';
+
 		var str = '';
 		for (var i = 0, len = this.nodes.length; i < len; i++) {
-			str += this.nodes[i].toString() + '\n';
+			str += line_indent +
+				this.nodes[i].toString() + (this.nodes[i].needsSemicolon ? ';' : '') +
+				'\n';
+				// '  // ' + this.nodes[i].constructor.name + '\n';
 		}
 
+		if (braces) {
+			str = brace_indent + ' {\n' + str + '\n' + brace_indent + '}';
+		} else {
+			str = '\n' + str;
+		}
+
+		Block.indent--;
 		return str;
 	}
 });
@@ -60,7 +90,17 @@ function Literal(value) {
 }
 $.extend(Literal.prototype, {
 	toString: function() {
-		return ' "' + this.value + '"';
+		return this.value;
+	}
+});
+
+function Identifier(value) {
+	this.value = value;
+}
+$.extend(Identifier.prototype, {
+	needsSemicolon: true,
+	toString: function() {
+		return this.value;
 	}
 });
 
@@ -82,23 +122,24 @@ function Operation(op, a, b) {
 	this.b = b;
 }
 $.extend(Operation.prototype, {
+	needsSemicolon: true,
 	toString: function() {
 		return this.a.toString() + ' ' + this.op.toString() + ' ' + this.b.toString();
 	}
 });
 
-function FuncCall(name, args) {
-	this.name = name;
-	this.args = args;
+function FuncCall(factors) {
+	this.factors = factors;
 }
 $.extend(FuncCall.prototype, {
-	addArg: function(arg) {
-		this.args.push(arg);
+	needsSemicolon: true,
+	prependFactor: function(arg) {
+		this.factors.unshift(arg);
 
 		return this;
 	},
 	toString: function() {
-		return this.name + in_parens(this.args);
+		return this.factors[0].toString() + in_parens(this.factors.slice(1));
 	}
 });
 
@@ -111,12 +152,29 @@ function Assign(assignee, op, value) {
 
 $.extend(Assign.prototype, {
 	toString: function() {
-		var str = this.assignee.toString() + this.op;
-		if (this.value) str += this.value.toString();
+		var str = this.assignee.toString() + ' ' + this.op;
+		if (this.value) str += ' ' + this.value.toString();
 
 		return str;
 	}
 });
+
+function AssignList(assigns) {
+	this.assigns = assigns;
+}
+
+$.extend(AssignList.prototype, {
+	needsSemicolon: true,
+	add: function(assign) {
+		this.assigns.push(assign);
+		return this;
+	},
+
+	toString: function() {
+		return to_list(this.assigns);
+	}
+});
+
 
 function Obj(props) {
 	this.props = props;
@@ -150,6 +208,7 @@ function Code(params, block) {
 	this.block = block;
 }
 $.extend(Code.prototype, {
+	needsSemicolon: true,
 	toString: function() {
 		return 'function' + in_parens(this.params) + ' {' + this.block.toString() + '}';
 	}
@@ -172,6 +231,10 @@ $.extend(Value.prototype, {
 	add: function(props) {
 		this.properties = this.properties.concat(props);
 		return this;
+	},
+
+	toString: function() {
+		return this.base + concat(this.properties);
 	},
 
 	hasProperties: function() {
@@ -234,16 +297,16 @@ function Access(member) {
 
 $.extend(Access.prototype, {
 	toString: function() {
-		return '.' + this.member;
+		return '.' + this.member.toString();
 	}
 });
 
-function Index(i) {
-	this.i = i;
+function Index(expr) {
+	this.expr = expr;
 }
 $.extend(Index.prototype, {
 	toString: function() {
-		return '[' + this.i + ']';
+		return '[' + this.expr.toString() + ']';
 	}
 });
 
@@ -256,12 +319,12 @@ function Try(block, caught, catchBlock, finallyBlock) {
 
 $.extend(Try.prototype, {
 	toString: function() {
-		var str = 'try ' + this.block.toString();
+		var str = 'try {' + this.block.toString() + '}';
 		if (this.caught) {
-			str += 'catch(' + this.caught.toString() + ')' + this.catchBlock.toString();
+			str += ' catch(' + this.caught.toString() + ') {' + this.catchBlock.toString() + '}';
 		}
 		if (this.finallyBlock) {
-			str += 'finally ' + this.finallyBlock.toString();
+			str += ' finally {' + this.finallyBlock.toString() + '}';
 		}
 
 		return str;
@@ -286,7 +349,7 @@ function While(cond, block) {
 
 $.extend(While.prototype, {
 	toString: function() {
-		return 'while (' + this.cond.toString() + ') ' + this.block.toString();
+		return 'while (' + this.cond.toString() + ') ' + this.block.toString(true);
 	}
 });
 
@@ -300,7 +363,9 @@ $.extend(For.prototype, {
 	},
 
 	toString: function() {
-		var blk = this.block.toString(), str;
+		var
+			blk = this.block.toString(true),
+			str;
 
 		if (this.loop.in) {
 			str = 'var _obj; for (' + this.loop.id + ' in (_obj=' + this.loop.obj.toString() + '))';
@@ -326,14 +391,21 @@ function Switch(expr, cases, deflt) {
 	this.expr = expr;
 	this.cases = cases;
 	this.deflt = deflt;
+
+	// FIXME: this is a hack; 'break' is not a valid identifier
+	if (this.cases) {
+		for (var i = 0, len = this.cases.length; i < len; i++) {
+			this.cases[i][1].push(new Identifier('break'));
+		}
+	}
 }
 
 $.extend(Switch.prototype, {
 	toString: function() {
 		var str = 'switch (' + this.expr + ') {\n';
 		for (var i = 0, len = this.cases.length; i < len; i++) {
-			str += 'case ' + objs_to_list(this.cases[i][0]) + ':' +
-				this.cases[i][1].toString() + 'break;'
+			str += 'case ' + to_list(this.cases[i][0]) + ':' +
+				this.cases[i][1].toString();
 		}
 
 		return str + '}';
@@ -351,9 +423,16 @@ $.extend(If.prototype, {
 		return this;
 	},
 	toString: function() {
-		var str = 'if (' + this.condition.toString() + ')' + this.block.toString();
+		var str = 'if (' + this.condition.toString() + ') {' + this.block.toString() + '}';
+		var else_text;
 		for (var i = 0, len = this.elses; i < len; i++) {
-			str += 'else ' + this.elses[i].toString();
+			else_text = this.elses[i].toString();
+			// don't put a brace between else and if
+			if (else_text instanceof If) {
+				else_text = 'else ' + else_text;
+			} else {
+				else_text = 'else {' + else_text + '}';
+			}
 		}
 
 		return str;
@@ -365,6 +444,7 @@ module.exports = {
 	Obj: Obj,
 	Block: Block,
 	Assign: Assign,
+	AssignList: AssignList,
 	Operation: Operation,
 	Code: Code,
 	Access: Access,
@@ -377,6 +457,7 @@ module.exports = {
 	If: If,
 	For: For,
 	Literal: Literal,
+	Identifier: Identifier,
 	Null: Null,
 	Undefined: Undefined,
 	Value: Value,

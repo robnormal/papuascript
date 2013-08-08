@@ -135,6 +135,7 @@ Term
 Atom 
 	: Literal
 	| Assignable
+	| Accessor
 	| Object
 	| Array
 	| Parenthetical
@@ -148,11 +149,11 @@ Invocation
 
 ArityInvocation
 	: Atom WS Atom
-		{ $$ = new N.FuncCall($1, [$3]); }
+		{ $$ = new N.FuncCall([$1, $3]); }
 	| Atom WS Code
-		{ $$ = new N.FuncCall($1, [$3]); }
+		{ $$ = new N.FuncCall([$1, $3]); }
 	| Atom WS ArityInvocation
-		{ $$ = $3.addArg($1); }
+		{ $$ = $3.prependFactor($1); }
 	;
 
 /* An indented block of expressions. Note that the [Rewriter](rewriter.html)
@@ -169,20 +170,20 @@ Block
 they can also serve as keys in object literals. */
 AlphaNumeric
 	: NUMBER
-    { $$ = new N.Literal($1); }
+    { $$ = new N.Literal(yytext); }
 	| STRING
-    { $$ = new N.Literal($1); }
+    { $$ = new N.Literal(yytext); }
 	;
 
 /* All of our immediate values. Generally these can be passed straight
 /* through and printed to JavaScript. */
 Literal
 	: AlphaNumeric
-    { $$ = new N.Literal($1); }
+    { $$ = new N.Literal(yytext); }
 	| REGEX
-    { $$ = new N.Literal($1); }
+    { $$ = new N.Literal(yytext); }
 	| DEBUGGER
-    { $$ = new N.Literal($1); }
+    { $$ = new N.Literal(yytext); }
 	| UNDEFINED
     { $$ = new N.Undefined(); }
 	| NULL
@@ -206,15 +207,15 @@ Assignment
 
 Identifier
 	: IDENTIFIER
-    { $$ = new N.Literal($1); }
+    { $$ = new N.Identifier(yytext); }
 	;
 
 /* Comma-separated assignments */
 AssignList
 	: Assignment
-		{ $$ = [$1]; }
+		{ $$ = new N.AssignList([$1]); }
 	| AssignList ',' Assignment
-		{ $$ = $1.concat($2); }
+		{ $$ = $1.add($2); }
 	;
 
 Object
@@ -266,9 +267,11 @@ FnLitParams
 /* Variables and properties that can be assigned to. */
 Assignable
 	: Identifier
-	| Atom Accessor
-		{ $$ = new N.Value($1).add($2); }
 	| ThisProperty
+	| Parenthetical Accessor
+		{ $$ = new N.Value($1).add($2); }
+	| Assignable Accessor
+		{ $$ = new N.Value($1).add($2); }
 	;
 
 /* Indexing into an object or array using bracket notation. */
@@ -286,13 +289,14 @@ Index
 /* A reference to a property on *this*. */
 ThisProperty
 	: '@' Identifier
+		{ $$ = new N.Value(new N.Identifier('this'), [new N.Access($2)]); }
 	;
 
 /* The array literal. */
 Array
-	: '[' ']'
+	: WS '[' ']'
     { $$ = new N.Arr([]); }
-	| '[' Arguments ']'
+	| WS '[' Arguments ']'
     { $$ = new N.Arr($2); }
 	;
 
@@ -395,9 +399,9 @@ Binary
 /* where only values are accepted, wrapping it in parentheses will always do
 /* the trick. */
 Parenthetical
-	: '(' Body ')'
+	: '(' Expression ')'
 		{ $$ = $2; }
-	| '(' INDENT Body OUTDENT ')'
+	| '(' INDENT Expression OUTDENT ')'
 		{ $$ = $3; }
 	;
 

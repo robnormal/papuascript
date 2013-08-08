@@ -50,6 +50,44 @@ function throwSyntaxError(message, location) {
 	throw error;
 }
 
+var buildLocationData = function(first, last) {
+	if (!last) {
+		return first;
+	} else {
+		return {
+			first_line: first.first_line,
+			first_column: first.first_column,
+			last_line: last.last_line,
+			last_column: last.last_column
+		};
+	}
+};
+
+var addLocationDataFn = function(first, last) {
+	return function(obj) {
+		if (((typeof obj) === 'object') && obj['updateLocationDataIfMissing']) {
+			obj.updateLocationDataIfMissing(buildLocationData(first, last));
+		}
+		return obj;
+	};
+};
+
+var locationDataToString = function(obj) {
+	var locationData;
+	if (("2" in obj) && ("first_line" in obj[2])) {
+		locationData = obj[2];
+	} else if ("first_line" in obj) {
+		locationData = obj;
+	}
+
+	if (locationData) {
+		return ("" + (locationData.first_line + 1) + ":" + (locationData.first_column + 1) + "-") +
+			("" + (locationData.last_line + 1) + ":" + (locationData.last_column + 1));
+	} else {
+		return "No location data";
+	}
+};
+
 module.exports = {
 	has: has,
 	last: last,

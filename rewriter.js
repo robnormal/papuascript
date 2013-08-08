@@ -307,7 +307,7 @@ function resolveBlocks(tokens) {
 					tokens.splice(i, 1);
 				} else {
 					// make sure TERMINATOR follows OUTDENT
-					if ('TERMINATOR' !== tokens[i+1][0] && 'OUTDENT' !== tokens[i+1][0]) {
+					if (tokens[i+1] && 'TERMINATOR' !== tokens[i+1][0] && 'OUTDENT' !== tokens[i+1][0]) {
 						tokens.splice(i+1, 0, ['TERMINATOR', '', H.loc(tokens[i])]);
 					}
 

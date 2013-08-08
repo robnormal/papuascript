@@ -114,6 +114,9 @@ var INDEXABLE = CALLABLE.concat('NUMBER', 'BOOL', 'NULL', 'UNDEFINED');
 
 
 Lexer.prototype = {
+	options: {
+		ranges: false
+	},
 	setInput: function(s) {
 		this.text = s;
 		this.fixed_tokens = R.rewrite(this.tokenize(this.text));
@@ -127,16 +130,24 @@ Lexer.prototype = {
 			this.lex_index++;
 			this.yylineno = token[2].first_line;
 			this._pos = token[2].first_column;
+
+			/*
 			if (token[0] === 'IDENTIFIER') {
 				this.yytext = token[1];
 			} else {
 				this.yytext = token[0];
 			}
+			*/
+			this.yytext = token[1];
 
 			return token[0];
 		}
 	},
-	
+
+	place: function() {
+		return this.lex_index;
+	},
+
 	showPosition: function() {
 		return this.yytext + ' <- at ' + this._pos;
 	},
