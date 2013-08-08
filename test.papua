@@ -9,6 +9,7 @@
 	returned by calling print now, or it could be a function
 	that takes no arguments and calls that
 */
+
 util = require 'util'
 
 toInt = \x -> parseInt x 10
@@ -65,9 +66,6 @@ finally
 
 j = z[3]
 k = {a: 2, b: 4, c: { y: 'asrt' } }
-
-closure = \ ->
-	j := 5
 
 y = a
 	5

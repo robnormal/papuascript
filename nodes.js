@@ -199,6 +199,11 @@ $.extend(FuncCall.prototype, {
 
 		return this;
 	},
+	appendFactor: function(arg) {
+		this.factors.push(arg);
+
+		return this;
+	},
 	toString: function() {
 		return this.factors[0].toString() + in_parens(this.factors.slice(1));
 	},

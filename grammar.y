@@ -134,26 +134,47 @@ Term
 
 Atom 
 	: Literal
-	| Assignable
-	| Accessor
+	| Callable
 	| Object
 	| Array
+	;
+
+Callable
+	: Assignable
 	| Parenthetical
 	;
 
+/* Variables and properties that can be assigned to. */
+Assignable
+	: Identifier
+	| ThisProperty
+	| Parenthetical Accessor
+		{ $$ = new N.Value($1).add($2); }
+	| Assignable Accessor
+		{ $$ = new N.Value($1).add($2); }
+	;
+
 Invocation
-	: Atom '(' ')'
+	: Callable '(' ')'
 		{ $$ = new N.FuncCall($1); }
 	| ArityInvocation
+	| CodeInvocation
 	;
 
 ArityInvocation
-	: Atom WS Atom
+	: Callable WS Atom
 		{ $$ = new N.FuncCall([$1, $3]); }
-	| Atom WS Code
+	| Atom '`' Callable '`'
+		{ $$ = new N.FuncCall([$3, $1]); }
+	| ArityInvocation WS Atom
+		{ $$ = $1.appendFactor($3); }
+	;
+
+CodeInvocation
+	: Callable WS Code
 		{ $$ = new N.FuncCall([$1, $3]); }
-	| Atom WS ArityInvocation
-		{ $$ = $3.prependFactor($1); }
+	| ArityInvocation WS Code
+		{ $$ = $1.appendFactor($3); }
 	;
 
 /* An indented block of expressions. Note that the [Rewriter](rewriter.html)
@@ -264,16 +285,6 @@ FnLitParams
 		{ $$ = [$1]; }
 	| FnLitParams Identifier FN_LIT_PARAM
 		{ $$ = $1.concat($2); }
-	;
-
-/* Variables and properties that can be assigned to. */
-Assignable
-	: Identifier
-	| ThisProperty
-	| Parenthetical Accessor
-		{ $$ = new N.Value($1).add($2); }
-	| Assignable Accessor
-		{ $$ = new N.Value($1).add($2); }
 	;
 
 /* Indexing into an object or array using bracket notation. */
