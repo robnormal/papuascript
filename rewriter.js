@@ -418,6 +418,13 @@ function markFunctionParams(tokens) {
 			i++;
 		}
 
+		// Take this opportunity to mark SPACEDOTs
+		if ('.' === tag && (!prev || prev.spaced)) {
+			tokens.splice(i, 1,
+				['SPACEDOT', '.', H.loc(tokens[i])]
+			);
+		}
+
 		i++;
 	}
 

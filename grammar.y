@@ -39,7 +39,7 @@ var N = require('./nodes.js');
 %token UNDEFINED
 %token FN_LIT_PARAM
 %token WS
-
+%token SPACEDOT
 
 /* Precedence
 /* ----------
@@ -61,6 +61,7 @@ var N = require('./nodes.js');
 %left      "RELATION"
 %left      "COMPARE"
 %left      "LOGIC"
+%left      "SPACEDOT"
 %nonassoc  "INDENT" "OUTDENT"
 %right     "=" ":" "COMPOUND_ASSIGN" "RETURN" "THROW"
 %right     "IN" "CASE"
@@ -129,8 +130,28 @@ Term
 	| Invocation
 	| If
 	| Switch
-	| Unary Term
+	| Unary Atom
 		{ $$ = $1.setTerm($2); }
+	| Unary Invocation
+		{ $$ = $1.setTerm($2); }
+	| Assignable Chain
+		{ $$ = N.FuncCall.fromChain($1, $2); }
+	| Invocation Chain
+		{ $$ = N.FuncCall.fromChain($1, $2); }
+	;
+
+Link
+	: SPACEDOT Identifier
+    { $$ = $2; }
+	| SPACEDOT MethodCall
+    { $$ = $2; }
+	;
+
+Chain
+	: Link
+    { $$ = [$1]; }
+	| Chain Link
+    { $1.push($2); $$ = $1; }
 	;
 
 Unary
@@ -163,23 +184,38 @@ Assignable
 	;
 
 Invocation
-	: ArityInvocation
+	: NonCodeInvocation
 	| CodeInvocation
 	;
 
 ArityInvocation
 	: Callable WS Atom
 		{ $$ = new N.FuncCall([$1, $3]); }
-	| Atom '`' Callable '`'
-		{ $$ = new N.FuncCall([$3, $1]); }
-	| ArityInvocation WS Atom
+	| NonCodeInvocation WS Atom
 		{ $$ = $1.appendFactor($3); }
+	;
+
+MethodCall
+	: Identifier WS Atom
+		{ $$ = new N.FuncCall([$1, $3]); }
+	| MethodCall WS Atom
+		{ $$ = $1.appendFactor($3); }
+	;
+
+ReverseInvocation
+	: Atom '`' Assignable '`'
+		{ $$ = new N.FuncCall([$3, $1]); }
+	;
+
+NonCodeInvocation
+	: ArityInvocation
+	| ReverseInvocation
 	;
 
 CodeInvocation
 	: Callable WS Code
 		{ $$ = new N.FuncCall([$1, $3]); }
-	| ArityInvocation WS Code
+	| NonCodeInvocation WS Code
 		{ $$ = $1.appendFactor($3); }
 	;
 

@@ -225,6 +225,13 @@ module.exports = {
 		R.convertPoundSign(toks);
 		assert.ok(tags_equal(toks, expected), 'parens include to EOF if no break or closing container');
 
+	},
+
+	'dot preceded by whitespace becomes SPACEDOT': function(b, assert) {
+		var toks = getTokens('foo .bar 10');
+		R.markFunctionParams(toks);
+		assert.equal(toks[1][0], 'SPACEDOT', 'replaces dot with SPACEDOT');
+		assert.equal(toks[2][1], 'bar', 'removes dot');
 	}
 
 };

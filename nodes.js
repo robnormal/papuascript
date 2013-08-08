@@ -244,8 +244,10 @@ $.extend(Operation.prototype, {
 	}
 });
 
-function FuncCall(factors) {
+// a FuncCall can have properties, as in getDB(name, passwd).address
+function FuncCall(factors, props) {
 	this.factors = factors;
+	this.properties = props || [];
 }
 $.extend(FuncCall.prototype, {
 	is_expression: true,
@@ -261,13 +263,41 @@ $.extend(FuncCall.prototype, {
 		return this;
 	},
 	toString: function() {
-		return this.factors[0].toString() + in_parens(this.factors.slice(1));
+		var str = this.factors[0].toString() + in_parens(this.factors.slice(1));
+
+		for (var i in this.properties) if (this.properties.hasOwnProperty(i)) {
+			str += this.properties[i].toString();
+		}
+
+		return str;
 	},
 	children: function() {
 		return this.factors;
+	},
+	addProperty: function(prop) {
+		this.properties.push(prop);
+		return this;
+	}
+});
+FuncCall.fromChain = function(call_or_factor, chain) {
+	var
+		base = call_or_factor,
+		accessor, link;
+
+	console.log(chain.length);
+	for (var i in chain) if (chain.hasOwnProperty(i)) {
+		link = chain[i];
+
+		if (link instanceof FuncCall) {
+			link.factors[0] = base.addProperty(new Access(link.factors[0]));
+			base = link;
+		} else {
+			base = base.addProperty(new Access(link));
+		}
 	}
 
-});
+	return base;
+}
 
 
 function Assign(assignee, op, value) {
