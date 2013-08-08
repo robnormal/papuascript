@@ -66,6 +66,9 @@ finally
 j = z[3]
 k = {a: 2, b: 4, c: { y: 'asrt' } }
 
+closure = \ ->
+	j := 5
+
 y = a
 	5
 	'yes'

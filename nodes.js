@@ -1,4 +1,5 @@
 var $ = require('underscore');
+var Block, AssignList, Try, While, For, If, Switch, Assign;
 
 var concat = function(xs) {
 	var str = '';
@@ -31,19 +32,51 @@ var repeat = function(str, n) {
 	return res;
 };
 
+var can_define_vars = function(node) {
+	// Code cannot define vars for enclosing scope
+	return node instanceof AssignList ||
+		node instanceof Block ||
+		node instanceof If ||
+		node instanceof For ||
+		node instanceof While ||
+		node instanceof Switch ||
+		node instanceof Try;
+}
+
+var vars_defined = function(node) {
+	if (node instanceof Assign) {
+		return [node.assignee];
+	} else if (node instanceof Array) {
+		var defined = [];
+
+		for (var i = 0, len = node.length; i < len; i++) {
+			defined = defined.concat(vars_defined(node[i]));
+		}
+
+		return defined;
+	} else if (can_define_vars(node) && node.children) {
+		return vars_defined(node.children());
+	} else {
+		return [];
+	}
+}
+
 function LOC() {}
 
 function Arr(xs) {
 	this.xs = xs;
 }
 $.extend(Arr.prototype, {
+	children: function() {
+		return [];
+	},
 	toString: function() {
 		return '[' + to_list(this.xs) + ']';
 	}
 });
 
 
-function Block(nodes) {
+Block = function(nodes) {
 	this.nodes = nodes;
 }
 
@@ -59,6 +92,10 @@ $.extend(Block.prototype, {
 	push: function(nodes) {
 		this.nodes.push(nodes);
 		return this;
+	},
+
+	children: function() {
+		return this.nodes;
 	},
 
 	toString: function(braces) {
@@ -82,6 +119,14 @@ $.extend(Block.prototype, {
 
 		Block.indent--;
 		return str;
+	},
+
+	/**
+	 * @param existing array List of variables in the outside scope
+	 */
+	resolveVars: function(existing) {
+		var defined = vars_defined(this);
+		return defined;
 	}
 });
 
@@ -91,6 +136,10 @@ function Literal(value) {
 $.extend(Literal.prototype, {
 	toString: function() {
 		return this.value;
+	},
+
+	children: function() {
+		return [];
 	}
 });
 
@@ -101,16 +150,25 @@ $.extend(Identifier.prototype, {
 	needsSemicolon: true,
 	toString: function() {
 		return this.value;
+	},
+	children: function() {
+		return [];
 	}
 });
 
 function Undefined() { }
 Undefined.prototype.isAssignable = false;
 Undefined.prototype.isComplex = false;
+Undefined.prototype.children = function() {
+		return [];
+	};
 
 function Null() { }
 Null.prototype.isAssignable = false;
 Null.prototype.isComplex = false;
+Null.prototype.children = function() {
+		return [];
+	};
 
 function Bool(val) {
 	this.val = val;
@@ -125,6 +183,9 @@ $.extend(Operation.prototype, {
 	needsSemicolon: true,
 	toString: function() {
 		return this.a.toString() + ' ' + this.op.toString() + ' ' + this.b.toString();
+	},
+	children: function() {
+		return [this.a, this.b];
 	}
 });
 
@@ -140,7 +201,11 @@ $.extend(FuncCall.prototype, {
 	},
 	toString: function() {
 		return this.factors[0].toString() + in_parens(this.factors.slice(1));
+	},
+	children: function() {
+		return this.factors;
 	}
+
 });
 
 
@@ -156,7 +221,11 @@ $.extend(Assign.prototype, {
 		if (this.value) str += ' ' + this.value.toString();
 
 		return str;
+	},
+	children: function() {
+		return [];
 	}
+
 });
 
 function AssignList(assigns) {
@@ -165,6 +234,9 @@ function AssignList(assigns) {
 
 $.extend(AssignList.prototype, {
 	needsSemicolon: true,
+	children: function() {
+		return this.assigns;
+	},
 	add: function(assign) {
 		this.assigns.push(assign);
 		return this;
@@ -187,6 +259,9 @@ $.extend(Obj.prototype, {
 		}
 
 		return '{ ' + to_list(strs) + '}';
+	},
+	children: function() {
+		return this.props;
 	}
 });
 
@@ -196,7 +271,10 @@ function Return(expr) {
 	}
 }
 $.extend(Return.prototype, {
-	children: ['expression'],
+	children: function() {
+		return [this.expression];
+	},
+
 	isStatement: true,
 	toString: function() {
 		return 'return ' + this.expression.toString();
@@ -209,25 +287,30 @@ function Code(params, block) {
 }
 $.extend(Code.prototype, {
 	needsSemicolon: true,
+	children: function() {
+		return [this.params, this.block];
+	},
+
 	toString: function() {
 		return 'function' + in_parens(this.params) + ' {' + this.block.toString() + '}';
 	}
 });
 
-function Value(base, props, tag) {
+function Value(base, props) {
 	if (!props && base instanceof Value) {
 		return base;
 	}
 	this.base = base;
 	this.properties = props || [];
-	if (tag) {
-		this[tag] = true;
-	}
+
 	return this;
 }
 
 $.extend(Value.prototype, {
-	children: ['base', 'properties'],
+	children: function() {
+		return [this.base, this.properties];
+	},
+
 	add: function(props) {
 		this.properties = this.properties.concat(props);
 		return this;
@@ -298,7 +381,11 @@ function Access(member) {
 $.extend(Access.prototype, {
 	toString: function() {
 		return '.' + this.member.toString();
+	},
+	children: function() {
+		return [this.member];
 	}
+
 });
 
 function Index(expr) {
@@ -307,6 +394,9 @@ function Index(expr) {
 $.extend(Index.prototype, {
 	toString: function() {
 		return '[' + this.expr.toString() + ']';
+	},
+	children: function() {
+		return [this.expr];
 	}
 });
 
@@ -328,6 +418,9 @@ $.extend(Try.prototype, {
 		}
 
 		return str;
+	},
+	children: function() {
+		return [this.block, this.caught, this.catchBlock, this.finallyBlock];
 	}
 });
 
@@ -339,6 +432,9 @@ function Throw(expr) {
 $.extend(Throw.prototype, {
 	toString: function() {
 		return 'throw ' + this.expr.toString();
+	},
+	children: function() {
+		return [];
 	}
 });
 
@@ -350,16 +446,29 @@ function While(cond, block) {
 $.extend(While.prototype, {
 	toString: function() {
 		return 'while (' + this.cond.toString() + ') ' + this.block.toString(true);
+	},
+	children: function() {
+		return [this.cond, this.block];
 	}
 });
 
-function For(loop) {
+function For(loop, block) {
 	this.loop = loop;
+	this.block = block;
 }
 $.extend(For.prototype, {
 	setBlock: function(block) {
 		this.block = block;
 		return this;
+	},
+	children: function() {
+		var children = [];
+		for (var x in this.loop) if (this.loop.hasOwnProperty(x)) {
+			children.push(this.loop[x]);
+		}
+		children.push(this.block);
+
+		return children;
 	},
 
 	toString: function() {
@@ -387,7 +496,7 @@ $.extend(For.prototype, {
 	}
 });
 
-function Switch(expr, cases, deflt) {
+Switch = function(expr, cases, deflt) {
 	this.expr = expr;
 	this.cases = cases;
 	this.deflt = deflt;
@@ -409,7 +518,11 @@ $.extend(Switch.prototype, {
 		}
 
 		return str + '}';
+	},
+	children: function() {
+		return [this.expr, this.cases, this.deflt];
 	}
+
 });
 
 function If(cond, block) {
@@ -436,7 +549,11 @@ $.extend(If.prototype, {
 		}
 
 		return str;
+	},
+	children: function() {
+		return [this.condition, this.block, this.elses];
 	}
+
 });
 
 module.exports = {

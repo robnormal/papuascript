@@ -255,6 +255,8 @@ Return
 Code
 	: '\' FnLitParams "->" Block
 		{ $$ = new N.Code($2, $4); }
+	| '\' "->" Block
+		{ $$ = new N.Code([], $3); }
 	;
 
 FnLitParams
