@@ -178,10 +178,12 @@ module.exports = {
 	},
 
 	'Treats DO WHILE correctly': function(b, assert) {
+		var toks;
 
 		toks = mkTokens(
 			'DO INDENT IDENTIFIER OUTDENT WHILE IDENTIFIER TERMINATOR NUMBER'
 		);
+
 		try {
 			R.resolveBlocks(toks);
 		} catch (e) {
@@ -191,6 +193,38 @@ module.exports = {
 			'DO INDENT IDENTIFIER OUTDENT WHILE IDENTIFIER TERMINATOR NUMBER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Knows that the WHILE goes with the preceding DO');
+	},
+
+	'"#" parenthesizes the rest of the expression': function(b, assert) {
+		var toks;
+
+		toks = mkTokens(
+			'IDENTIFIER NUMBER # IDENTIFIER MATH NUMBER TERMINATOR IDENTIFIER'
+		);
+		expected = mkTokens(
+			'IDENTIFIER NUMBER ( IDENTIFIER MATH NUMBER ) TERMINATOR IDENTIFIER'
+		);
+		R.convertPoundSign(toks);
+		assert.ok(tags_equal(toks, expected), 'parens include rest of line');
+
+		toks = mkTokens(
+			'IDENTIFIER ( NUMBER # IDENTIFIER MATH NUMBER ) NUMBER'
+		);
+		expected = mkTokens(
+			'IDENTIFIER ( NUMBER ( IDENTIFIER MATH NUMBER ) ) NUMBER'
+		);
+		R.convertPoundSign(toks);
+		assert.ok(tags_equal(toks, expected), 'parens only extend to enclosing paren or container');
+
+		toks = mkTokens(
+			'IDENTIFIER NUMBER # IDENTIFIER MATH NUMBER'
+		);
+		expected = mkTokens(
+			'IDENTIFIER NUMBER ( IDENTIFIER MATH NUMBER )'
+		);
+		R.convertPoundSign(toks);
+		assert.ok(tags_equal(toks, expected), 'parens include to EOF if no break or closing container');
+
 	}
 
 };

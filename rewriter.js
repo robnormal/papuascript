@@ -388,7 +388,7 @@ function markFunctionParams(tokens) {
 		i = 0,
 		param_list = false; // whether we are waiting for a block (e.g., in a WHILE condition)
 
-	// arrays and objects can be 
+	// arrays and objects can be
 	while (i < tokens.length) {
 		var tag = tokens[i][0];
 		var prev = tokens[i-1];
@@ -475,12 +475,75 @@ function cleanTerminators(tokens) {
 	return tokens;
 }
 
+// FIXME: lots of dumb repeated code
+function finishPound(tokens, pos) {
+	var nested = 0;
+
+	while (tokens[pos]) {
+		switch (tokens[pos][0]) {
+		case '#':
+			// OPEN PAREN
+			tokens.splice(pos, 1, ['(','', H.loc(tokens[pos])]);
+			finishPound(tokens, pos + 1);
+			break;
+
+		case '(':
+		case '[':
+		case '{':
+			++nested;
+			break;
+
+		case ')':
+		case ']':
+		case '}':
+			if (nested === 0) {
+				tokens.splice(pos, 0, [')','',H.loc(tokens[pos])]);
+				return pos;
+			} else {
+				--nested;
+			}
+			break;
+
+		case 'TERMINATOR':
+		case 'OUTDENT':
+			tokens.splice(pos, 0, [')','',H.loc(tokens[pos])]);
+			return pos;
+		}
+
+		++pos;
+	}
+
+	// if EOF without closing, close there
+	tokens.splice(pos, 0, [')','',H.loc(tokens[pos-1])]);
+	pos++;
+
+	return pos;
+}
+
+function convertPoundSign(tokens, pos) {
+	pos = pos || 0;
+
+	while (tokens[pos]) {
+		if (tokens[pos][0] === '#') {
+			// OPEN PAREN
+			tokens.splice(pos, 1, ['(','', H.loc(tokens[pos])]);
+
+			pos = finishPound(tokens, pos + 1);
+		}
+
+		++pos;
+	}
+
+	return tokens;
+}
+
 function rewrite(tokens) {
 	return markFunctionParams(
-		resolveBlocks(
-			fixFunctionBlocks(
-				cpsArrow(
-					tokens))));
+		convertPoundSign(
+			resolveBlocks(
+				fixFunctionBlocks(
+					cpsArrow(
+						tokens)))));
 }
 
 
@@ -488,6 +551,7 @@ module.exports = {
 	rewriteCpsArrow: cpsArrow,
 	resolveBlocks: resolveBlocks,
 	markFunctionParams: markFunctionParams,
+	convertPoundSign: convertPoundSign,
 	fixFunctionBlocks: fixFunctionBlocks,
 	cleanTerminators: cleanTerminators,
 	rewrite: rewrite

@@ -17,15 +17,15 @@ toInt = \x -> parseInt x 10
 DBEmptyFailure = \query params ->
 	@err = { query: q, params: xs }
 
-util.inherits DBEmptyFailure nodam.AsyncFailure
+DBEmptyFailure `util.inherits` nodam.AsyncFailure
 
 DBMissingFailure = \table condition ->
   @err = { table: table, condition: condition }
 
-util.inherits  DBMissingFailure  DBEmptyFailure
+DBMissingFailure `util.inherits` DBEmptyFailure
 
-getDB = \file -> //  function getDB(file) {
-	db <- (nodam.get 'db').pipe  //  nadam.get('db').pipe(function(db) {
+getDB = \file ->
+	db <- (nodam.get 'db').pipe
 	if db
 		Async.result db
 	else
