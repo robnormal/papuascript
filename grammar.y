@@ -129,7 +129,13 @@ Term
 	| Invocation
 	| If
 	| Switch
-	| UNARY Term
+	| Unary Term
+		{ $$ = $1.setTerm($2); }
+	;
+
+Unary
+	: UNARY
+		{ $$ = new N.Unary(yytext); }
 	;
 
 Atom 
@@ -142,6 +148,8 @@ Atom
 Callable
 	: Assignable
 	| Parenthetical
+	| Callable '(' ')'
+		{ $$ = new N.FuncCall([$1]); }
 	;
 
 /* Variables and properties that can be assigned to. */
@@ -155,9 +163,7 @@ Assignable
 	;
 
 Invocation
-	: Callable '(' ')'
-		{ $$ = new N.FuncCall($1); }
-	| ArityInvocation
+	: ArityInvocation
 	| CodeInvocation
 	;
 
@@ -217,13 +223,13 @@ Literal
 /* increment and decrement are forms of assignment */
 Assignment
 	: Assignable '=' Expression
-    { $$ = new N.Assign($1, $2, $3); }
+    { $$ = N.Assign.create($1, $2, $3); }
 	| UNARY_ASSIGN Assignable
-    { $$ = new N.Assign($2, $1); }
+    { $$ = N.Assign.create($2, $1); }
 	| Assignable UNARY_ASSIGN
-    { $$ = new N.Assign($1, $2); }
+    { $$ = N.Assign.create($1, $2); }
 	| Assignable COMPOUND_ASSIGN Expression
-    { $$ = new N.Assign($1, $2, $3); }
+    { $$ = N.Assign.create($1, $2, $3); }
 	;
 
 Identifier

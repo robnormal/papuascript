@@ -104,7 +104,7 @@ $.extend(Block.prototype, {
 		return this.nodes;
 	},
 
-	toString: function(braces) {
+	toString: function() {
 		Block.indent++;
 		var brace_indent = repeat('  ', Block.indent - 1);
 		var line_indent = Block.indent > 0 ? (brace_indent + '  ') : '';
@@ -120,11 +120,7 @@ $.extend(Block.prototype, {
 				'\n';
 		}
 
-		if (braces) {
-			str = brace_indent + ' {\n' + str + '\n' + brace_indent + '}';
-		} else {
-			str = '\n' + str;
-		}
+		str = '\n' + str;
 
 		Block.indent--;
 		return str;
@@ -148,6 +144,24 @@ $.extend(Block.prototype, {
 				this.nodes.pop();
 				this.nodes.push(new Return(last));
 			}
+		}
+
+		return this;
+	},
+
+	assignify: function(assignee, op) {
+		var last = H.last(this.nodes);
+
+		if (last.is_expression) {
+			if (last.assignify) {
+				last.assignify(assignee, op);
+			} else {
+				this.nodes.pop();
+				this.nodes.push(new Assign(assignee, op, last));
+			}
+		} else {
+			// if no expression, then assign undefined
+			this.nodes.push(new Assign(assignee, op, new Undefined()));
 		}
 
 		return this;
@@ -258,11 +272,19 @@ $.extend(FuncCall.prototype, {
 
 function Assign(assignee, op, value) {
 	this.assignee = assignee;
-	this.value = value;
 	this.op = op;
+	this.value = value;
+}
+Assign.create = function(assignee, op, value) {
+	if (value && value.assignify) {
+		return value.assignify(assignee, op);
+	} else {
+		return new Assign(assignee, op, value);
+	}
 }
 
 $.extend(Assign.prototype, {
+	needsSemicolon: true,
 	toString: function() {
 		var str = this.assignee.toString() + ' ' + this.op;
 		if (this.value) str += ' ' + this.value.toString();
@@ -502,7 +524,7 @@ function While(cond, block) {
 
 $.extend(While.prototype, {
 	toString: function() {
-		return 'while (' + this.cond.toString() + ') ' + this.block.toString(true);
+		return 'while (' + this.cond.toString() + ') {' + this.block.toString() + '}';
 	},
 	children: function() {
 		return [this.cond, this.block];
@@ -530,7 +552,7 @@ $.extend(For.prototype, {
 
 	toString: function() {
 		var
-			blk = this.block.toString(true),
+			blk = ' {' + this.block.toString(true) + '}',
 			str;
 
 		if (this.loop.in) {
@@ -557,18 +579,17 @@ Switch = function(expr, cases, deflt) {
 	this.expr = expr;
 	this.cases = cases;
 	this.deflt = deflt;
-
-	// FIXME: this is a hack; 'break' is not a valid identifier
-	if (this.cases) {
-		for (var i = 0, len = this.cases.length; i < len; i++) {
-			this.cases[i][1].push(new Identifier('break'));
-		}
-	}
 }
 
 $.extend(Switch.prototype, {
 	toString: function() {
 		var str = 'switch (' + this.expr + ') {\n';
+
+		// FIXME: this is a hack; 'break' is not a valid identifier
+		for (var i = 0, len = this.cases.length; i < len; i++) {
+			this.cases[i][1].push(new Identifier('break'));
+		}
+
 		for (var i = 0, len = this.cases.length; i < len; i++) {
 			str += 'case ' + to_list(this.cases[i][0]) + ':' +
 				this.cases[i][1].toString();
@@ -578,6 +599,26 @@ $.extend(Switch.prototype, {
 	},
 	children: function() {
 		return [this.expr, this.cases, this.deflt];
+	},
+	returnify: function() {
+		for (var i = 0, len = this.cases.length; i < len; i++) {
+			this.cases[i][1].returnify();
+		}
+		if (this.deflt) {
+			this.deflt.returnify();
+		}
+
+		return this;
+	},
+	assignify: function(assignee, op) {
+		for (var i = 0, len = this.cases.length; i < len; i++) {
+			this.cases[i][1].assignify(assignee, op);
+		}
+		if (this.deflt) {
+			this.deflt.assignify(assignee, op);
+		}
+
+		return this;
 	}
 
 });
@@ -600,7 +641,7 @@ $.extend(If.prototype, {
 			else_text = this.elses[i].toString();
 
 			// don't put a brace between else and if
-			if (else_text instanceof If) {
+			if (this.elses[i] instanceof If) {
 				else_text = ' else ' + else_text;
 			} else {
 				else_text = ' else {' + else_text + '}';
@@ -621,9 +662,38 @@ $.extend(If.prototype, {
 		}
 
 		return this;
+	},
+	assignify: function(assignee, op) {
+		this.block.assignify(assignee, op);
+		for (var i = 0, len = this.elses.length; i < len; i++) {
+			this.elses[i].assignify(assignee, op);
+		}
+
+		return this;
+	}
+});
+
+
+function Unary(op, term) {
+	this.op = op;
+	this.term = term;
+}
+$.extend(Unary.prototype, {
+	is_expression: true,
+
+	setTerm: function(term) {
+		this.term = term;
+		return this;
+	},
+	toString: function() {
+		return this.op + ' ' + this.term.toString();
+	},
+	children: function() {
+		return this.term;
 	}
 
 });
+
 
 module.exports = {
 	LOC: LOC,
@@ -649,5 +719,6 @@ module.exports = {
 	Value: Value,
 	Bool: Bool,
 	Return: Return,
-	FuncCall: FuncCall
+	FuncCall: FuncCall,
+	Unary: Unary
 };

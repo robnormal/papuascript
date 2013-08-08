@@ -39,7 +39,7 @@ while y
 for x = 2; x<5; x++
 	z
 
-if a
+foo = if a
 	b
 else if c
 	d
@@ -48,7 +48,7 @@ else if e
 else
 	g
 
-switch a
+yoyo = switch a
 	case 1:
 		b
 		b++
