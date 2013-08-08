@@ -1,4 +1,5 @@
 var $ = require('underscore');
+var H = require('./helpers');
 var Block, AssignList, Try, While, For, If, Switch, Assign;
 
 var concat = function(xs) {
@@ -71,6 +72,7 @@ function Arr(xs) {
 	this.xs = xs;
 }
 $.extend(Arr.prototype, {
+	is_expression: true,
 	children: function() {
 		return [];
 	},
@@ -134,13 +136,30 @@ $.extend(Block.prototype, {
 	resolveVars: function(existing) {
 		var defined = vars_defined(this);
 		return defined;
+	},
+
+	returnify: function() {
+		var last = H.last(this.nodes);
+
+		if (last.is_expression) {
+			if (last.returnify) {
+				last.returnify();
+			} else {
+				this.nodes.pop();
+				this.nodes.push(new Return(last));
+			}
+		}
+
+		return this;
 	}
+
 });
 
 function Literal(value) {
 	this.value = value;
 }
 $.extend(Literal.prototype, {
+	is_expression: true,
 	toString: function() {
 		return this.value;
 	},
@@ -154,6 +173,7 @@ function Identifier(value) {
 	this.value = value;
 }
 $.extend(Identifier.prototype, {
+	is_expression: true,
 	needsSemicolon: true,
 	toString: function() {
 		return this.value;
@@ -164,22 +184,35 @@ $.extend(Identifier.prototype, {
 });
 
 function Undefined() { }
-Undefined.prototype.isAssignable = false;
-Undefined.prototype.isComplex = false;
-Undefined.prototype.children = function() {
+$.extend(Undefined.prototype, {
+	is_expression: true,
+	toString: function() { return 'undefined'; },
+	children: function() {
 		return [];
-	};
+	}
+});
 
 function Null() { }
-Null.prototype.isAssignable = false;
-Null.prototype.isComplex = false;
-Null.prototype.children = function() {
+$.extend(Null.prototype, {
+	is_expression: true,
+	toString: function() { return 'null'; },
+	children: function() {
 		return [];
-	};
+	}
+});
 
 function Bool(val) {
 	this.val = val;
 }
+$.extend(Bool.prototype, {
+	is_expression: true,
+	toString: function() {
+		return this.val ? 'true' : 'false';
+	},
+	children: function() {
+		return [];
+	}
+});
 
 function Operation(op, a, b) {
 	this.op = op;
@@ -187,6 +220,7 @@ function Operation(op, a, b) {
 	this.b = b;
 }
 $.extend(Operation.prototype, {
+	is_expression: true,
 	needsSemicolon: true,
 	toString: function() {
 		return this.a.toString() + ' ' + this.op.toString() + ' ' + this.b.toString();
@@ -200,6 +234,7 @@ function FuncCall(factors) {
 	this.factors = factors;
 }
 $.extend(FuncCall.prototype, {
+	is_expression: true,
 	needsSemicolon: true,
 	prependFactor: function(arg) {
 		this.factors.unshift(arg);
@@ -264,6 +299,7 @@ function Obj(props) {
 	this.props = props;
 }
 $.extend(Obj.prototype, {
+	is_expression: true,
 	toString: function() {
 		var strs = [];
 		for (var i = 0, len = this.props.length; i < len; i++) {
@@ -278,16 +314,14 @@ $.extend(Obj.prototype, {
 });
 
 function Return(expr) {
-	if (expr && !expr.unwrap().isUndefined) {
-		this.expression = expr;
-	}
+	this.expression = expr;
 }
 $.extend(Return.prototype, {
+	needsSemicolon: true,
 	children: function() {
 		return [this.expression];
 	},
 
-	isStatement: true,
 	toString: function() {
 		return 'return ' + this.expression.toString();
 	}
@@ -302,8 +336,11 @@ var var_string = function(node) {
 function Code(params, block) {
 	this.params = params;
 	this.block = block;
+	this.block.returnify();
 }
+
 $.extend(Code.prototype, {
+	is_expression: true,
 	needsSemicolon: true,
 	children: function() {
 		return [this.params, this.block];
@@ -326,6 +363,7 @@ function Value(base, props) {
 }
 
 $.extend(Value.prototype, {
+	is_expression: true,
 	children: function() {
 		return [this.base, this.properties];
 	},
@@ -550,6 +588,7 @@ function If(cond, block) {
 	this.elses = [];
 }
 $.extend(If.prototype, {
+	is_expression: true,
 	addElse: function(if_or_block) {
 		this.elses.push(if_or_block);
 		return this;
@@ -557,20 +596,31 @@ $.extend(If.prototype, {
 	toString: function() {
 		var str = 'if (' + this.condition.toString() + ') {' + this.block.toString() + '}';
 		var else_text;
-		for (var i = 0, len = this.elses; i < len; i++) {
+		for (var i = 0, len = this.elses.length; i < len; i++) {
 			else_text = this.elses[i].toString();
+
 			// don't put a brace between else and if
 			if (else_text instanceof If) {
-				else_text = 'else ' + else_text;
+				else_text = ' else ' + else_text;
 			} else {
-				else_text = 'else {' + else_text + '}';
+				else_text = ' else {' + else_text + '}';
 			}
+
+			str += else_text
 		}
 
 		return str;
 	},
 	children: function() {
 		return [this.condition, this.block, this.elses];
+	},
+	returnify: function() {
+		this.block.returnify();
+		for (var i = 0, len = this.elses.length; i < len; i++) {
+			this.elses[i].returnify();
+		}
+
+		return this;
 	}
 
 });
