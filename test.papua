@@ -71,3 +71,7 @@ k = {a: 2, b: 4, c: { y: 'asrt' } }
 
 y = a # b 5 'yes'
 
+z = map xs \x ->
+	y := 4
+	x + y
+

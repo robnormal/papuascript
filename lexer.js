@@ -36,7 +36,7 @@ JS_KEYWORDS = [
 	'let', 'new', 'delete', 'typeof', 'in', 'instanceof',
   'return', 'throw', 'break', 'continue', 'debugger',
   'if', 'else', 'switch', 'case', 'default', 'for', 'while',
-	'do', 'try', 'catch', 'finally', 'class', 'extends', 'super'
+	'do', 'try', 'catch', 'finally'
 ];
 
 PAPUA_KEYWORDS = [];
@@ -46,9 +46,9 @@ PAPUA_KEYWORDS = [];
 // to avoid having a JavaScript error at runtime.
 RESERVED = [
   'function', 'void', 'with', 'const', 'enum',
-  'export', 'import', 'native', '__hasProp', '__extends', '__bind',
-  '__indexOf', 'implements', 'interface', 'package', 'private', 'protected',
-  'public', 'static', 'yield',
+  'export', 'import', 'native',
+  'implements', 'interface', 'package', 'private', 'protected',
+  'public', 'static', 'yield', 'class', 'extends', 'super'
 ];
 
 STRICT_PROSCRIBED = ['arguments', 'eval'];
@@ -130,14 +130,7 @@ Lexer.prototype = {
 			this.lex_index++;
 			this.yylineno = token[2].first_line;
 			this._pos = token[2].first_column;
-
-			/*
-			if (token[0] === 'IDENTIFIER') {
-				this.yytext = token[1];
-			} else {
-				this.yytext = token[0];
-			}
-			*/
+			this._tok = token;
 			this.yytext = token[1];
 
 			return token[0];

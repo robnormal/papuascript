@@ -102,7 +102,7 @@ Line
 Statement
 	: Return
 	| STATEMENT
-    { $$ = new N.Literal($1); }
+    { $$ = new N.Literal($1, yylineno); }
 	| While
 	| For
 	| AssignList
@@ -234,26 +234,26 @@ Block
 they can also serve as keys in object literals. */
 AlphaNumeric
 	: NUMBER
-    { $$ = new N.Literal(yytext); }
+    { $$ = new N.Literal(yytext, yylineno); }
 	| STRING
-    { $$ = new N.Literal(yytext); }
+    { $$ = new N.Literal(yytext, yylineno); }
 	;
 
 /* All of our immediate values. Generally these can be passed straight
 /* through and printed to JavaScript. */
 Literal
 	: AlphaNumeric
-    { $$ = new N.Literal(yytext); }
+    { $$ = new N.Literal(yytext, yylineno); }
 	| REGEX
-    { $$ = new N.Literal(yytext); }
+    { $$ = new N.Literal(yytext, yylineno); }
 	| DEBUGGER
-    { $$ = new N.Literal(yytext); }
+    { $$ = new N.Literal(yytext, yylineno); }
 	| UNDEFINED
-    { $$ = new N.Undefined(); }
+    { $$ = new N.Undefined(yylineno); }
 	| NULL
-    { $$ = new N.Null(); }
+    { $$ = new N.Null(yylineno); }
 	| BOOL
-    { $$ = new N.Bool($1); }
+    { $$ = new N.Bool($1, yylineno); }
 	;
 
 /* Assignment of a variable, property, or index to a value.
@@ -271,7 +271,7 @@ Assignment
 
 Identifier
 	: IDENTIFIER
-    { $$ = new N.Identifier(yytext); }
+    { $$ = new N.Identifier(yytext, yylineno); }
 	;
 
 Var

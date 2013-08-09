@@ -1,8 +1,12 @@
 var $ = require('underscore');
 var H = require('./helpers');
 var Block, AssignList, Try, While, For, If, Switch, Assign, Undefined, Return,
-	Code, Access;
-var vars_defined, concat, to_list, in_parens, repeat, var_string, can_define_vars, can_update_vars;
+	Code, Access, Var;
+var concat, to_list, in_parens, repeat, list_bind;
+var vars_defined, check_updated_vars, var_string, can_define_vars, can_update_vars;
+
+// global line number. Only used when calling toString()
+var lineno = null;
 
 concat = function(xs) {
 	var str = '';
@@ -35,108 +39,119 @@ repeat = function(str, n) {
 	return res;
 };
 
+// maps f (which returns an array) over the list xs, then concatenates the results
+list_bind = function(xs, f) {
+	var res = [];
+	for (var i = 0, len = xs.length; i < len; i++) {
+		res = res.concat(f(xs[i]));
+	}
+
+	return res;
+}
+
 var_string = function(node) {
 	var vars = vars_defined(node);
 
-	return vars.length ? 'var ' + vars.join(',') + ';\n' : '';
+	return vars.length ?
+		'var ' + vars.join(',') + ';' :
+		'';
 };
 
 can_define_vars = function(node) {
-	// Code cannot define vars for enclosing scope
-	return node instanceof AssignList ||
-		node instanceof Var ||
-		node instanceof Block ||
-		node instanceof If ||
-		node instanceof For ||
-		node instanceof While ||
-		node instanceof Switch ||
-		node instanceof Try;
+	return true;
 }
 
 can_update_vars = function(node) {
-	// Code cannot define vars for enclosing scope
-	return node instanceof AssignList ||
-		node instanceof Block ||
-		node instanceof If ||
-		node instanceof For ||
-		node instanceof While ||
-		node instanceof Switch ||
-		node instanceof Try;
+	return true;
 }
 
 vars_defined = function(node, in_scope) {
+	var defined;
+
 	if (! node.vars_defined) {
 		if (node instanceof Assign && node.op === '=') {
-			var v;
-			if (node.assignee.properties) {
-				v = node.assignee.base.toString();
-			} else {
-				v = node.assignee.toString();
-			}
-
-			if (v === 'this') {
-				node.vars_defined = [];
-			} else {
-				node.vars_defined = [v];
-			}
+			defined = [node.baseName()];
 		} else if (node instanceof Var) {
-			node.vars_defined = $.map(node.names, function(n) { return n.value; });
+			defined = $.map(node.names, function(n) { return n.value; });
 		} else if (node instanceof Array) {
-			var defined = [];
-
-			for (var i = 0, len = node.length; i < len; i++) {
-				defined = defined.concat(vars_defined(node[i]));
-			}
-
-			node.vars_defined = $.uniq(defined);
+			defined = $.uniq(list_bind(node, function(n) {
+				return vars_defined(n);
+			}));
 		} else if (can_define_vars(node) && node.children) {
-			node.vars_defined = vars_defined(node.children());
+			defined = vars_defined(node.children());
 		} else {
-			node.vars_defined = [];
+			defined = [];
 		}
+
+		// remove "this" from list; it is the only variable that cannot be defined
+		node.vars_defined = $.without(defined, 'this');
 	}
 
 	return node.vars_defined;
 }
 
-var check_updated_vars = function(node, in_scope, outer_scope) {
-	if (null === in_scope) {
-		in_scope = vars_defined(node);
-	}
+check_updated_vars = function(node, inner_scope, outer_scope) {
+	if (! node) return [];
 
-	if (node instanceof Assign) {
-		var v = node.assignee.toString();
+	var updated;
 
-		if (node.op === ':=') {
-			if (H.has(outer_scope, v)) {
-				node.vars_updated = [v];
+	if (! node.vars_updated) {
+		if (null === inner_scope) {
+			inner_scope = vars_defined(node);
+		}
+
+		if (node instanceof Assign) {
+			var
+				v = node.baseName(),
+				outer = H.has(outer_scope, v),
+				inner = H.has(inner_scope, v),
+				updating = node.op === ':=',
+				defining = node.op === '='
+				;
+
+			if (outer) {
+				if (defining) {
+					console.log('Warning: variable ' + v + ' shadowing variable of same name. ' +
+						'Use := to update variables in the containing scope.');
+
+					updated = [];
+				} else if (! updating) {
+					H.throwSyntaxError('Illegal "' + v + ' ' + node.op + '": Use ":=" to update variables in outer scope');
+				} else {
+					updated = [v];
+				}
+			} else if (updating) {
+				H.throwSyntaxError('Cannot update variable that is not in outer scope: ' + v);
+			} else if (! defining && ! inner) {
+				H.throwSyntaxError('Undefined variable: ' + v);
 			} else {
-				H.throwSyntaxError('Updated variable undefined: ' + v);
+				updated = [];
 			}
-		} else if (! H.has(in_scope, v)) {
-			H.throwSyntaxError('Modifying undefined variable: ' + v);
-		} else if ('=' === node.op && H.has(outer_scope, v)) {
-			console.log('Warning: variable ' + v + ' shadowing variable of same name. ' +
-				'Use := to update variables in the containing scope.');
 
-			node.vars_updated = [];
-		}
-	} else if (node instanceof Array) {
-		node.vars_updated = [];
+			// Code may contain assignments
+			check_updated_vars(node.value, inner_scope, outer_scope);
 
-		for (var i = 0, len = node.length; i < len; i++) {
-			node.vars_updated = node.vars_updated.concat(
-				check_updated_vars(node[i], in_scope, outer_scope)
-			);
+		} else if (node instanceof Array) {
+
+			updated = list_bind(node, function(n) {
+				return check_updated_vars(n, inner_scope, outer_scope);
+			});
+
+		// check scope in functions
+		} else if (node instanceof Code) {
+			// add current scope variables
+			check_updated_vars(node.block, null, outer_scope.concat(inner_scope));
+
+			// the Code node is responsible for checking itself;
+			// wrt the closing scope, it can be ignored
+			updated = [];
+		} else if (can_update_vars(node) && node.children) {
+			updated = check_updated_vars(node.children(), inner_scope, outer_scope);
+		} else {
+			updated = [];
 		}
-	} else if (can_update_vars(node) && node.children) {
-		node.vars_updated = check_updated_vars(node.children(), in_scope, outer_scope);
-	// check scope in functions
-	} else if (node instanceof Code) {
-		// add current scope variables
-		check_updated_vars(node.block, null, outer_scope.concat(in_scope));
-	} else {
-		node.vars_updated = [];
+
+		node.vars_updated = $.uniq(updated);
 	}
 
 	return node.vars_updated;
@@ -243,8 +258,8 @@ $.extend(Block.prototype, {
 		return this;
 	},
 
-	checkScope: function(in_scope) {
-		return check_updated_vars(this, null, in_scope);
+	checkScope: function(top_scope) {
+		return check_updated_vars(this, null, top_scope);
 	}
 
 });
@@ -280,7 +295,9 @@ $.extend(Identifier.prototype, {
 Undefined = function() { }
 $.extend(Undefined.prototype, {
 	is_expression: true,
-	toString: function() { return 'undefined'; },
+	toString: function() {
+		return 'void 0';
+	},
 	children: function() {
 		return [];
 	}
@@ -364,7 +381,6 @@ FuncCall.fromChain = function(call_or_factor, chain) {
 		base = call_or_factor,
 		accessor, link;
 
-	console.log(chain.length);
 	for (var i in chain) if (chain.hasOwnProperty(i)) {
 		link = chain[i];
 
@@ -396,13 +412,23 @@ Assign.create = function(assignee, op, value) {
 $.extend(Assign.prototype, {
 	needsSemicolon: true,
 	toString: function() {
-		var str = this.assignee.toString() + ' ' + this.op;
-		if (this.value) str += ' ' + this.value.toString();
-
-		return str;
+		return this.assignee.toString() + ' ' + (
+				this.op === ':=' ? '=' : this.op
+			) + (
+				this.value ? ' ' + this.value.toString() : ''
+			);
 	},
 	children: function() {
 		return [];
+	},
+	// get name of the variable being assigned to or modified,
+	// ignoring object property references and array indices
+	baseName: function() {
+		if (this.assignee.properties) {
+			return this.assignee.base.toString();
+		} else {
+			return this.assignee.toString();
+		}
 	}
 
 });
@@ -800,7 +826,7 @@ $.extend(Unary.prototype, {
 
 });
 
-var Var = function(names) {
+Var = function(names) {
 	this.names = names;
 }
 
