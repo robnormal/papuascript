@@ -107,6 +107,7 @@ Statement
 	| For
 	| AssignList
 	| Throw
+	| Var
 
 	/* RR - try blocks could be expressions, but for now, we'll say not */
 	| Try
@@ -271,6 +272,13 @@ Assignment
 Identifier
 	: IDENTIFIER
     { $$ = new N.Identifier(yytext); }
+	;
+
+Var
+	: VAR Identifier
+    { $$ = new N.Var([$2]); }
+	| Var ',' Identifier
+    { $$ = $1.add($3); }
 	;
 
 /* Comma-separated assignments */

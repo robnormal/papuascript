@@ -15,6 +15,7 @@ util = require 'util'
 toInt = \x -> parseInt x 10
 
 DBEmptyFailure = \query params ->
+	u = 5
 	@err = { query: q, params: xs }
 
 DBEmptyFailure `util.inherits` nodam.AsyncFailure
@@ -39,6 +40,7 @@ while y
 for x = 2; x<5; x++
 	z
 
+var b
 foo = if a
 	b
 else if c
@@ -58,7 +60,7 @@ yoyo = switch a
 		d
 
 try
-	a
+	util = showme
 catch b
 	c
 finally

@@ -1,8 +1,10 @@
 var $ = require('underscore');
 var H = require('./helpers');
-var Block, AssignList, Try, While, For, If, Switch, Assign;
+var Block, AssignList, Try, While, For, If, Switch, Assign, Undefined, Return,
+	Code, Access;
+var vars_defined, concat, to_list, in_parens, repeat, var_string, can_define_vars, can_update_vars;
 
-var concat = function(xs) {
+concat = function(xs) {
 	var str = '';
 	for (var i = 0, len = xs.length; i < len; i++) {
 		str += xs[i].toString();
@@ -11,7 +13,7 @@ var concat = function(xs) {
 	return str;
 };
 
-var to_list = function(xs) {
+to_list = function(xs) {
 	var strs = [];
 	for (var i = 0, len = xs.length; i < len; i++) {
 		strs.push(xs[i].toString());
@@ -20,11 +22,11 @@ var to_list = function(xs) {
 	return strs.join(', ');
 };
 
-var in_parens = function(xs) {
+in_parens = function(xs) {
 	return '(' + to_list(xs) + ')';
 };
 
-var repeat = function(str, n) {
+repeat = function(str, n) {
 	var res = '';
 	for(var i = 0; i < n; i++) {
 		res += str;
@@ -33,7 +35,25 @@ var repeat = function(str, n) {
 	return res;
 };
 
-var can_define_vars = function(node) {
+var_string = function(node) {
+	var vars = vars_defined(node);
+
+	return vars.length ? 'var ' + vars.join(',') + ';\n' : '';
+};
+
+can_define_vars = function(node) {
+	// Code cannot define vars for enclosing scope
+	return node instanceof AssignList ||
+		node instanceof Var ||
+		node instanceof Block ||
+		node instanceof If ||
+		node instanceof For ||
+		node instanceof While ||
+		node instanceof Switch ||
+		node instanceof Try;
+}
+
+can_update_vars = function(node) {
 	// Code cannot define vars for enclosing scope
 	return node instanceof AssignList ||
 		node instanceof Block ||
@@ -44,26 +64,82 @@ var can_define_vars = function(node) {
 		node instanceof Try;
 }
 
-var vars_defined = function(node) {
-	// := does not define a new variable
-	if (node instanceof Assign &&
-		node.op !== ':=' &&
-		(! node.assignee.properties || 0 === node.assignee.properties.length)
-	) {
-		return [node.assignee.toString()];
+vars_defined = function(node, in_scope) {
+	if (! node.vars_defined) {
+		if (node instanceof Assign && node.op === '=') {
+			var v;
+			if (node.assignee.properties) {
+				v = node.assignee.base.toString();
+			} else {
+				v = node.assignee.toString();
+			}
+
+			if (v === 'this') {
+				node.vars_defined = [];
+			} else {
+				node.vars_defined = [v];
+			}
+		} else if (node instanceof Var) {
+			node.vars_defined = $.map(node.names, function(n) { return n.value; });
+		} else if (node instanceof Array) {
+			var defined = [];
+
+			for (var i = 0, len = node.length; i < len; i++) {
+				defined = defined.concat(vars_defined(node[i]));
+			}
+
+			node.vars_defined = $.uniq(defined);
+		} else if (can_define_vars(node) && node.children) {
+			node.vars_defined = vars_defined(node.children());
+		} else {
+			node.vars_defined = [];
+		}
+	}
+
+	return node.vars_defined;
+}
+
+var check_updated_vars = function(node, in_scope, outer_scope) {
+	if (null === in_scope) {
+		in_scope = vars_defined(node);
+	}
+
+	if (node instanceof Assign) {
+		var v = node.assignee.toString();
+
+		if (node.op === ':=') {
+			if (H.has(outer_scope, v)) {
+				node.vars_updated = [v];
+			} else {
+				H.throwSyntaxError('Updated variable undefined: ' + v);
+			}
+		} else if (! H.has(in_scope, v)) {
+			H.throwSyntaxError('Modifying undefined variable: ' + v);
+		} else if ('=' === node.op && H.has(outer_scope, v)) {
+			console.log('Warning: variable ' + v + ' shadowing variable of same name. ' +
+				'Use := to update variables in the containing scope.');
+
+			node.vars_updated = [];
+		}
 	} else if (node instanceof Array) {
-		var defined = [];
+		node.vars_updated = [];
 
 		for (var i = 0, len = node.length; i < len; i++) {
-			defined = defined.concat(vars_defined(node[i]));
+			node.vars_updated = node.vars_updated.concat(
+				check_updated_vars(node[i], in_scope, outer_scope)
+			);
 		}
-
-		return $.uniq(defined);
-	} else if (can_define_vars(node) && node.children) {
-		return vars_defined(node.children());
+	} else if (can_update_vars(node) && node.children) {
+		node.vars_updated = check_updated_vars(node.children(), in_scope, outer_scope);
+	// check scope in functions
+	} else if (node instanceof Code) {
+		// add current scope variables
+		check_updated_vars(node.block, null, outer_scope.concat(in_scope));
 	} else {
-		return [];
+		node.vars_updated = [];
 	}
+
+	return node.vars_updated;
 }
 
 function LOC() {}
@@ -165,6 +241,10 @@ $.extend(Block.prototype, {
 		}
 
 		return this;
+	},
+
+	checkScope: function(in_scope) {
+		return check_updated_vars(this, null, in_scope);
 	}
 
 });
@@ -197,7 +277,7 @@ $.extend(Identifier.prototype, {
 	}
 });
 
-function Undefined() { }
+Undefined = function() { }
 $.extend(Undefined.prototype, {
 	is_expression: true,
 	toString: function() { return 'undefined'; },
@@ -365,9 +445,9 @@ $.extend(Obj.prototype, {
 	}
 });
 
-function Return(expr) {
+Return = function(expr) {
 	this.expression = expr;
-}
+};
 $.extend(Return.prototype, {
 	needsSemicolon: true,
 	children: function() {
@@ -379,16 +459,12 @@ $.extend(Return.prototype, {
 	}
 });
 
-var var_string = function(node) {
-	var vars = vars_defined(node);
-
-	return vars.length ? 'var ' + vars.join(',') + ';\n' : '';
-};
-
-function Code(params, block) {
+Code = function(params, block) {
 	this.params = params;
 	this.block = block;
 	this.block.returnify();
+
+	vars_defined(block);
 }
 
 $.extend(Code.prototype, {
@@ -399,7 +475,7 @@ $.extend(Code.prototype, {
 	},
 
 	toString: function() {
-		return 'function' + in_parens(this.params) + ' { ' + var_string(this) +
+		return 'function' + in_parens(this.params) + ' { ' + var_string(this.block) +
 			this.block.toString() + '}';
 	}
 });
@@ -483,7 +559,7 @@ $.extend(Value.prototype, {
 });
 
 
-function Access(member) {
+Access = function(member) {
 	this.member = member;
 }
 
@@ -724,6 +800,26 @@ $.extend(Unary.prototype, {
 
 });
 
+var Var = function(names) {
+	this.names = names;
+}
+
+$.extend(Var.prototype, {
+	is_expression: false,
+
+	add: function(name) {
+		this.names.push(name);
+		return this;
+	},
+	// no output
+	toString: function() {
+		return '';
+	},
+	children: function() {
+		return this.term;
+	}
+});
+
 
 module.exports = {
 	LOC: LOC,
@@ -750,5 +846,6 @@ module.exports = {
 	Bool: Bool,
 	Return: Return,
 	FuncCall: FuncCall,
-	Unary: Unary
+	Unary: Unary,
+	Var: Var
 };

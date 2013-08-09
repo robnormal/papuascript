@@ -32,7 +32,7 @@ var JS_KEYWORDS, PAPUA_KEYWORDS, RESERVED, STRICT_PROSCRIBED, JS_FORBIDDEN,
 
 // Keywords that CoffeeScript shares in common with JavaScript.
 JS_KEYWORDS = [
-  'true', 'false', 'null', 'this',
+  'true', 'false', 'null', 'this','var', 
 	'let', 'new', 'delete', 'typeof', 'in', 'instanceof',
   'return', 'throw', 'break', 'continue', 'debugger',
   'if', 'else', 'switch', 'case', 'default', 'for', 'while',
@@ -45,7 +45,7 @@ PAPUA_KEYWORDS = [];
 // used by CoffeeScript internally. We throw an error when these are encountered,
 // to avoid having a JavaScript error at runtime.
 RESERVED = [
-  'function', 'var', 'void', 'with', 'const', 'enum',
+  'function', 'void', 'with', 'const', 'enum',
   'export', 'import', 'native', '__hasProp', '__extends', '__bind',
   '__indexOf', 'implements', 'interface', 'package', 'private', 'protected',
   'public', 'static', 'yield',
