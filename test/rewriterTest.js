@@ -232,6 +232,19 @@ module.exports = {
 		R.markFunctionParams(toks);
 		assert.equal(toks[1][0], 'SPACEDOT', 'replaces dot with SPACEDOT');
 		assert.equal(toks[2][1], 'bar', 'removes dot');
+	},
+
+	'Function literals can be parenthesized': function(b, assert) {
+		/*
+		toks = mkTokens(
+			'( \\ IDENTIFIER -> IDENTIFIER ) IDENTIFIER'
+		);
+		expected = mkTokens(
+			'( \\ IDENTIFIER -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER'
+		);
+		R.rewrite(toks);
+		assert.ok(tags_equal(toks, expected), 'OUTDENT placed before closing paren');
+		*/
 	}
 
 };

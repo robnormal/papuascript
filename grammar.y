@@ -76,7 +76,7 @@ var N = require('./nodes.js');
    all parsing must end here. */
 Root
 	: /* empty */
-		{ $$ = new N.Block(); }
+		{ $$ = new N.Block([]); }
   | Body
 		{ return $1; }
   | Block TERMINATOR
@@ -225,7 +225,7 @@ will convert some postfix forms into blocks for us, by adjusting the
 token stream. */
 Block
 	: INDENT OUTDENT
-  	{ $$ = new N.Block(); }
+  	{ $$ = new N.Block([]); }
 	| INDENT Body OUTDENT
   	{ $$ = $2; }
 	;
@@ -358,9 +358,9 @@ ThisProperty
 /* The array literal. */
 Array
 	: WS '[' ']'
-    { $$ = new N.Arr([]); }
+    { $$ = new N.Arr([], yylineno); }
 	| WS '[' Arguments ']'
-    { $$ = new N.Arr($2); }
+    { $$ = new N.Arr($2, yylineno); }
 	;
 
 Arguments
@@ -398,7 +398,7 @@ Throw
 
 While
 	: "WHILE" Expression Block
-		{ $$ = new N.While($2, $3); }
+		{ $$ = new N.While($2, $3, false); }
 	| "DO" Block "WHILE" Expression 
 		{ $$ = new N.While($4, $2, true); }
 	;
@@ -437,7 +437,7 @@ Cases
 /* An individual **Case** clause, with action. */
 Case
 	: CASE ExpressionList ':' Block
-		{ $$ = [$2, $4]; }
+		{ $$ = new N.Case($2, $4); }
 	;
 
 ExpressionList
@@ -464,8 +464,10 @@ Binary
 Parenthetical
 	: '(' Expression ')'
 		{ $$ = $2; }
+/* leftover from CoffeScript?
 	| '(' INDENT Expression OUTDENT ')'
 		{ $$ = $3; }
+*/
 	;
 
 /* The most basic form of *if* is a condition and an action. The following

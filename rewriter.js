@@ -238,9 +238,10 @@ function resolveBlocks(tokens) {
 		i = 0,
 		pre_blocks = [false], // whether we are waiting for a block (e.g., in a WHILE condition)
 		blocks = [], // what type of block we are in
-		pair_levels = [], // while conditions, etc., can be broken over lines if in parens
+		pair_levels = [0], // while conditions, etc., can be broken over lines if in parens
+		indent_level = 0,
 		ignore_newlines = [false], // stack that answers that question for indentation levels
-		last_block,
+		last_block, last_pair_level,
 		tag; // current token's tag
 
 	// eliminate leading TERMINATORs
@@ -276,12 +277,14 @@ function resolveBlocks(tokens) {
 			case '(':
 			case '[':
 			case '{':
+				pair_levels[pair_levels.length - 1]++;
 				pre_blocks.push(false);
 				break;
 
 			case ')':
 			case ']':
 			case '}':
+				pair_levels[pair_levels.length - 1]--;
 				if (H.last(pre_blocks)) {
 					H.throwSyntaxError('Unexpected ' + tag + ' at head of block');
 				}
@@ -289,8 +292,12 @@ function resolveBlocks(tokens) {
 				break;
 
 			case 'INDENT':
+				// if starting a block, do not ignore newlines
 				if (pre_blocks.pop()) {
 					ignore_newlines.push(false);
+					indent_level++;
+
+				// otherwise, start ignoring them and drop this indent
 				} else {
 					ignore_newlines.push(i);
 					// remove indent
@@ -302,15 +309,17 @@ function resolveBlocks(tokens) {
 			case 'OUTDENT':
 				var ignore_from = ignore_newlines.pop();
 
+				// if ignoring newlines, remove outdent
 				if (false !== ignore_from) {
-					// remove outdent
 					tokens.splice(i, 1);
+
 				} else {
 					// make sure TERMINATOR follows OUTDENT
 					if (tokens[i+1] && 'TERMINATOR' !== tokens[i+1][0] && 'OUTDENT' !== tokens[i+1][0]) {
 						tokens.splice(i+1, 0, ['TERMINATOR', '', H.loc(tokens[i])]);
 					}
 
+					indent_level--;
 					last_block = blocks.pop();
 				}
 					

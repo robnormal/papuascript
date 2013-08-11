@@ -1,8 +1,12 @@
 var $ = require('underscore');
+var N = require('nodam');
 var H = require('./helpers');
+
+var LCOUNT = /\n/g
+
 var Block, AssignList, Try, While, For, If, Switch, Assign, Undefined, Return,
-	Code, Access, Var;
-var concat, to_list, in_parens, repeat, list_bind;
+	Code, Access, Var, Case, Break;
+var Lines, concat, to_list, in_parens, repeat, list_bind;
 var vars_defined, check_updated_vars, var_string, can_define_vars, can_update_vars;
 
 // global line number. Only used when calling toString()
@@ -48,6 +52,196 @@ list_bind = function(xs, f) {
 
 	return res;
 }
+
+function reduceLines(nodes) {
+	return $.reduce(nodes, function(memo, n) {
+		var info = n.lines();
+
+		// bring node up to beginning of next
+		while (memo.end < info.start) {
+			memo.add('');
+		}
+
+		return memo.concat(info.lines);
+	}, { start: 0, lines: []});
+}
+
+var LineString, line, indent;
+(function() {
+	LineString = function LineString(str, line, indent) {
+		this.indent = indent;
+
+		if (false === indent) {
+			this.str = str;
+			this.line = line;
+		}
+	};
+
+	line = function(str, line) {
+		return new LineString(str, line, false);
+	};
+
+	indent = function(n) {
+		return new LineString(null, null, n);
+	};
+
+	LineString.prototype.isIndent = function() {
+		return false !== this.indent;
+	};
+
+})();
+
+Lines = function(l_strs) {
+	this.lines = l_strs;
+
+	$.each(l_strs, function(lstr) {
+		if (! (lstr instanceof LineString)) {
+			console.log(l_strs);
+			throw new Error();
+		}
+	});
+}
+
+$.extend(Lines.prototype, {
+	firstNonIndent: function() {
+		var i = 0;
+		while (this.lines[i] && this.lines[i].isIndent()) {
+			i++;
+		}
+
+		return this.lines[i] ? i : false;
+	},
+
+	lastNonIndent: function() {
+		var i = this.lines.length - 1;
+		while (this.lines[i] && this.lines[i].isIndent()) {
+			i--;
+		}
+
+		return this.lines[i] ? i : false;
+	},
+
+
+	prefix: function(str) {
+		if (typeof str !== 'string') throw new Error('argument to Lines::suffix must be a string');
+
+		var i = this.firstLine();
+
+		if (false === i) {
+			throw new Error('Cannot prefix list of indents or empty list');
+		} else {
+			this.lines.unshift(line(str, i));
+			return this;
+		}
+	},
+
+	suffix: function(str) {
+		if (typeof str !== 'string') throw new Error('argument to Lines::suffix must be a string');
+
+		var i = this.lastLine();
+
+		if (false === i) {
+			throw new Error('Cannot prefix list of indents or empty list');
+		} else {
+			this.lines.push(line(str, i));
+			return this;
+		}
+	},
+
+	push: function(lstr) {
+		if (!(lstr instanceof LineString)) throw new Error();
+		this.lines.push(lstr);
+		return this;
+	},
+	unshift: function(lstr) {
+		if (!(lstr instanceof LineString)) throw new Error();
+		this.lines.unshift(lstr);
+		return this;
+	},
+
+	append: function(ls) {
+		if (!(ls instanceof Lines)) throw new Error('Expected Lines, got ' + ls);
+		this.lines = this.lines.concat(ls.lines);
+		return this;
+	},
+
+	firstLine: function() {
+		var i = this.firstNonIndent();
+
+		return false === i ?
+			false :
+			this.lines[i].line;
+	},
+
+	lastLine: function() {
+		var i = this.lastNonIndent();
+
+		return false === i ?
+			false :
+			this.lines[i].line;
+	},
+
+	toString: function() {
+		var
+			res = '',
+			indent = 0,
+			line = 0,
+			lstr, i, len;
+
+		for (i in this.lines) if (this.lines.hasOwnProperty(i)) {
+			lstr = this.lines[i];
+
+			if (lstr.isIndent()) {
+				indent += lstr.indent;
+
+			// add empty lines to bring us up to current line
+			} else {
+				if (line < lstr.line) {
+					while (line < lstr.line) {
+						res += '\n';
+						line++;
+					}
+
+					res += repeat('  ', indent);
+				}
+
+				res += lstr.str;
+			}
+		}
+
+		return res;
+	}
+});
+
+Lines.join = function(liness, text) {
+	var
+		lines = liness[0],
+		i = 1, // skip first Lines object
+		len = liness.length;
+
+	for (; i < len; i++) {
+		lines.suffix(text);
+		lines.append(liness[i]);
+	}
+
+	return lines;
+}
+
+Lines.merge = function(liness) {
+	return Lines.join(liness, '');
+};
+
+Lines.mapNodes = function(xs) {
+	return $.map(xs, function(x) {
+		return x.lines();
+	});
+};
+
+Lines.bindNodes = function(xs) {
+	return new Lines(list_bind(xs, function(x) {
+		return x.lines().lines;
+	}));
+};
 
 var_string = function(node) {
 	var vars = vars_defined(node);
@@ -159,8 +353,9 @@ check_updated_vars = function(node, inner_scope, outer_scope) {
 
 function LOC() {}
 
-function Arr(xs) {
+function Arr(xs, yylineno) {
 	this.xs = xs;
+	this.line = yylineno;
 }
 $.extend(Arr.prototype, {
 	is_expression: true,
@@ -169,6 +364,12 @@ $.extend(Arr.prototype, {
 	},
 	toString: function() {
 		return '[' + to_list(this.xs) + ']';
+	},
+
+	lines: function() {
+		return Lines.bindNodes(this.xs)
+			.prefix('[')
+			.suffix(']');
 	}
 });
 
@@ -195,7 +396,7 @@ $.extend(Block.prototype, {
 		return this.nodes;
 	},
 
-	toString: function() {
+	toString: function(line) {
 		Block.indent++;
 		var brace_indent = repeat('  ', Block.indent - 1);
 		var line_indent = Block.indent > 0 ? (brace_indent + '  ') : '';
@@ -217,6 +418,33 @@ $.extend(Block.prototype, {
 		return str;
 	},
 
+	lines: function() {
+		Block.indent++;
+
+		var ls = new Lines([]);
+
+		if (Block.indent > 0) {
+			ls.push( indent(1) );
+		}
+
+		for (var i = 0, len = this.nodes.length; i < len; i++) {
+			ls.append(this.nodes[i].lines())
+				.suffix(this.nodes[i].needsSemicolon ? ';' : '');
+		}
+
+		if (Block.indent > 0) {
+			ls.push( indent(-1) );
+		} else {
+			// FIXME: this is here because it can't be at the top; we need content
+			// with a line number first
+			ls.prefix(var_string(this));
+		}
+
+		Block.indent--;
+
+		return ls;
+	},
+
 	/**
 	 * @param existing array List of variables in the outside scope
 	 */
@@ -228,7 +456,7 @@ $.extend(Block.prototype, {
 	returnify: function() {
 		var last = H.last(this.nodes);
 
-		if (last.is_expression) {
+		if (last && last.is_expression) {
 			if (last.returnify) {
 				last.returnify();
 			} else {
@@ -243,7 +471,7 @@ $.extend(Block.prototype, {
 	assignify: function(assignee, op) {
 		var last = H.last(this.nodes);
 
-		if (last.is_expression) {
+		if (last && last.is_expression) {
 			if (last.assignify) {
 				last.assignify(assignee, op);
 			} else {
@@ -264,8 +492,9 @@ $.extend(Block.prototype, {
 
 });
 
-function Literal(value) {
+function Literal(value, yylineno) {
 	this.value = value;
+	this.line = yylineno;
 }
 $.extend(Literal.prototype, {
 	is_expression: true,
@@ -275,11 +504,15 @@ $.extend(Literal.prototype, {
 
 	children: function() {
 		return [];
+	},
+	lines: function() {
+		return new Lines([line(this.value, this.line)]);
 	}
 });
 
-function Identifier(value) {
+function Identifier(value, yylineno) {
 	this.value = value;
+	this.line = yylineno;
 }
 $.extend(Identifier.prototype, {
 	is_expression: true,
@@ -289,10 +522,15 @@ $.extend(Identifier.prototype, {
 	},
 	children: function() {
 		return [];
+	},
+	lines: function() {
+		return new Lines([line(this.value, this.line)]);
 	}
 });
 
-Undefined = function() { }
+Undefined = function(line) {
+	this.line = line;
+}
 $.extend(Undefined.prototype, {
 	is_expression: true,
 	toString: function() {
@@ -300,20 +538,29 @@ $.extend(Undefined.prototype, {
 	},
 	children: function() {
 		return [];
+	},
+	lines: function() {
+		return new Lines([line(this.value, this.line)]);
 	}
 });
 
-function Null() { }
+function Null(line) {
+	this.line = line;
+}
 $.extend(Null.prototype, {
 	is_expression: true,
 	toString: function() { return 'null'; },
 	children: function() {
 		return [];
+	},
+	lines: function() {
+		return new Lines([line(this.value, this.line)]);
 	}
 });
 
-function Bool(val) {
+function Bool(val, line) {
 	this.val = val;
+	this.line = line;
 }
 $.extend(Bool.prototype, {
 	is_expression: true,
@@ -322,7 +569,11 @@ $.extend(Bool.prototype, {
 	},
 	children: function() {
 		return [];
+	},
+	lines: function() {
+		return new Lines([line(this.value, this.line)]);
 	}
+
 });
 
 function Operation(op, a, b) {
@@ -338,7 +589,13 @@ $.extend(Operation.prototype, {
 	},
 	children: function() {
 		return [this.a, this.b];
+	},
+	lines: function() {
+		return this.a.lines()
+			.suffix(this.op.toString())
+			.append(this.b.lines());
 	}
+
 });
 
 // a FuncCall can have properties, as in getDB(name, passwd).address
@@ -374,7 +631,16 @@ $.extend(FuncCall.prototype, {
 	addProperty: function(prop) {
 		this.properties.push(prop);
 		return this;
+	},
+	lines: function() {
+		var args = this.factors.slice(1);
+
+		return this.factors[0].lines()
+			.suffix('(')
+			.append(Lines.join(Lines.mapNodes(args), ','))
+			.suffix(')')
 	}
+
 });
 FuncCall.fromChain = function(call_or_factor, chain) {
 	var
@@ -397,6 +663,7 @@ FuncCall.fromChain = function(call_or_factor, chain) {
 
 
 function Assign(assignee, op, value) {
+	if (!assignee) throw new Error('new Assign() requires 3 arguments');
 	this.assignee = assignee;
 	this.op = op;
 	this.value = value;
@@ -429,8 +696,19 @@ $.extend(Assign.prototype, {
 		} else {
 			return this.assignee.toString();
 		}
-	}
+	},
 
+	lines: function() {
+		var ls = this.assignee.lines()
+			.suffix(' ' + (this.op === ':=' ? '=' : this.op));
+
+		if (this.value) {
+			ls.suffix(' ')
+				.append(this.value.lines());
+		}
+
+		return ls;
+	}
 });
 
 function AssignList(assigns) {
@@ -449,6 +727,10 @@ $.extend(AssignList.prototype, {
 
 	toString: function() {
 		return to_list(this.assigns);
+	},
+
+	lines: function() {
+		return Lines.join(Lines.mapNodes(this.assigns), ',');
 	}
 });
 
@@ -468,6 +750,22 @@ $.extend(Obj.prototype, {
 	},
 	children: function() {
 		return this.props;
+	},
+
+	lines: function() {
+		var liness = [];
+
+		for (var i = 0, len = this.props.length; i < len; i++) {
+			liness.push(
+				this.props[i][0].lines()
+					.suffix(': ')
+					.append(this.props[i][1].lines())
+			);
+		}
+
+		return Lines.join(liness, ', ')
+			.prefix('{')
+			.suffix('}');
 	}
 });
 
@@ -482,6 +780,9 @@ $.extend(Return.prototype, {
 
 	toString: function() {
 		return 'return ' + this.expression.toString();
+	},
+	lines: function() {
+		return this.expression.lines().prefix('return ');
 	}
 });
 
@@ -503,7 +804,17 @@ $.extend(Code.prototype, {
 	toString: function() {
 		return 'function' + in_parens(this.params) + ' { ' + var_string(this.block) +
 			this.block.toString() + '}';
+	},
+
+	lines: function() {
+		return Lines.join(Lines.mapNodes(this.params), ',')
+			.prefix('function (')
+			.suffix(') { ')
+			.suffix(var_string(this))
+			.append(this.block.lines())
+			.suffix('}');
 	}
+
 });
 
 function Value(base, props) {
@@ -529,6 +840,11 @@ $.extend(Value.prototype, {
 
 	toString: function() {
 		return this.base + concat(this.properties);
+	},
+
+	lines: function() {
+		return this.base.lines()
+			.append(Lines.bindNodes(this.properties));
 	},
 
 	hasProperties: function() {
@@ -595,6 +911,10 @@ $.extend(Access.prototype, {
 	},
 	children: function() {
 		return [this.member];
+	},
+
+	lines: function() {
+		return new Lines([line(this.toString(), this.member.line)]);
 	}
 
 });
@@ -608,6 +928,10 @@ $.extend(Index.prototype, {
 	},
 	children: function() {
 		return [this.expr];
+	},
+
+	lines: function() {
+		return this.expr.lines().prefix('[').suffix(']');
 	}
 });
 
@@ -632,6 +956,23 @@ $.extend(Try.prototype, {
 	},
 	children: function() {
 		return [this.block, this.caught, this.catchBlock, this.finallyBlock];
+	},
+	lines: function() {
+		var ls = this.block.lines().prefix('try {').suffix('}');
+		if (this.caught) {
+			ls.suffix(' catch(')
+				.append(this.caught.lines())
+				.suffix(') {')
+				.append(this.catchBlock.lines())
+				.suffix('}');
+		}
+		if (this.finallyBlock) {
+			ls.suffix(' finally {')
+				.append(this.finallyBlock.lines())
+				.suffix('}');
+		}
+
+		return ls;
 	}
 });
 
@@ -646,12 +987,16 @@ $.extend(Throw.prototype, {
 	},
 	children: function() {
 		return [];
+	},
+	lines: function() {
+		return this.expr.lines().prefix('throw ');
 	}
 });
 
-function While(cond, block) {
+function While(cond, block, is_do) {
 	this.cond = cond;
 	this.block = block;
+	this.is_do = is_do;
 }
 
 $.extend(While.prototype, {
@@ -660,6 +1005,22 @@ $.extend(While.prototype, {
 	},
 	children: function() {
 		return [this.cond, this.block];
+	},
+	lines: function() {
+		var ls = this.block.lines();
+
+		if (this.is_do) {
+			ls.prefix('do {')
+				.suffix('} while (')
+				.append(this.cond.lines())
+				.suffix(')');
+		} else {
+			ls.prefix('while (')
+				.append(this.cond.lines())
+				.suffix('}');
+		}
+
+		return ls;
 	}
 });
 
@@ -704,10 +1065,42 @@ $.extend(For.prototype, {
 		}
 
 		return str;
+	},
+
+	lines: function() {
+		var
+			blk = this.block.lines(),
+			ls;
+
+		if (this.loop.in) {
+			ls = this.loop.obj.lines()
+				.prefix('var _obj; for (' + this.loop.id + ' in (_obj=')
+				.suffix('))');
+
+			if (this.loop.own) {
+				ls.suffix('{ if (_obj.hasOwnProperty(' + this.loop.id + ')) {')
+					.append(blk)
+					.suffix('}');
+			} else {
+				ls.append(blk)
+			}
+		} else {
+			ls = this.loop.init.lines()
+				.prefix('for (')
+				.suffix('; ')
+				.append(this.loop.check.lines())
+				.suffix('; ')
+				.append(this.loop.step.lines())
+				.suffix(') {')
+				.append(blk)
+				.suffix('}');
+		}
+
+		return ls;
 	}
 });
 
-Switch = function(expr, cases, deflt) {
+Switch = function Switch(expr, cases, deflt) {
 	this.expr = expr;
 	this.cases = cases;
 	this.deflt = deflt;
@@ -717,11 +1110,6 @@ $.extend(Switch.prototype, {
 	toString: function() {
 		var str = 'switch (' + this.expr + ') {\n';
 
-		// FIXME: this is a hack; 'break' is not a valid identifier
-		for (var i = 0, len = this.cases.length; i < len; i++) {
-			this.cases[i][1].push(new Identifier('break'));
-		}
-
 		for (var i = 0, len = this.cases.length; i < len; i++) {
 			str += 'case ' + to_list(this.cases[i][0]) + ':' +
 				this.cases[i][1].toString();
@@ -729,12 +1117,21 @@ $.extend(Switch.prototype, {
 
 		return str + '}';
 	},
+	lines: function() {
+		return this.expr.lines()
+			.prefix('switch (')
+			.suffix(') {\n')
+			.append(Lines.bindNodes(this.cases))
+			.suffix('default:')
+			.append(this.deflt.lines())
+			.suffix('}');
+	},
 	children: function() {
 		return [this.expr, this.cases, this.deflt];
 	},
 	returnify: function() {
 		for (var i = 0, len = this.cases.length; i < len; i++) {
-			this.cases[i][1].returnify();
+			this.cases[i].returnify();
 		}
 		if (this.deflt) {
 			this.deflt.returnify();
@@ -744,7 +1141,7 @@ $.extend(Switch.prototype, {
 	},
 	assignify: function(assignee, op) {
 		for (var i = 0, len = this.cases.length; i < len; i++) {
-			this.cases[i][1].assignify(assignee, op);
+			this.cases[i].assignify(assignee, op);
 		}
 		if (this.deflt) {
 			this.deflt.assignify(assignee, op);
@@ -753,6 +1150,40 @@ $.extend(Switch.prototype, {
 		return this;
 	}
 
+});
+
+Case = function Case(vals, blk) {
+	this.vals = vals;
+	this.blk = blk;
+}
+$.extend(Case.prototype, {
+	returnify: function() {
+		this.blk.returnify();
+		return this;
+	},
+	assignify: function(assignee, op) {
+		this.blk.assignify(assignee, op);
+		return this;
+	},
+	lines: function() {
+		return Lines.join(Lines.mapNodes(this.vals), ',')
+			.prefix('case ')
+			.suffix(':')
+			.append(this.blk.lines())
+			.suffix('break;')
+			;
+	}
+});
+
+Break = function Break(yylineno) {
+	this.line = yylineno;
+};
+$.extend(Break.prototype, {
+	is_expression: false,
+	toString: function() { return 'break;\n' },
+	lines: function() {
+		return line('break', this.line);
+	}
 });
 
 function If(cond, block) {
@@ -783,6 +1214,26 @@ $.extend(If.prototype, {
 		}
 
 		return str;
+	},
+	lines: function() {
+		var ls = this.condition.lines()
+			.prefix('if (')
+			.suffix(') {' )
+			.append(this.block.lines())
+			.suffix('}');
+
+		if (this.elses && this.elses.length) {
+			if (this.elses.length > 1) {
+				ls.suffix(' else ').append(
+					Lines.join(Lines.mapNodes(this.elses.slice(0, -1)), ' else ')
+				);
+			}
+			ls.suffix(' else {')
+				.append(H.last(this.elses).lines())
+				.suffix('}');
+		}
+
+		return ls;
 	},
 	children: function() {
 		return [this.condition, this.block, this.elses];
@@ -826,7 +1277,7 @@ $.extend(Unary.prototype, {
 
 });
 
-Var = function(names) {
+Var = function Var(names) {
 	this.names = names;
 }
 
@@ -843,6 +1294,9 @@ $.extend(Var.prototype, {
 	},
 	children: function() {
 		return this.term;
+	},
+	lines: function() {
+		return new Lines([]);
 	}
 });
 
@@ -873,5 +1327,6 @@ module.exports = {
 	Return: Return,
 	FuncCall: FuncCall,
 	Unary: Unary,
-	Var: Var
+	Var: Var,
+	Case: Case
 };
