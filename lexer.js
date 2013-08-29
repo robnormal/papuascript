@@ -27,12 +27,12 @@ var JS_KEYWORDS, PAPUA_KEYWORDS, RESERVED, STRICT_PROSCRIBED, JS_FORBIDDEN,
 		IDENTIFIER, NUMBER  , WHITESPACE, COMMENT   , MULTI_DENT, SIMPLESTR , JSTOKEN   ,
 		OPERATORS, UNARY   , LOGIC   , SHIFT   , COMPARE , MATH    , RELATION, BOOL,
 		MULTILINER      , TRAILING_SPACES , COMPOUND_ASSIGN, SINGLESTR, DOUBLESTR, REGEX,
-		PAPUA_OPS
+		UNARY_ASSIGN, PAPUA_OPS
 		;
 
 // Keywords that CoffeeScript shares in common with JavaScript.
 JS_KEYWORDS = [
-  'true', 'false', 'null', 'this','var', 
+  'true', 'false', 'null', 'this','var',
 	'let', 'new', 'delete', 'typeof', 'in', 'instanceof',
   'return', 'throw', 'break', 'continue', 'debugger',
   'if', 'else', 'switch', 'case', 'default', 'for', 'while',
@@ -65,7 +65,7 @@ IDENTIFIER = /^([$A-Za-z_\x7f-\uffff][$\w\x7f-\uffff]*)/;
 NUMBER  = /^0b[01]+|^0o[0-7]+|^0x[\da-f]+|^\d*\.?\d+(?:e[+-]?\d+)?/i;
 WHITESPACE = /^[^\n\S]+/;
 COMMENT    = /^\/\*([^#][\s\S]*?)\*\/|^(?:\s*\/\/.*)/;
-MULTI_DENT = /^(?:\n[^\n\S]*)+/;
+MULTI_DENT = /^(?:\n([^\n\S]*))+/;
 SINGLESTR  = /^'[^\\']*(?:\\.[^\\']*)*'/;
 DOUBLESTR  = /^"[^\\"]*(?:\\.[^\\"]*)*"/;
 JSTOKEN    = /^`[^\\`]*(?:\\.[^\\`]*)*`/;
@@ -146,12 +146,8 @@ Lexer.prototype = {
 	},
 
 	tokenize: function(s) {
-		this.indent   = 0              // The current indentation level.
-		this.indebt   = 0              // The over-indentation at the current level.
-		this.outdebt  = 0              // The under-outdentation at the current level.
-		this.indents  = []             // The stack of all current indentation levels.
-		this.ends     = []             // The stack for pairing up tokens.
-		this.tokens   = []             // Stream of parsed tokens in the form `['TYPE', value, location data]`.
+		this.indents  = [''];             // The stack of all current indentation levels. Top-level indent is empty string
+		this.tokens   = [];             // Stream of parsed tokens in the form `['TYPE', value, location data]`.
 		
 		this.chunkLine = 0;            // The start line for the current @chunk.
 		this.chunkColumn = 0;          // The start column of the current @chunk.
@@ -181,10 +177,6 @@ Lexer.prototype = {
 		
     this.closeIndentation()
  
-		if (!!(tag = this.ends.pop())) {
-			this.error('missing ' + tag);
-		}
-
     return this.tokens;
 	},
 
@@ -377,7 +369,8 @@ Lexer.prototype = {
   // can close multiple indents, so we need to know how far in we happen to be.
 	line: function() {
 		var diff, indent, match, size,
-			prev = H.last(this.tokens);
+			prev = H.last(this.tokens),
+			base_indent = this.indents[this.indents.length - 1];
 
 		if (!(match = MULTI_DENT.exec(this.chunk))) {
 			return 0;
@@ -386,56 +379,63 @@ Lexer.prototype = {
 		// mark token before newline as spaced
 		if (prev) prev.spaced = true;
 
-		indent = match[0];
-		this.seenFor = false;
-		size = indent.length - 1 - indent.lastIndexOf('\n');
-		if (size - this.indebt === this.indent) {
+		indent = match[1];
+
+		if (indent === base_indent) {
 			this.newlineToken(0);
-			return indent.length;
-		}
-		if (size > this.indent) {
-			diff = size - this.indent + this.outdebt;
-			this.token('INDENT', diff, indent.length - size, size);
+			return match[0].length;
+
+		// indent
+		} else if (H.begins_with(indent, base_indent)) {
+			diff = indent.substr(base_indent.length);
+			this.token('INDENT', diff, indent.length - diff.length, diff.length);
 			this.indents.push(diff);
-			this.ends.push('OUTDENT');
-			this.outdebt = this.indebt = 0;
+
+		// outdent
+		} else if (H.begins_with(base_indent, indent)) {
+			diff = base_indent.substr(indent.length);
+			this.outdent(diff.length, true);
+
 		} else {
-			this.indebt = 0;
-			this.outdent(this.indent - size, false, indent.length);
+			this.error('mismatched indent');
 		}
-		this.indent = size;
-		return indent.length;
+
+		return match[0].length;
 	},
 
 
   // Record an outdent token or multiple tokens, if we happen to be moving back
   // inwards past several recorded indents.
-	outdent: function(moveOut, noNewlines, outdentLength) {
-		var dent, len;
+	outdent: function(moveOut, noNewlines) {
+		var dent, len, last_indent;
 
 		while (moveOut > 0) {
 			len = this.indents.length - 1;
-			if (this.indents[len] === void 0) {
+
+			if (len < 0) {
 				moveOut = 0;
-			} else if (this.indents[len] === this.outdebt) {
-				moveOut -= this.outdebt;
-				this.outdebt = 0;
-			} else if (this.indents[len] < this.outdebt) {
-				this.outdebt -= this.indents[len];
-				moveOut -= this.indents[len];
 			} else {
-				dent = this.indents.pop() + this.outdebt;
-				moveOut -= dent;
-				this.outdebt = 0;
-				this.pair('OUTDENT');
-				this.token('OUTDENT', dent, 0, outdentLength);
+				last_indent = this.indents[len];
+				dent = last_indent.length;
+
+				if (dent === void 0) {
+					moveOut = 0;
+				} else {
+					// partial outdent; alter current indent
+					if (dent > moveOut) {
+						this.indents[len] = this.indents[len].substr(0, dent - moveOut);
+						this.token('OUTDENT', last_indent.substr(dent - moveOut), 0, dent);
+						moveOut = 0;
+					} else {
+						this.indents.pop();
+						this.token('OUTDENT', last_indent, 0, dent);
+						moveOut -= dent;
+					}
+				}
 			}
 		}
-		if (dent) {
-			this.outdebt -= moveOut;
-		}
 		if (!(this.prevTag() === 'TERMINATOR' || noNewlines)) {
-			this.token('TERMINATOR', '\n', outdentLength, 0);
+			this.token('TERMINATOR', '\n', null, 0);
 		}
 		return this;
 	},
@@ -504,17 +504,6 @@ Lexer.prototype = {
 			tag = 'LOGIC';
 		}
 
-		switch (value) {
-			case '(':
-			case '{':
-			case '[':
-				this.ends.push(INVERSES[value]);
-				break;
-			case ')':
-			case '}':
-			case ']':
-				this.pair(value);
-		}
 		this.token(tag, value);
 
 		return value.length;
@@ -596,53 +585,7 @@ Lexer.prototype = {
 
   // Close up all remaining open blocks at the end of the file.
 	closeIndentation: function() {
-		return this.outdent(this.indent);
-	},
-
-  // Pairs up a closing token, ensuring that all listed pairs of tokens are
-  // correctly balanced throughout the course of the token stream.
-	pair: function(tag) {
-		var size, wanted;
-		if (tag !== (wanted = H.last(this.ends))) {
-			if ('OUTDENT' !== wanted) {
-				this.error("unmatched " + tag);
-			}
-			this.indent -= size = H.last(this.indents);
-			this.outdentToken(size, true);
-
-			return this.pair(tag);
-		} else {
-			return this.ends.pop();
-		}
-	},
-
-	outdentToken: function(moveOut, noNewlines, outdentLength) {
-		var dent, len;
-		while (moveOut > 0) {
-			len = this.indents.length - 1;
-			if (this.indents[len] === void 0) {
-				moveOut = 0;
-			} else if (this.indents[len] === this.outdebt) {
-				moveOut -= this.outdebt;
-				this.outdebt = 0;
-			} else if (this.indents[len] < this.outdebt) {
-				this.outdebt -= this.indents[len];
-				moveOut -= this.indents[len];
-			} else {
-				dent = this.indents.pop() + this.outdebt;
-				moveOut -= dent;
-				this.outdebt = 0;
-				this.pair('OUTDENT');
-				this.token('OUTDENT', dent, 0, outdentLength);
-			}
-		}
-		if (dent) {
-			this.outdebt -= moveOut;
-		}
-		if (!(this.prevTag() === 'TERMINATOR' || noNewlines)) {
-			this.token('TERMINATOR', '\n', outdentLength, 0);
-		}
-		return this;
+		return this.outdent(this.indents[this.indents.length - 1].length, false);
 	}
 };
 

@@ -58,6 +58,17 @@ module.exports = {
 			;
 
 		assert.equal(true, eq(tags1, [ID, '=', NUM, BR]));
+	},
+
+	'Requires indent to match previous indent': function(b, assert) {
+		var
+			good = 'this\n \t is\n \t   indented\n \t correctly',
+			bad  = 'this\n \t is\n \t   indented\n  wrong';
+
+		lexer = new lex.Lexer();
+
+		lexer.tokenize(good);
+		lexer.tokenize(bad);
 	}
 
 };
