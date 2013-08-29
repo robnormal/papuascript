@@ -389,7 +389,7 @@ Lexer.prototype = {
 		} else if (H.begins_with(indent, base_indent)) {
 			diff = indent.substr(base_indent.length);
 			this.token('INDENT', diff, indent.length - diff.length, diff.length);
-			this.indents.push(diff);
+			this.indents.push(indent);
 
 		// outdent
 		} else if (H.begins_with(base_indent, indent)) {

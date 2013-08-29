@@ -67,8 +67,15 @@ module.exports = {
 
 		lexer = new lex.Lexer();
 
-		lexer.tokenize(good);
-		lexer.tokenize(bad);
+		doesntThrow(assert, function() {
+			lexer.tokenize(good);
+		}, 'accepts consistent indentation');
+
+		try {
+			lexer.tokenize(bad);
+			assert.ok(false, 'throws error on inconsistent indentation');
+		} catch(e) {
+		}
 	}
 
 };
