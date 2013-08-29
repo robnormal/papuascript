@@ -553,13 +553,49 @@ function convertPoundSign(tokens, pos) {
 	return tokens;
 }
 
+function fixIndents(tokens) {
+	var
+		pos = tokens.length - 1,
+		outdents = [],
+		outdent, out_pos, indent;
+
+	while(tokens[pos]) {
+		if (tokens[pos][0] === 'OUTDENT') {
+			outdents.push(tokens[pos][1]);
+		} else if (tokens[pos][0] === 'INDENT') {
+			indent = tokens[pos][1];
+
+			while ((outdent = outdents.pop()) && indent.length) {
+				if (H.ends_with(indent, outdent)) {
+					// subtract outdent from end
+					indent = indent.substr(-outdent.length);
+
+					if (indent.length) {
+						// add missing indent
+						tokens.splice(pos, 0,
+							['INDENT', indent + outdent, H.loc(tokens[pos])]
+						);
+					}
+				} else {
+					error('Unmatched outdent', pos);
+				}
+			}
+		}
+
+		pos--;
+	}
+
+	return tokens;
+}
+
 function rewrite(tokens) {
 	return markFunctionParams(
 		convertPoundSign(
 			resolveBlocks(
 				fixFunctionBlocks(
 					cpsArrow(
-						tokens)))));
+						fixIndents(
+							tokens))))));
 }
 
 
@@ -569,6 +605,7 @@ module.exports = {
 	markFunctionParams: markFunctionParams,
 	convertPoundSign: convertPoundSign,
 	fixFunctionBlocks: fixFunctionBlocks,
+	fixIndents: fixIndents,
 	cleanTerminators: cleanTerminators,
 	rewrite: rewrite
 };

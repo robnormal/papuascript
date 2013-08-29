@@ -66,6 +66,18 @@ function mkTokens(str) {
 }
 
 module.exports = {
+	'Pairs off indents and outdents': function(b, assert) {
+		var text1 = '(\\x ->\n' + '    x\n' + '  ) b'; 
+		var raw = getTokens(text1);
+		var toks = R.fixIndents(raw);
+
+		assert.equal(toks[4][0], 'INDENT');
+		assert.equal(toks[5][0], 'INDENT', 'adds second indent to match outdent');
+	},
+
+	'Checks matching pairs': function(b, assert) {
+	},
+
 	'Converts CPS arrow to continuation-passing function call': function(b, assert) {
 		var text1 =
 'while top\n' +
@@ -189,7 +201,7 @@ module.exports = {
 		} catch (e) {
 			assert.ok(false, 'Knows that the WHILE goes with the preceding DO');
 		}
-		expected = mkTokens(
+		var expected = mkTokens(
 			'DO INDENT IDENTIFIER OUTDENT WHILE IDENTIFIER TERMINATOR NUMBER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Knows that the WHILE goes with the preceding DO');
@@ -201,7 +213,7 @@ module.exports = {
 		toks = mkTokens(
 			'IDENTIFIER NUMBER # IDENTIFIER MATH NUMBER TERMINATOR IDENTIFIER'
 		);
-		expected = mkTokens(
+		var expected = mkTokens(
 			'IDENTIFIER NUMBER ( IDENTIFIER MATH NUMBER ) TERMINATOR IDENTIFIER'
 		);
 		R.convertPoundSign(toks);

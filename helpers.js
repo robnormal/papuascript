@@ -19,6 +19,10 @@ function begins_with(haystack, needle) {
 	return haystack.substr(0, needle.length) === needle;
 }
 
+function ends_with(haystack, needle) {
+	return haystack.substr(-needle.length) === needle;
+}
+
 function find_init(xs, str) {
 	for (var i = 0, len = xs.length; i < len; i++) {
 		if (str.substr(0, xs[i].length) === xs[i]) {
@@ -98,6 +102,7 @@ module.exports = {
 	count: count,
 	find_init: find_init,
 	begins_with: begins_with,
+	ends_with: ends_with,
 	here: here,
 	loc: loc,
 	throwSyntaxError: throwSyntaxError
