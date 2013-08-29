@@ -73,6 +73,7 @@ module.exports = {
 
 		assert.equal(toks[4][0], 'INDENT');
 		assert.equal(toks[5][0], 'INDENT', 'adds second indent to match outdent');
+		assert.equal(toks[6][0], 'IDENTIFIER', 'adds correct number of indents');
 	},
 
 	'Checks matching pairs': function(b, assert) {
@@ -132,12 +133,14 @@ module.exports = {
 		assert.equal('INDENT', toks[5][0]);
 		assert.equal('OUTDENT', toks[8][0]);
 
+		/*
 		var text2 = 'foo \\bar spam -> j = 3\n  return bar + spam + j';
 		var raw = getTokens(text2);
 		var toks2 = R.fixFunctionBlocks(raw);
 
 		assert.equal('INDENT', toks2[5][0], 'adds indent after arrow');
 		assert.equal('RETURN', toks2[10][0], 'Removes indent of associated block');
+		*/
 	},
 
 	'Removes non-semantic TERMINATORs': function(b, assert) {

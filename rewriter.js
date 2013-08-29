@@ -136,48 +136,68 @@ function cpsArrow(tokens) {
 	return tokens;
 }
 
-function fixFunctionBlocks(tokens) {
-	var i = 0, tag, start, line;
+function readFunctionOneLiner(tokens, pos) {
+	var pairs = 0, indents = 0, body = [];
 
-	while (tokens[i]) {
-		tag = tokens[i][0];
-		if (tag === '->') {
-			start = i;
-			do { i++; } while (!startsNewLine(tokens[i]));
-
-			// remove indent from block, and move it up to the arrow
-			if (i > start) {
-
-				// one-liners
-				if (!tokens[i] || tokens[i][0] === 'TERMINATOR') {
-					var outdent = ['OUTDENT', '', H.loc(tokens[i-1])];
-					if (tokens[i]) {
-						tokens.splice(i, 1, outdent);
-					} else {
-						tokens.splice(i, 0, outdent);
-					}
-					tokens.splice(start+1, 0, ['INDENT', '', H.loc(tokens[start])]);
-					i += 2;
-
-				} else {
-
-					// replace indent with newline
-					var indent = tokens.splice(i, 1, ['TERMINATOR', '', H.loc(tokens[i])])[0];
-
-					// add indent after ->
-					tokens.splice(start + 1, 0, indent);
-					i++;
-				}
-
-			// for empty function, create an indent and an outdent
-			} else if (tokens[i][0] !== 'INDENT') {
-				tokens.splice(i, 0, ['INDENT', '', H.loc(tokens[start])]);
-				tokens.splice(i+1, 0, ['OUTDENT', '', H.loc(tokens[start])]);
-				i += 2;
+	while (tokens[pos]) {
+		switch (tokens[pos][0]) {
+		case '(':
+		case '[':
+		case '{':
+			break;
+			pairs++;
+		case ')':
+		case ']':
+		case '}':
+			if (pairs) {
+				pairs--;
+			} else {
+				return [body, pos];
 			}
+			break;
+		case 'INDENT':
+			indents++;
+			has_indented = true;
+			break;
+		case 'OUTDENT':
+			indents--;
+			if (indents <= 0 && !pairs) {
+				body.push(tokens[pos]);
+				return [body, pos];
+			}
+			break;
+		case 'TERMINATOR':
+			if (! indents) {
+				return [body, pos + 1];
+			}
+			break;
 		}
 
-		i++;
+		body.push(tokens[pos]);
+		pos++;
+	}
+
+
+	return [body, pos];
+}
+
+function fixFunctionBlocks(tokens) {
+	var i = 0,
+		res, code, end;
+
+	while (tokens[i]) {
+		// one-line functions
+		if (tokens[i][0] === '->' && (!tokens[i+1] || tokens[i+1][0] !== 'INDENT')) {
+			res = readFunctionOneLiner(tokens, i);
+			code = res[0];
+			end = res[1] - 1;
+
+			tokens.splice(end, 0, ['OUTDENT', '', H.loc(tokens[end - 1])]);
+			tokens.splice(i+1, 0, ['INDENT', '', H.loc(tokens[i])]);
+			i = end + 2;
+		} else {
+			i++;
+		}
 	}
 
 	return tokens;
@@ -568,13 +588,16 @@ function fixIndents(tokens) {
 			while ((outdent = outdents.pop()) && indent.length) {
 				if (H.ends_with(indent, outdent)) {
 					// subtract outdent from end
-					indent = indent.substr(-outdent.length);
+					indent = indent.substr(0, indent.length - outdent.length);
 
 					if (indent.length) {
 						// add missing indent
 						tokens.splice(pos, 0,
 							['INDENT', indent + outdent, H.loc(tokens[pos])]
 						);
+
+						// update original indent to reflect its effective indentation
+						tokens[pos][1] = indent;
 					}
 				} else {
 					error('Unmatched outdent', pos);
