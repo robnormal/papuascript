@@ -337,16 +337,15 @@ function resolveBlocks(tokens) {
 			case 'OUTDENT':
 				var ignore_from = ignore_newlines.pop();
 
+				// make sure to include TERMINATOR when necessary
+				if (!H.last(ignore_newlines)) {
+					addNewlineIfNecessary(tokens, i+1);
+				}
+
 				// if ignoring newlines, remove outdent
 				if (false !== ignore_from) {
 					tokens.splice(i, 1);
-
 				} else {
-					// make sure TERMINATOR follows OUTDENT
-					if (tokens[i+1] && 'TERMINATOR' !== tokens[i+1][0] && 'OUTDENT' !== tokens[i+1][0]) {
-						tokens.splice(i+1, 0, ['TERMINATOR', '', H.loc(tokens[i])]);
-					}
-
 					indent_level--;
 					last_block = blocks.pop();
 				}
@@ -394,6 +393,20 @@ function resolveBlocks(tokens) {
 	var last_tok = tokens[i-1];
 	if (last_tok[0] !== 'TERMINATOR') {
 		tokens.splice(i, 0, ['TERMINATOR', '', H.loc(last_tok)]);
+	}
+
+	return tokens;
+}
+
+function addNewlineIfNecessary(tokens, i) {
+	if (tokens[i] &&
+		'TERMINATOR' !== tokens[i][0] &&
+		')' !== tokens[i][0] &&
+		']' !== tokens[i][0] &&
+		'}' !== tokens[i][0] &&
+		'OUTDENT' !== tokens[i][0]
+	) {
+		tokens.splice(i, 0, ['TERMINATOR', '', H.loc(tokens[i-1])]);
 	}
 
 	return tokens;

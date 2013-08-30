@@ -202,6 +202,25 @@ module.exports = {
 			'IDENTIFIER = \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER OUTDENT TERMINATOR IDENTIFIER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Inserts required TERMINATOR after OUTDENT when newlines matter');
+
+		toks = mkTokens(
+			'IDENTIFIER INDENT IDENTIFIER OUTDENT IDENTIFIER'
+		);
+		R.resolveBlocks(toks);
+		expected = mkTokens(
+			'IDENTIFIER IDENTIFIER TERMINATOR IDENTIFIER TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Inserts required TERMINATOR after OUTDENT at top level');
+
+		toks = mkTokens(
+			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER'
+		);
+		R.resolveBlocks(toks);
+		expected = mkTokens(
+			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Does not add TERMINATOR before closing container symbols - parens, etc');
+
 	},
 
 	'Treats DO WHILE correctly': function(b, assert) {

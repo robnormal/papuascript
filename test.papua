@@ -1,3 +1,4 @@
-double = util.map (\x ->
-		2*x
-	) xs
+(\x -> 2*x) xs
+
+z
+
