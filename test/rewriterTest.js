@@ -67,13 +67,27 @@ function mkTokens(str) {
 
 module.exports = {
 	'Pairs off indents and outdents': function(b, assert) {
-		var text1 = '(\\x ->\n' + '    x\n' + '  ) b'; 
+		var text1 =
+			'(\\x ->\n' +
+			'    x\n' +
+			'  ) b'; 
 		var raw = getTokens(text1);
 		var toks = R.fixIndents(raw);
 
 		assert.equal(toks[4][0], 'INDENT');
 		assert.equal(toks[5][0], 'INDENT', 'adds second indent to match outdent');
 		assert.equal(toks[6][0], 'IDENTIFIER', 'adds correct number of indents');
+
+		var text2 =
+			'\\x ->\n' +
+			'  while 1\n' +
+			'    print\n' +
+			'a';
+		raw = getTokens(text2);
+		toks = R.fixIndents(raw);
+
+		assert.equal(toks[8][0], 'OUTDENT');
+		assert.equal(toks[9][0], 'OUTDENT', 'adds second outdent to match indents');
 	},
 
 	'Checks matching pairs': function(b, assert) {
@@ -133,14 +147,12 @@ module.exports = {
 		assert.equal('INDENT', toks[5][0]);
 		assert.equal('OUTDENT', toks[8][0]);
 
-		/*
 		var text2 = 'foo \\bar spam -> j = 3\n  return bar + spam + j';
 		var raw = getTokens(text2);
 		var toks2 = R.fixFunctionBlocks(raw);
 
 		assert.equal('INDENT', toks2[5][0], 'adds indent after arrow');
 		assert.equal('RETURN', toks2[10][0], 'Removes indent of associated block');
-		*/
 	},
 
 	'Removes non-semantic TERMINATORs': function(b, assert) {
@@ -208,6 +220,22 @@ module.exports = {
 			'DO INDENT IDENTIFIER OUTDENT WHILE IDENTIFIER TERMINATOR NUMBER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Knows that the WHILE goes with the preceding DO');
+	},
+
+	'Preserves innermost INDENT and OUTDENT for blocks': function(b, assert) {
+		/*
+			(\ ->
+			    x
+			  ) y';
+			*/
+		toks = mkTokens(
+			'( \\ -> INDENT INDENT IDENTIFIER OUTDENT ) IDENTIFIER OUTDENT TERMINATOR'
+		);
+		R.resolveBlocks(toks);
+		expected = mkTokens(
+			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Removes INDENT related to expression, not inner block');
 	},
 
 	'"#" parenthesizes the rest of the expression': function(b, assert) {

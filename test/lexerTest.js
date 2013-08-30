@@ -18,6 +18,11 @@ function map(xs, f) {
 	return ys;
 }
 
+function getTokens(str) {
+	lexer = new lex.Lexer();
+	return lexer.tokenize(str);
+}
+
 function tags(tokens) {
 	return map(tokens, function(x) { return x[0]; });
 }
@@ -50,16 +55,6 @@ module.exports = {
 		assert.equal(true, eq(tags2, [ID, '->', BR]), 'Finds function-definition arrow');
 	},
 
-	'TERMINATOR added to last line in document, even if no newline': function(b, assert) {
-		var
-			line1 = 'x = 4',
-			lexer = new lex.Lexer(),
-			tags1 = tags(lexer.tokenize(line1))
-			;
-
-		assert.equal(true, eq(tags1, [ID, '=', NUM, BR]));
-	},
-
 	'Requires indent to match previous indent': function(b, assert) {
 		var
 			good = 'this\n \t is\n \t   indented\n \t correctly',
@@ -76,6 +71,29 @@ module.exports = {
 			assert.ok(false, 'throws error on inconsistent indentation');
 		} catch(e) {
 		}
-	}
+	},
 
+	'Correctly finds indents': function(b, assert) {
+		var code =
+			'while 3\n' +
+			'  if db\n' +
+			'    a\n' +
+			'\n' +
+			'do\n' +
+			'  x\n' +
+			'while y',
+
+			lexer = new lex.Lexer(),
+			tags1 = tags(lexer.tokenize(code));
+
+		assert.equal('INDENT', tags1[10], 'indents at indent after "do" after block statement');
+	},
+
+	'TERMINATOR added to last line in document, even if no newline': function(b, assert) {
+		var
+			text1 = 'x = 4',
+			tags1 = tags(getTokens(text1));
+
+		assert.equal(true, eq(tags1, [ID, '=', NUM, BR]));
+	}
 };

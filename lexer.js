@@ -174,9 +174,9 @@ Lexer.prototype = {
 
 			i += consumed;
 		}
-		
-    this.closeIndentation()
- 
+
+		this.endWithNewline(this.tokens);
+
     return this.tokens;
 	},
 
@@ -370,7 +370,7 @@ Lexer.prototype = {
 	line: function() {
 		var diff, indent, match, size,
 			prev = H.last(this.tokens),
-			base_indent = this.indents[this.indents.length - 1];
+			base_indent = this.indents.join('');
 
 		if (!(match = MULTI_DENT.exec(this.chunk))) {
 			return 0;
@@ -389,7 +389,7 @@ Lexer.prototype = {
 		} else if (H.begins_with(indent, base_indent)) {
 			diff = indent.substr(base_indent.length);
 			this.token('INDENT', diff, indent.length - diff.length, diff.length);
-			this.indents.push(indent);
+			this.indents.push(diff);
 
 		// outdent
 		} else if (H.begins_with(base_indent, indent)) {
@@ -415,27 +415,27 @@ Lexer.prototype = {
 			if (len < 0) {
 				moveOut = 0;
 			} else {
-				last_indent = this.indents[len];
-				dent = last_indent.length;
+				last_indent = H.last(this.indents);
+				moveIn = last_indent.length;
 
-				if (dent === void 0) {
+				if (moveIn === void 0) {
 					moveOut = 0;
 				} else {
 					// partial outdent; alter current indent
-					if (dent > moveOut) {
-						this.indents[len] = this.indents[len].substr(0, dent - moveOut);
-						this.token('OUTDENT', last_indent.substr(dent - moveOut), 0, dent);
+					if (moveIn > moveOut) {
+						this.indents[len] = last_indent.substr(0, moveIn - moveOut);
+						this.token('OUTDENT', last_indent.substr(moveIn - moveOut), 0, moveIn);
 						moveOut = 0;
 					} else {
 						this.indents.pop();
-						this.token('OUTDENT', last_indent, 0, dent);
-						moveOut -= dent;
+						this.token('OUTDENT', last_indent, 0, moveIn);
+						moveOut -= moveIn;
 					}
 				}
 			}
 		}
 		if (!(this.prevTag() === 'TERMINATOR' || noNewlines)) {
-			this.token('TERMINATOR', '\n', null, 0);
+			this.newlineToken(0);
 		}
 		return this;
 	},
@@ -457,6 +457,10 @@ Lexer.prototype = {
 			this.token('TERMINATOR', '\n', offset, 0);
 		}
 		return this;
+	},
+
+	endWithNewline: function() {
+		this.newlineToken(this.tokens.length);
 	},
 
   // We treat all other single characters as a token. E.g.: `( ) , . !`
@@ -581,11 +585,6 @@ Lexer.prototype = {
 			first_line: this.chunkLine,
 			first_column: this.chunkColumn
 		});
-	},
-
-  // Close up all remaining open blocks at the end of the file.
-	closeIndentation: function() {
-		return this.outdent(this.indents[this.indents.length - 1].length, false);
 	}
 };
 

@@ -633,12 +633,15 @@ $.extend(FuncCall.prototype, {
 		return this;
 	},
 	lines: function() {
-		var args = this.factors.slice(1);
+		var
+			args = this.factors.slice(1),
+			ls = this.factors[0].lines().suffix('(');
 
-		return this.factors[0].lines()
-			.suffix('(')
-			.append(Lines.join(Lines.mapNodes(args), ','))
-			.suffix(')')
+		if (args && args.length) {
+			ls.append(Lines.join(Lines.mapNodes(args), ','));
+		}
+
+		return ls.suffix(')');
 	}
 
 });
