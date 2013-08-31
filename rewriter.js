@@ -64,6 +64,22 @@ function outdentNextOutdent(tokens, i) {
 	return tokens;
 }
 
+var addNewlineIfNecessary = function(tokens, i) {
+	if (tokens[i] &&
+		'TERMINATOR' !== tokens[i][0] &&
+		')' !== tokens[i][0] &&
+		']' !== tokens[i][0] &&
+		'}' !== tokens[i][0] &&
+		'OUTDENT' !== tokens[i][0]
+	) {
+		tokens.splice(i, 0, ['TERMINATOR', '', H.loc(tokens[i-1])]);
+
+		return true;
+	} else {
+		return false;
+	}
+}
+
 function cpsArrow(tokens) {
 	var
 		i = 0,
@@ -176,7 +192,7 @@ function readFunctionOneLiner(tokens, pos) {
 	}
 
 	// check that last token is not a newline
-	if (H.last(body)[0] = 'TERMINATOR') {
+	if (H.last(body)[0] === 'TERMINATOR') {
 		body.pop();
 		pos--;
 	}
@@ -242,10 +258,10 @@ function deletePrecedingBR(tokens, i) {
 	return i;
 }
 
-function isWhileForDo(tokens, i, last_block) {
+function isWhileForDo(tokens, i, was_do) {
 	// will already have added TERMINATOR after OUTDENT,
 	// so must account for that here
-	return last_block === 'DO' &&
+	return was_do &&
 		tokens[i] &&
 		tokens[i-1] &&
 		tokens[i-2] &&
@@ -254,136 +270,167 @@ function isWhileForDo(tokens, i, last_block) {
 		'OUTDENT' === tokens[i-2][0];
 }
 
-// remove indent, newlines, and subsequent outdent from expressions
-// make all functions take a block
-function resolveBlocks(tokens) {
+// eliminate leading TERMINATORs
+function trimNewlines(tokens, i) {
+	var trimmed = 0;
+
+	while (tokens[i] && tokens[i][0] === 'TERMINATOR') {
+		tokens.splice(i, 1);
+		trimmed++;
+	}
+
+	return trimmed;
+}
+
+function resolveBlocks_new(tokens) {
 	var
 		i = 0,
-		pre_blocks = [false], // whether we are waiting for a block (e.g., in a WHILE condition)
-		blocks = [], // what type of block we are in
-		pair_levels = [0], // while conditions, etc., can be broken over lines if in parens
-		indent_level = 0,
-		ignore_newlines = [false], // stack that answers that question for indentation levels
-		last_block, last_pair_level,
-		tag; // current token's tag
+		awaiting_block = [false], // whether we need an indented block next, recorded as a stack of conditions
+		tag
+		;
 
-	// eliminate leading TERMINATORs
-	if (tokens[0][0] === 'TERMINATOR') {
-		tokens.splice(0, 1);
-	}
+	trimNewlines(tokens, 0);
 
 	while (i < tokens.length) {
 		tag = tokens[i][0];
 
 		// get this condition early
-		if (isWhileForDo(tokens, i, last_block)) {
+		if (isWhileForDo(tokens, i, block_was_do)) {
 			i = deletePrecedingBR(tokens, i);
 			i++;
-
 			continue;
 		}
 
 		// don't add new block when IF follows ELSE
 		if ('IF' === tokens[i][0] && tokens[i-1] && 'ELSE' === tokens[i-1][0]) {
 			i++;
-
 			continue;
 		}
-		
+
+		// check for block keyword
 		if (H.has(BLOCK_TAGS, tag)) {
-			pre_blocks.push(true);
-			blocks.push(tag);
-			pair_levels.push(0); // start counting parens
+			block_keywords.push(tag);
+
+			awaiting_block.push({ pos: i });
 		}
 
 		switch (tag) {
-			case '(':
-			case '[':
-			case '{':
-				pair_levels[pair_levels.length - 1]++;
-				pre_blocks.push(false);
-				break;
+		case '(':
+		case '[':
+		case '{':
+			awaiting_block.push(false);
+			break;
 
-			case ')':
-			case ']':
-			case '}':
-				pair_levels[pair_levels.length - 1]--;
-				if (H.last(pre_blocks)) {
-					error('Unexpected ' + tag + ' at head of block', tokens[i]);
-				}
-				pre_blocks.pop();
-				break;
+		case ')':
+		case ']':
+		case '}':
+			if (H.last(awaiting_block)) {
+				error('Unexpected ' + tag + ' at head of block', tokens[i]);
+			}
 
-			case 'INDENT':
+			awaiting_block.pop();
+			break;
+
+		case 'ELSE':
+		case 'CASE':
+		case 'DEFAULT':
+		case 'CATCH':
+		case 'FINALLY':
+			// remove TERMINATOR before these keywords
+			i = deletePrecedingBR(tokens, i);
+			break;
+
+		case '->':
+			awaiting_block.push({ pos: i });
+			break;
+
+		/* NOTE:
+		 * Multiple consecutive INDENTs are associated with parents *in order*,
+		 * not in reverse order. Thus, in the following:
+		 *
+		 * fmap (\x ->
+		 *         x*x
+		 *     ) nums
+		 * 
+		 * two indents come after '->'. The first is associated with the expression
+		 * starting with 'fmap'; the second is associated with the function literal.
+		 */
+		case 'INDENT':
+			var count = 0, awaits, await;
+
+			while (tokens[i] && tokens[i][0] === 'INDENT') {
+				count++;
+				i++;
+			}
+
+			awaits = awaiting_block.splice(-count, count);
+
+			for (var j = 0; j < awaits.length; j++) {
 				// if starting a block, do not ignore newlines
-				if (pre_blocks.pop()) {
-					ignore_newlines.push(false);
-					indent_level++;
-
-				// otherwise, start ignoring them and drop this indent
-				// make sure this is applied to the *first* adjacent indent,
-				// since the inner indent(s) would be block markers
+				if (false !== awaits[j]) {
+					parents.push({ i: awaits[j], block: true });
 				} else {
-					var ignore = 0;
-					while (tokens[i - ignore - 1][0] === 'INDENT') ignore++;
-					ignore_newlines.splice(ignore_newlines.length - ignore, 0, i);
+					// otherwise, start ignoring them and drop this indent
+					parents.push({ i: H.last(line_starts), block: false });
 
 					// remove indent
-					tokens.splice(i, 1);
+					tokens.splice(i-1, 1);
 					i--;
 				}
-				break;
+				
+				i -= trimNewlines(tokens, i); // ignore initial newlines in expression block
+			}
 
-			case 'OUTDENT':
-				var ignore_from = ignore_newlines.pop();
+			break;
 
-				// make sure to include TERMINATOR when necessary
-				if (!H.last(ignore_newlines)) {
-					addNewlineIfNecessary(tokens, i+1);
-				}
+		case 'OUTDENT':
+			var block_owner = parents.pop();
 
-				// if ignoring newlines, remove outdent
-				if (false !== ignore_from) {
-					tokens.splice(i, 1);
-				} else {
-					indent_level--;
-					last_block = blocks.pop();
-				}
-					
-				break;
+			// append TERMINATOR after OUTDENT when not ignoring newlines outside block
+			if (H.last(parents).block) {
+				var added = addNewlineIfNecessary(tokens, i+1);
+			}
 
-			case 'TERMINATOR':
-				if (H.last(pre_blocks)) {
-					error('Unexpected ' + tag + ' at head of block', tokens[i]);
-				}
+			// if ignoring newlines, remove outdent
+			if (false === block_owner.block) {
+				tokens.splice(i, 1);
+				i--;
+			} else {
+				block_was_do = block_keywords.pop() === 'DO';
+			}
 
-				// remove newline if ignoring
-				// or if more than one in a row
-				// TERMINATORs after OUTDENTs are not redundant unless we are ignoring newlines
-				// because they separate one Line from another
-				if (
-					H.last(ignore_newlines) ||
-					!tokens[i-1] ||
+			line_starts.pop();
+			if (added) i++;
+
+			break;
+
+		case 'TERMINATOR':
+			if (H.last(awaiting_block)) {
+				error('Unexpected ' + tag + ' at head of block', tokens[i]);
+			}
+
+			// remove newline if ignoring
+			// or if more than one in a row
+			// TERMINATORs after OUTDENTs are not redundant unless we are ignoring newlines
+			// because they separate one Line from another
+			if (H.last(parents).block) {
+				// remove unnecessary newline
+				if (! tokens[i-1] ||
 					'TERMINATOR' === tokens[i-1][0] ||
 					'INDENT' === tokens[i-1][0]
 				) {
 					tokens.splice(i, 1);
 					i--;
+
+				// record first token of newline
+				} else if (tokens[i+1]) {
+					line_starts.push(i + 1);
 				}
-				break;
-
-			case '->':
-				pre_blocks.push(true);
-				break;
-
-			case 'ELSE':
-			case 'CASE':
-			case 'DEFAULT':
-			case 'CATCH':
-			case 'FINALLY':
-				// remove TERMINATOR before these keywords
-				i = deletePrecedingBR(tokens, i);
-				break;
+			} else {
+				tokens.splice(i, 1);
+				i--;
+			}
+			break;
 		}
 
 		i++;
@@ -398,15 +445,177 @@ function resolveBlocks(tokens) {
 	return tokens;
 }
 
-function addNewlineIfNecessary(tokens, i) {
-	if (tokens[i] &&
-		'TERMINATOR' !== tokens[i][0] &&
-		')' !== tokens[i][0] &&
-		']' !== tokens[i][0] &&
-		'}' !== tokens[i][0] &&
-		'OUTDENT' !== tokens[i][0]
-	) {
-		tokens.splice(i, 0, ['TERMINATOR', '', H.loc(tokens[i-1])]);
+function resolveBlocks(tokens) {
+	var
+		i = 0,
+		line_starts = [0], // first token on current line (record as stack)
+		parents = [{ i: 0, block: true }],
+
+		// whether we need an indented block next, recorded as a stack of conditions
+		awaiting_block = [false],
+		block_keywords = [], // stack of keywords creating nested blocks we are currently in
+		block_was_do = false, // whether previous block was a DO block (for resolving WHILE)
+		tag
+		;
+
+	trimNewlines(tokens, 0);
+
+	while (i < tokens.length) {
+		tag = tokens[i][0];
+
+		// get this condition early
+		if (isWhileForDo(tokens, i, block_was_do)) {
+			i = deletePrecedingBR(tokens, i);
+			i++;
+			continue;
+		}
+
+		// don't add new block when IF follows ELSE
+		if ('IF' === tokens[i][0] && tokens[i-1] && 'ELSE' === tokens[i-1][0]) {
+			i++;
+			continue;
+		}
+
+		// check for block keyword
+		if (H.has(BLOCK_TAGS, tag)) {
+			block_keywords.push(tag);
+
+			awaiting_block.push({ pos: i });
+		}
+
+		switch (tag) {
+		case '(':
+		case '[':
+		case '{':
+			awaiting_block.push(false);
+			line_starts.push(i);
+			break;
+
+		case ')':
+		case ']':
+		case '}':
+			if (H.last(awaiting_block)) {
+				error('Unexpected ' + tag + ' at head of block', tokens[i]);
+			}
+
+			awaiting_block.pop();
+			line_starts.pop();
+			break;
+
+		case 'ELSE':
+		case 'CASE':
+		case 'DEFAULT':
+		case 'CATCH':
+		case 'FINALLY':
+			// remove TERMINATOR before these keywords
+			i = deletePrecedingBR(tokens, i);
+			break;
+
+		case '->':
+			awaiting_block.push({ pos: i });
+			break;
+
+		/* NOTE:
+		 * Multiple consecutive INDENTs are associated with parents *in order*,
+		 * not in reverse order. Thus, in the following:
+		 *
+		 * fmap (\x ->
+		 *         x*x
+		 *     ) nums
+		 * 
+		 * two indents come after '->'. The first is associated with the expression
+		 * starting with 'fmap'; the second is associated with the function literal.
+		 */
+		case 'INDENT':
+			var count = 0, awaits, await;
+
+			while (tokens[i] && tokens[i][0] === 'INDENT') {
+				count++;
+				i++;
+			}
+
+			awaits = awaiting_block.splice(-count, count);
+
+			// the most recent line starts all these blocks, so:
+			for (var aw_count = awaits.length; aw_count; aw_count--) {
+				line_starts.push(H.last(line_starts));
+			}
+
+			for (var j = 0; j < awaits.length; j++) {
+				// if starting a block, do not ignore newlines
+				if (false !== awaits[j]) {
+					parents.push({ i: awaits[j], block: true });
+				} else {
+					// otherwise, start ignoring them and drop this indent
+					parents.push({ i: H.last(line_starts), block: false });
+
+					// remove indent
+					tokens.splice(i-1, 1);
+					i--;
+				}
+				
+				i -= trimNewlines(tokens, i); // ignore initial newlines in expression block
+			}
+
+			break;
+
+		case 'OUTDENT':
+			var block_owner = parents.pop();
+
+			// append TERMINATOR after OUTDENT when not ignoring newlines outside block
+			if (H.last(parents).block) {
+				var added = addNewlineIfNecessary(tokens, i+1);
+			}
+
+			// if ignoring newlines, remove outdent
+			if (false === block_owner.block) {
+				tokens.splice(i, 1);
+				i--;
+			} else {
+				block_was_do = block_keywords.pop() === 'DO';
+			}
+
+			line_starts.pop();
+			if (added) i++;
+
+			break;
+
+		case 'TERMINATOR':
+			if (H.last(awaiting_block)) {
+				error('Unexpected ' + tag + ' at head of block', tokens[i]);
+			}
+
+			// remove newline if ignoring
+			// or if more than one in a row
+			// TERMINATORs after OUTDENTs are not redundant unless we are ignoring newlines
+			// because they separate one Line from another
+			if (H.last(parents).block) {
+				// remove unnecessary newline
+				if (! tokens[i-1] ||
+					'TERMINATOR' === tokens[i-1][0] ||
+					'INDENT' === tokens[i-1][0]
+				) {
+					tokens.splice(i, 1);
+					i--;
+
+				// record first token of newline
+				} else if (tokens[i+1]) {
+					line_starts.push(i + 1);
+				}
+			} else {
+				tokens.splice(i, 1);
+				i--;
+			}
+			break;
+		}
+
+		i++;
+	}
+
+	// ensure one last TERMINATOR
+	var last_tok = tokens[i-1];
+	if (last_tok[0] !== 'TERMINATOR') {
+		tokens.splice(i, 0, ['TERMINATOR', '', H.loc(last_tok)]);
 	}
 
 	return tokens;
@@ -613,13 +822,13 @@ function fixIndents(tokens) {
 					indent = indent.substr(0, indent.length - outdent.length);
 
 					if (indent.length) {
+						// update original indent to reflect its effective indentation
+						tokens[pos][1] = outdent;
+
 						// add missing indent
 						tokens.splice(pos, 0,
-							['INDENT', indent + outdent, H.loc(tokens[pos])]
+							['INDENT', indent, H.loc(tokens[pos])]
 						);
-
-						// update original indent to reflect its effective indentation
-						tokens[pos][1] = indent;
 					}
 
 					// get rid of used outdent
@@ -644,6 +853,8 @@ function fixIndents(tokens) {
 				} else {
 					error('Unmatched outdent', tokens[pos]);
 				}
+
+				i--;
 			}
 
 			// close unclosed indent before final TERMINATOR

@@ -88,6 +88,21 @@ module.exports = {
 
 		assert.equal(toks[8][0], 'OUTDENT');
 		assert.equal(toks[9][0], 'OUTDENT', 'adds second outdent to match indents');
+
+		var text3 =
+			'a\n' +
+			'    b\n' +
+			'  c\n' +
+			'd\n';
+
+		raw = getTokens(text3);
+		toks = R.fixIndents(raw);
+
+		assert.equal(toks[1][0], 'INDENT');
+		assert.equal(toks[2][0], 'INDENT', 'adds second indent to match outdents');
+		assert.equal(toks[4][0], 'OUTDENT');
+		assert.equal(toks[6][0], 'OUTDENT');
+		assert.equal(9, toks.length, 'Does not add too many indents or outdents');
 	},
 
 	'Checks matching pairs': function(b, assert) {
@@ -167,32 +182,7 @@ module.exports = {
 	},
 
 	'Removes redundant TERMINATORs': function(b, assert) {
-		var toks = mkTokens(
-			'IF IDENTIFIER INDENT TERMINATOR STRING OUTDENT TERMINATOR NUMBER TERMINATOR TERMINATOR STRING'
-		);
-		R.resolveBlocks(toks);
-		var expected = mkTokens(
-			'IF IDENTIFIER INDENT STRING OUTDENT TERMINATOR NUMBER TERMINATOR STRING TERMINATOR'
-		);
-		assert.ok(tags_equal(toks, expected));
-
-		toks = mkTokens(
-			'IDENTIFIER = \\ b -> INDENT TERMINATOR IF IDENTIFIER INDENT IDENTIFIER OUTDENT TERMINATOR ELSE INDENT IDENTIFIER OUTDENT OUTDENT TERMINATOR'
-		);
-		R.resolveBlocks(toks);
-		expected = mkTokens(
-			'IDENTIFIER = \\ b -> INDENT IF IDENTIFIER INDENT IDENTIFIER OUTDENT ELSE INDENT IDENTIFIER OUTDENT OUTDENT TERMINATOR'
-		);
-		assert.ok(tags_equal(toks, expected));
-
-		toks = mkTokens(
-			'WHILE IDENTIFIER INDENT IF IDENTIFIER INDENT IDENTIFIER OUTDENT TERMINATOR ELSE INDENT IDENTIFIER OUTDENT TERMINATOR NUMBER OUTDENT TERMINATOR'
-		);
-		R.resolveBlocks(toks);
-		expected = mkTokens(
-			'WHILE IDENTIFIER INDENT IF IDENTIFIER INDENT IDENTIFIER OUTDENT ELSE INDENT IDENTIFIER OUTDENT TERMINATOR NUMBER OUTDENT TERMINATOR'
-		);
-		assert.ok(tags_equal(toks, expected), 'Leaves terminators that separate "Line"s in a block');
+		var toks, expected;
 
 		toks = mkTokens(
 			'IDENTIFIER = \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER OUTDENT IDENTIFIER TERMINATOR'
@@ -247,11 +237,11 @@ module.exports = {
 			    x
 			  ) y';
 			*/
-		toks = mkTokens(
+		var toks = mkTokens(
 			'( \\ -> INDENT INDENT IDENTIFIER OUTDENT ) IDENTIFIER OUTDENT TERMINATOR'
 		);
 		R.resolveBlocks(toks);
-		expected = mkTokens(
+		var expected = mkTokens(
 			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Removes INDENT related to expression, not inner block');
@@ -297,16 +287,14 @@ module.exports = {
 	},
 
 	'Function literals can be parenthesized': function(b, assert) {
-		/*
 		toks = mkTokens(
-			'( \\ IDENTIFIER -> IDENTIFIER ) IDENTIFIER'
+			'( \\ -> IDENTIFIER ) IDENTIFIER'
 		);
 		expected = mkTokens(
-			'( \\ IDENTIFIER -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER'
+			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
 		);
 		R.rewrite(toks);
 		assert.ok(tags_equal(toks, expected), 'OUTDENT placed before closing paren');
-		*/
 	}
 
 };

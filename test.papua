@@ -1,4 +1,7 @@
-(\x -> 2*x) xs
+meta (\x -> (\y ->
+			print y
+			y.blah x
+		) x
+	) 5
 
 z
-
