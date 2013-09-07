@@ -175,7 +175,7 @@ Lexer.prototype = {
 			i += consumed;
 		}
 
-		this.endWithNewline(this.tokens);
+		this.endFile(this.tokens);
 
     return this.tokens;
 	},
@@ -459,7 +459,20 @@ Lexer.prototype = {
 		return this;
 	},
 
-	endWithNewline: function() {
+	currentIndent: function() {
+		return this.indents.join('');
+	},
+
+	endFile: function() {
+		var indent = this.currentIndent();
+
+		// match final indent
+		if (indent.length) {
+			this.token('OUTDENT', indent, 0, this.tokens.length);
+			this.indents = [];
+		}
+
+		// always ensure a newline is at the end
 		this.newlineToken(this.tokens.length);
 	},
 

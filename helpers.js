@@ -1,3 +1,27 @@
+function Maybe(x, is_just) {
+	this.x = x;
+	this.is_just = is_just;
+}
+Maybe.prototype.isJust = function() {
+	return this.is_just;
+}
+Maybe.prototype.isNothing = function() {
+	return ! this.is_just;
+}
+Maybe.prototype.fromJust = function() {
+	if (this.is_just) {
+		return this.x;
+	} else {
+		throw new Error('Cannot call fromJust on Maybe::nothing');
+	}
+}
+
+Maybe.nothing = new Maybe(null, false);
+
+Maybe.just = function(x) {
+	return new Maybe(x, true);
+};
+
 function has(xs, x) {
 	return xs.indexOf(x) !== -1;
 }
@@ -23,6 +47,16 @@ function ends_with(haystack, needle) {
 	return haystack.substr(-needle.length) === needle;
 }
 
+function clipString(haystack, needle) {
+	var len = needle.length;
+
+	if (haystack.substr(haystack.length - len) === needle) {
+		return Maybe.just(haystack.substr(0, haystack.length - len));
+	} else {
+		return Maybe.nothing;
+	}
+}
+
 function find_init(xs, str) {
 	for (var i = 0, len = xs.length; i < len; i++) {
 		if (str.substr(0, xs[i].length) === xs[i]) {
@@ -31,6 +65,19 @@ function find_init(xs, str) {
 	}
 
 	return false;
+}
+
+function greaterIndent(a, b) {
+	return a !== b && begins_with(a, b);
+}
+
+function clone(a) {
+	var b = {};
+	for (var x in a) if (a.hasOwnProperty(x)) {
+		b[x] = a[x];
+	}
+
+	return b;
 }
 
 function here(line, col) {
@@ -58,6 +105,10 @@ function throwSyntaxError(message, location) {
 	throw error;
 }
 
+function error(msg, token) {
+	throw new Error(msg + ' in line ' + (token[2].first_line+1) + ' column ' + (token[2].first_column+1));
+}
+
 var buildLocationData = function(first, last) {
 	if (!last) {
 		return first;
@@ -73,7 +124,7 @@ var buildLocationData = function(first, last) {
 
 var addLocationDataFn = function(first, last) {
 	return function(obj) {
-		if (((typeof obj) === 'object') && obj['updateLocationDataIfMissing']) {
+		if (((typeof obj) === 'object') && obj.updateLocationDataIfMissing) {
 			obj.updateLocationDataIfMissing(buildLocationData(first, last));
 		}
 		return obj;
@@ -103,8 +154,15 @@ module.exports = {
 	find_init: find_init,
 	begins_with: begins_with,
 	ends_with: ends_with,
+	clipString: clipString,
+	greaterIndent: greaterIndent,
+	clone: clone,
 	here: here,
 	loc: loc,
-	throwSyntaxError: throwSyntaxError
+	throwSyntaxError: throwSyntaxError,
+	error: error,
+	Maybe: Maybe,
+	just: Maybe.just,
+	nothing: Maybe.nothing
 };
 

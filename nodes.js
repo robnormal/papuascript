@@ -367,7 +367,7 @@ $.extend(Arr.prototype, {
 	},
 
 	lines: function() {
-		return Lines.bindNodes(this.xs)
+		return Lines.join(Lines.mapNodes(this.xs), ',')
 			.prefix('[')
 			.suffix(']');
 	}

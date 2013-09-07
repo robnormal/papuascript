@@ -1,7 +1,17 @@
-meta (\x -> (\y ->
-			print y
-			y.blah x
-		) x
-	) 5
+/*
+	WHY THIS IS NOT OK: toInt x = parseInt x 10
+	I wanted it, but it doesn't work, because of nullary functions.
+	What does this following mean? 
 
-z
+	foo.bar = print(foo)
+
+	It's ambiguous - could be setting foo.bar to the value
+	returned by calling print now, or it could be a function
+	that takes no arguments and calls that
+*/
+
+
+(\xs -> (\x ->
+			x * x
+		) xs
+	) [1,2]

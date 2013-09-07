@@ -357,9 +357,9 @@ ThisProperty
 
 /* The array literal. */
 Array
-	: WS '[' ']'
+	: '[' ']'
     { $$ = new N.Arr([], yylineno); }
-	| WS '[' Arguments ']'
+	| '[' Arguments ']'
     { $$ = new N.Arr($2, yylineno); }
 	;
 

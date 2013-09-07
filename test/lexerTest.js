@@ -95,5 +95,14 @@ module.exports = {
 			tags1 = tags(getTokens(text1));
 
 		assert.equal(true, eq(tags1, [ID, '=', NUM, BR]));
+	},
+
+	'Outdents final indent': function(b, assert) {
+		var text1 =
+			'x = a\n' +
+			'  3';
+
+		var tags1 = tags(getTokens(text1));
+		assert.ok(eq(tags1, [ID, '=', ID, 'INDENT', NUM, 'OUTDENT', BR]));
 	}
 };
