@@ -1,17 +1,208 @@
-/*
-	WHY THIS IS NOT OK: toInt x = parseInt x 10
-	I wanted it, but it doesn't work, because of nullary functions.
-	What does this following mean? 
-
-	foo.bar = print(foo)
-
-	It's ambiguous - could be setting foo.bar to the value
-	returned by calling print now, or it could be a function
-	that takes no arguments and calls that
-*/
-
-
-(\xs -> (\x ->
+lazyMult = (\xs -> map (\x ->
 			x * x
 		) xs
 	) [1,2]
+
+lazyMult2 = \x -> \y ->
+	x*y
+
+3
+
+/********************
+lazyMult = (\xs -> map (\x ->
+			x * x
+		) xs
+	) [1,2]
+
+[ Line '' 0 Nothing true ]         -- starting at 'lazyMult'
+[ FnLiteral '' 0 ]                 -- starting at first '->'
+[ Line '' 1 Nothing true ]         -- starting at 'map'
+[ FnLiteral '' 1 ]                 -- starting at second '->'
+[ Line '\t\t\t' 2 Nothing  false]  -- x * x
+OUTDENT '\t'
+OUTDENT '\t'
+OUTDENT '\t'
+
+this.outdent '\t'
+	this.indents = 1
+	this.level = '\t\t'
+	-- pop indentables with more than 1 indents
+	-- then pop _blocks_ with exactly 1 indent
+	-- return
+
+[ Line '' 0 Nothing true ]        -- starting at 'lazyMult'
+[ FnLiteral '' 0 ]                -- starting at first '->'
+[ Line '' 1 Nothing true ]        -- starting at 'map'
+
+[ Line '' 0 Nothing true ]        -- starting at 'lazyMult'
+[ FnLiteral '' 0 ]                -- starting at first '->'
+[ Line '' 1 (Just '\t\t') true ]  -- starting at 'map'
+
+this.outdent '\t'
+	this.indents = 0
+	this.level = '\t'
+	-- pop indentables with more than 0 indents
+	-- then pop _blocks_ with exactly 0 indent
+	-- return
+
+[ Line '' 0 Nothing true ]      -- starting at 'lazyMult'
+
+[ Line '' 0 (Just '\t') true ]  -- starting at 'lazyMult'
+
+this.outdent '\t'
+	this.level = ''
+	-- indented Line being outdented
+	--     pop line
+	--     return DROP_OUTDENT
+
+ ********************/
+
+
+/********************
+
+lazyMult2 = \x -> \y ->
+	x*y
+
+[ Line '' 0 Nothing ]    -- starting at 'lazyMult2'
+[ FnLiteral '' 0 ]       -- starting at first '->'
+[ Line '' 1 Nothing ]    -- starting at '\y'
+[ FnLiteral '' 1 ]       -- starting at second '->'
+[ Line '\t' 2 Nothing ]  -- x * y
+
+this.outdent '\t'
+	this.level = ''
+	this.indents = 1
+	-- pop indentables with more than 1 indent
+	-- then pop _blocks_ with exactly 1 indent
+	-- if top indentable has same _level_, but less indents
+	--     return NEEDS_OUTDENT
+	-- else
+
+ ********************/
+
+
+/********************
+
+lazyMult3 = (\y ->
+		(\xs -> map (\x ->
+					x * x
+				) xs
+			) [1,2]
+	) 4
+
+[ Line '' 0 Nothing ]            -- starting at 'lazyMult3'
+[ FnLiteral '' 0 ]               -- starting at first '->'
+[ Line '\t\t' 1 Nothing ]        -- starting at second '('
+[ FnLiteral '\t\t' 1 ]           -- starting at second '->'
+[ Line '\t\t' 2 Nothing ]        -- starting at second 'map'
+[ FnLiteral '\t\t' 2 ]           -- starting at third '->'
+[ Line '\t\t\t\t\t' 3 Nothing ]  -- x * x
+
+OUTDENT '\t'
+	level = '\t\t\t\t'
+	indents = 2
+
+[ Line '' 0 Nothing ]                -- starting at 'lazyMult3'
+[ FnLiteral '' 0 ]                   -- starting at first '->'
+[ Line '\t\t' 1 Nothing ]            -- starting at second '('
+[ FnLiteral '\t\t' 1 ]               -- starting at second '->'
+[ Line '\t\t' 2 Nothing ]            -- starting at second 'map'
+
+[ Line '' 0 Nothing ]                -- starting at 'lazyMult3'
+[ FnLiteral '' 0 ]                   -- starting at first '->'
+[ Line '\t\t' 1 Nothing ]            -- starting at second '('
+[ FnLiteral '\t\t' 1 ]               -- starting at second '->'
+[ Line '\t\t' 2 (Just '\t\t\t\t') ]  -- starting at second 'map'
+
+OUTDENT '\t'
+	level = '\t\t\t'
+	indents = 1
+
+[ Line '' 0 Nothing ]              -- starting at 'lazyMult3'
+[ FnLiteral '' 0 ]                 -- starting at first '->'
+[ Line '\t\t' 1 Nothing ]          -- starting at second '('
+
+[ Line '' 0 Nothing ]              -- starting at 'lazyMult3'
+[ FnLiteral '' 0 ]                 -- starting at first '->'
+[ Line '\t\t' 1 (Just '\t\t\t') ]  -- starting at second '('
+
+OUTDENT '\t\t'
+	level = '\t'
+	indents = 0
+
+[ Line '' 0 Nothing ]     -- starting at 'lazyMult3'
+
+[ Line '' 0 (Just '\t') ] -- starting at 'lazyMult3'
+
+OUTDENT '\t'
+
+ ********************/
+
+/********************
+
+lazyMult4 = \x ->
+	console.log
+		x
+	x * x
+
+# All steps:
+
+[ Line '' 0 Nothing ]          -- starting at 'lazyMult4'
+
+[ Line '' 0 Nothing ]          -- starting at 'lazyMult4'
+[ FnLiteral '' 0 ]             -- starting at first '->'
+
+[ Line '' 0 Nothing ]          -- starting at 'lazyMult4'
+[ FnLiteral '' 0 ]             -- starting at first '->'
+[ Line '\t' 1 Nothing ]        -- starting at 'console'
+
+INDENT '\t'
+-- level = '\t\t'
+-- indents = 2
+
+Line
+-- Update last line's 'indented' property
+-- return DROP_INDENT
+
+[ Line '' 0 Nothing ]          -- starting at 'lazyMult4'
+[ FnLiteral '' 0 ]             -- starting at first '->'
+[ Line '\t' 1 (Just '\t\t') ]  -- starting at 'console', indented at 'x'
+
+indents = 2
+level = '\t\t'
+
+OUTDENT '\t'
+	level = '\t'
+	indents = 1
+-- pop last line
+-- return DROP_OUTDENT
+
+[ Line '' 0 Nothing ]          -- starting at 'lazyMult4'
+[ FnLiteral '' 0 ]             -- starting at first '->'
+[ Line '\t' 1 Nothing ]        -- x * x
+
+OUTDENT '\t'
+	level = ''
+	indents = 0
+-- pop all
+-- return KEEP_OUTDENT
+
+ ********************/
+
+/***
+ *
+ * Under what circumstances should we drop or keep an OUTDENT, and add or not add a TERMINATOR?
+ *
+ * ALWAYS set awaiting_line = true after INDENT, OUTDENT, or TERMINATOR
+ *
+ * A line can contain a block. If it does when it and the block are outdented, then
+ * we need to KEEP_OUTDENT. If it does not contain a block, then it should only get
+ * outdented if either it is the last line inside a block that is now being outdented -
+ * in which case, the block will be outdented immediately after the line (i.e., within
+ * the same function call) - or it is an indented line being outdented. In all cases
+ * except the last one, we need to KEEP_OUTDENT; in the last case, DROP_INDENT.
+ *
+ * If we have a line that is _not_ indented, but has a block, and then
+ * _becomes_ indented, then we are missing an indent for it
+ *
+ ***/

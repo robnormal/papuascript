@@ -15,6 +15,13 @@ Maybe.prototype.fromJust = function() {
 		throw new Error('Cannot call fromJust on Maybe::nothing');
 	}
 }
+Maybe.prototype.map = function(f) {
+	if (this.is_just) {
+		return Maybe.just(f(this.fromJust()));
+	} else {
+		return Maybe.nothing;
+	}
+}
 
 Maybe.nothing = new Maybe(null, false);
 
@@ -47,7 +54,15 @@ function ends_with(haystack, needle) {
 	return haystack.substr(-needle.length) === needle;
 }
 
-function clipString(haystack, needle) {
+function str_after_str(haystack, needle) {
+	if (needle && ends_with(haystack, needle)) {
+		return Maybe.just(haystack.substr(-needle.length));
+	} else {
+		return Maybe.nothing;
+	}
+}
+
+function stringMinus(haystack, needle) {
 	var len = needle.length;
 
 	if (haystack.substr(haystack.length - len) === needle) {
@@ -67,8 +82,41 @@ function find_init(xs, str) {
 	return false;
 }
 
-function greaterIndent(a, b) {
+function indentGreaterThan(a, b) {
 	return a !== b && begins_with(a, b);
+}
+
+function indentLessThan(a, b) {
+	return a !== b && indentGreaterThan(b, a);
+}
+
+function indentCmp(a, b) {
+	if (a === b) {
+		return { equal: true };
+	} else if (indentGreaterThan(a, b)) {
+		return { greater: true };
+	} else if (indentLessThan(a, b)) {
+		return { less: true };
+	} else {
+		return { error: true };
+	}
+}
+
+// remove b from the _end_ of a
+function indentMinus(a, b) {
+	if (a === b) {
+		res = { equal: true, diff: '' };
+	} else if (ends_with(a, b)) {
+		res = { greater: true, diff: stringMinus(a, b).fromJust() };
+	} else if (ends_with(b, a)) {
+		res = indentMinus(b,a);
+		res.greater = false;
+		res.less = true;
+	} else {
+		res = { error: 'Indent-outdent mismatch' };
+	}
+		
+	return res;
 }
 
 function clone(a) {
@@ -154,8 +202,12 @@ module.exports = {
 	find_init: find_init,
 	begins_with: begins_with,
 	ends_with: ends_with,
-	clipString: clipString,
-	greaterIndent: greaterIndent,
+	str_after_str: str_after_str,
+	stringMinus: stringMinus,
+	indentGreaterThan: indentGreaterThan,
+	indentLessThan: indentLessThan,
+	indentCmp: indentCmp,
+	indentMinus: indentMinus,
 	clone: clone,
 	here: here,
 	loc: loc,

@@ -72,7 +72,10 @@ module.exports = {
 			'    x\n' +
 			'  ) b'; 
 		var raw = getTokens(text1);
-		var toks = R.fixIndents(raw);
+		console.log(raw);
+		console.log('######');
+		var toks = R.fixFunctionBlocks(raw);
+		console.log(toks);
 
 		assert.equal(toks[4][0], 'INDENT');
 		assert.equal(toks[5][0], 'INDENT', 'adds second indent to match outdent');

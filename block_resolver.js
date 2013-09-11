@@ -1,5 +1,15 @@
 var H = require('./helpers.js');
-var last = H.last; // I use this too often to write it out all the time
+var $ = require('underscore');
+
+// I use these too often to write them out all the time
+var
+	last = H.last,
+	indentGreaterThan = H.indentGreaterThan,
+	indentLessThan = H.indentLessThan,
+	indentMinus = H.indentMinus,
+	stringMinus = H.stringMinus,
+	Nothing = H.nothing,
+	Just = H.just;
 
 var BLOCK_TAGS = [
 	'FOR', 'WHILE', 'DO', 'IF', 'ELSE',
@@ -18,11 +28,80 @@ function trimNewlines(tokens, i) {
 	return trimmed;
 }
 
-function Line(pos, level, indented, has_block) {
-	this.pos = pos;
-	this.level = level;
-	this.indented = indented;
-	this.has_block = has_block;
+function canBeginLine(tag) {
+	return -1 === ['TERMINATOR', 'INDENT', 'OUTDENT', ')', ']', '}'].indexOf(tag);
+}
+
+// removes zero-length markers ('|') from block level
+function realLevel(level) {
+	return level && level.replace(/\|/g,'');
+}
+
+var Line, Block, isLine, isIndentedLine, isBlock, getDent;
+
+(function() {
+	function Indentable(type, level, pairs, owner) {
+		this.type = type;
+		this.level = level;
+		this._rlevel = realLevel(level);
+		this.pairs = pairs;
+		this.owner = owner;
+
+		this.indent = '';
+		this._rindent = '';
+	}
+
+	$.extend(Indentable.prototype, {
+		// things are unindented only by _real_ indents
+		isUnindented: function(state) {
+			var st_rlevel = state.rlevel();
+
+			return st_rlevel === this._rlevel ||
+				indentLessThan(st_rlevel, this._rlevel) ||
+				this.indent && indentLessThan(st_rlevel, this.indent);
+		},
+
+		pairsAreClosed: function(state) {
+			return state.pairs < this.pairs;
+		},
+
+		setIndent: function(indent) {
+			this.indent = indent;
+			this._rindent = realLevel(this.indent);
+		},
+
+		addIndent: function(indent) {
+			this.setIndent(this.indent + (
+				'' === indent ? '|' : indent
+			));
+		}
+	});
+
+	Line = function(level, pairs, owner) {
+		return new Indentable('Line', level, pairs, owner);
+	};
+
+	Block = function(level, pairs, owner) {
+		return new Indentable('Block', level, pairs, owner);
+	};
+
+})();
+
+isLine = function(indentable) {
+	return indentable && indentable.type === 'Line';
+}
+
+isIndentedLine = function(indentable) {
+	// only a real indent indents a line
+	return isLine(indentable) && indentable._rindent;
+}
+
+isBlock = function(indentable) {
+	return indentable && indentable.type === 'Block';
+}
+
+getDent = function(indent) {
+	return indent ? indent : '|';
 }
 
 function Resolver(tokens) {
@@ -30,213 +109,324 @@ function Resolver(tokens) {
 
 	this.tokens = tokens;
 	this.pos = 0;
+
 	this.level = '';
-	this.awaiting_block = false;
-	this.is_do = false;
-	this.blocks = [];
-
 	this.pairs = 0;
-	this.indents = 0;
+	this.indentables = [];
 
-	this.indents_at_level = { '': 0 };
-
-	this.lines = [new Line(this.pos, this.level, false, false)];
+	this.awaiting_line = true; // awaiting first line
+	this.is_do = false;
 }
+Resolver.KEEP_OUTDENT = 0;
+Resolver.DROP_OUTDENT = 1;
 
-Resolver.prototype.indent = function() {
-	var line = last(this.lines);
+$.extend(Resolver.prototype, {
+	rlevel: function() {
+		return realLevel(this.level);
+	},
 
+	token: function() {
+		return this.tokens[this.pos];
+	},
 
-	if (this.awaiting_block) {
-		line.has_block = true;
-		this.awaiting_block = false;
-		this.level = line.level + this.tokens[this.pos][1];
+	tag: function() {
+		var tok = this.token();
+		return tok && tok[0];
+	},
 
-		// only update this if our INDENT was not added
-		// i.e., if it actually changes the indentation
-		if (this.level !== line.level) {
-			this.indents_at_level[this.level] = this.indents;
-		}
+	nextTag: function(tag) {
+		return this.tokens[this.pos + 1] && this.tokens[this.pos + 1][0];
+	},
 
-		if (this.tokens[this.pos][1]) {
-			var new_line = new Line(this.pos, this.level, false, false);
-			this.lines.push(new_line);
-		}
+	nextTagIs: function(tag) {
+		return tag === this.nextTag();
+	},
 
-		this.blocks.push(H.last(this.lines));
-		this.indents++;
+	appendTag: function(tag) {
+		var tok = this.insertTag(this.pos + 1, tag);
 		this.pos++;
-	} else {
-		line.indented = true;
-		// erase indent
-		this.removeToken(this.pos);
+		return tok;
+	},
+
+	insertTag: function(pos, tag) {
+		return this.insertTagWithText(pos, tag, '');
+	},
+
+	insertTagWithText: function(pos, tag, text) {
+		var tok = [tag, text, H.loc(this.tokens[pos - 1])];
+		this.tokens.splice(pos, 0, tok);
+		return tok;
+	},
+
+	replaceTag: function(pos, tag) {
+		this.tokens[pos][0] = tag;
+		return this.tokens[pos];
+	},
+
+	removeToken: function(pos) {
+		return this.tokens.splice(pos, 1);
+	},
+
+	dropToken: function() {
+		var tok = this.removeToken(this.pos);
 		this.pos--;
-	}
-};
+		return tok;
+	},
 
-Resolver.prototype.outdent = function() {
-	var line = last(this.lines);
-	var m_indent = H.clipString(this.level, this.tokens[this.pos][1]);
-	var ln;
+	needsBlock: function() {
+		return isBlock(this.dentable) && ! this.dentable.indent;
+	},
 
-	if (m_indent.isNothing()) {
-		H.error('Mismatched indent', this.tokens[this.pos]);
-	} else {
-		this.level = m_indent.fromJust();
+	push: function(indentable) {
+		this.indentables.push(indentable);
+		this.dentable = last(this.indentables);
 
-		console.log(this.lines, [line.level, this.level]);
+		return this.dentable;
+	},
 
-		if (line.indented && line.level === this.level) {
-			line.indented = false; // we've undone the indentation now
+	pop: function() {
+		var popped = [this.indentables.pop()];
+		this.dentable = last(this.indentables);
 
-			// replace OUTDENT with TERMINATOR, and try again
-			if (this.nextTagIs('TERMINATOR')) {
-				this.removeToken(this.pos);
-			} else {
-				this.replaceTag(this.pos, 'TERMINATOR');
-			}
-				
+		// Block always finishes a line, that is an explicit rule
+		if (isBlock(popped) && isLine(popped.owner)) {
+			popped.push(this.pop());
+		}
+
+		return popped;
+	},
+
+	// opening paren starts a Line or Block
+	incrementPairs: function() {
+		this.pairs++;
+		this.awaiting_line = true;
+	},
+
+	// closing paren ends a Line
+	decrementPairs: function() {
+		this.pairs--;
+		var outdents_needed = this.closePairs();
+
+		this.insertOutdents(outdents_needed);
+
+		// There might have been an INDENT inside the parens
+		if (this.dentable && indentGreaterThan(this.level, this.dentable.level)) {
+			this.dentable.indent = this.level;
+		}
+	},
+
+	block: function() {
+		var b;
+
+		// if Block starts within a Line, (but is not parenthesized) then
+		// the Block ends at the end of the line
+		if (isLine(this.dentable) && this.dentable.pairs === this.pairs) {
+			b = Block(this.level, this.pairs, this.dentable);
+		} else {
+			b = Block(this.level, this.pairs, null);
+		}
+
+		this.push(b);
+		this.awaiting_line = false; // won't need a new line until INDENT
+	},
+
+	line: function() {
+		var ln = Line(this.level, this.pairs);
+
+		if (! isLine(this.dentable)) {
+
+			return Just(this.push(ln));
+
+		// if inside new parens, add Line
+		} else if (! this.dentable || this.pairs > this.dentable.pairs) {
+
+			return Just(this.push(ln));
+
+		} else if (isIndentedLine(this.dentable)) {
+			var new_indent = this.level;
+
+			var cmp = H.indentCmp(new_indent, this.dentable.level);
+
+			// if the newline is outdented from the _base_ of the current line,
+			// then something is wrong - there should have been an OUTDENT
+			if (cmp.less) {
+				throw new Error('Bad line indent. Missing OUTDENT?');
+			} else if (cmp.equal) {
+				this.pop();
+
+				return Just(this.push(Line(this.level, this.pairs)));
+			} // else, continue below
+		} else {
+			// update current line's indent
+			this.dentable.indent = this.level;
+			return Nothing;
+		}
+	},
+
+	terminator: function() {
+		if (isIndentedLine(this.dentable)) {
+			// erase newline
+			this.removeToken(this.pos);
 			this.pos--;
 		} else {
-			this.blocks.pop();
-			this.lines.pop();
-			this.indents--;
+			this.pop();
+			this.awaiting_line = true;
+		}
+	},
 
-			ln = last(this.lines);
+	indent: function() {
+		if (! this.dentable) {
+			throw new Error('Cannot indent from nothing');
+		} else {
+			// FIXME: handle indented block conditions
+			var dent = getDent(this.token()[1]);
 
-			// close innermost unclosed indent
-			// outer ones will be closed at the next outdent (which we are inserting now)
-			if (this.indents > this.indents_at_level[this.level]) {
-				this.insertTag(this.pos + 1, 'OUTDENT');
+			if (! this.needsBlock()) {
+				this.dropToken();
 			}
 
-			if (ln.level === this.level) {
-				// if line is indented but not outdented, fix that
-				if (ln.indented) {
-					this.insertTag(this.pos + 1, 'OUTDENT');
+			this.level = this.level + dent;
+			this.dentable.addIndent(dent);
+			this.awaiting_line = true;
+		}
+	},
+
+	outdent: function() {
+		var
+			dent = getDent(this.token()[1]),
+			diff = stringMinus(this.level, dent),
+			outdents_needed, i, len;
+
+		if (diff.isNothing()) {
+			this.error('Mismatched indent');
+		} else {
+			this.level = diff.fromJust();
+			outdents_needed = this.closeIndents();
+
+			if (! outdents_needed.length) {
+				if (this.nextTagIs('TERMINATOR')) {
+					this.dropToken();
 				} else {
-					this.nextLine();
+					this.replaceTag(this.pos, 'TERMINATOR');
+				}
+				this.pos--;
+			} else {
+				outdents_needed.shift(); // we already have the first outdent
+				this.insertOutdents(outdents_needed);
+
+				if (canBeginLine(this.nextTag())) {
+					this.appendTag('TERMINATOR');
 				}
 			}
 		}
-	}
 
-};
+		this.awaiting_line = true;
+	},
 
-Resolver.prototype.functionBlock = function() {
-	this.awaiting_block = true;
+	popWhile: function(cond) {
+		var outdents_needed = [],
+			popped, m_dent;
 
-	// take care of inline functions
-	if (! this.nextTagIs('INDENT')) {
-		this.insertTag(this.pos + 1, 'INDENT');
-	}
-};
+		while (cond(this)) {
+			popped = this.pop();
 
-// called before beginning line - i.e., at the TERMINATOR or OUTDENT
-// prior to the line, but after accounting for the new indent level
-Resolver.prototype.nextLine = function() {
-	this.lines.push(
-		new Line(this.pos + 1, this.level, false, false)
-	);
-};
-
-Resolver.prototype.terminator = function() {
-	if (last(this.lines).indented) {
-		// erase newline
-		this.removeToken(this.pos);
-		this.pos--;
-	} else {
-		this.lines.pop();
-		this.nextLine();
-	}
-};
-
-Resolver.prototype.closingUnindentedFunction = function() {
-	var innermost = last(this.unindented_funcs);
-	return last(this.lines) === innermost.line &&
-		// innermost.pairs === this.pairs &&
-		innermost.indents === this.indents;
-}
-
-Resolver.prototype.fixBlocks = function() {
-	var block_line, m_indent, tag, tmp;
-
-	while (this.tokens[this.pos]) {
-		// this.debug_tokens(i, line.level, awaiting_block);
-		tag = this.tokens[this.pos][0];
-
-		// check for block keyword
-		// but don't treat DO statement's WHILE as a block word
-		if (H.has(BLOCK_TAGS, tag) && !('WHILE' === tag && this.is_do)) {
-			this.is_do = tag === 'DO';
-			this.awaiting_block = true;
-		} else switch(tag) {
-
-			case 'TERMINATOR':
-				this.terminator();
-				break;
-
-			case 'INDENT':
-				this.indent();
-				break;
-
-			case 'OUTDENT':
-				this.outdent();
-				break;
-
-			case '->':
-				this.functionBlock();
-				break;
-
-			case '(': case '[': case '{':
-				this.pairs++;
-				break;
-
-			case ')': case ']': case '}':
-				this.pairs--;
-				break;
+			for (var i = 0, len = popped.length; i < len; i++) {
+				if (isBlock(popped[i])) {
+					outdents_needed.push(popped[i].indent);
+				}
+			}
 		}
 
-		this.pos++;
-	}
-}
+		return outdents_needed;
+	},
 
-Resolver.prototype.nextTagIs = function(tag) {
-	return this.tokens[this.pos + 1] &&
-		tag === this.tokens[this.pos + 1][0];
-}
+	closeIndents: function() {
+		return this.popWhile(function(that) {
+			return that.dentable && that.dentable.isUnindented(that);
+		});
+	},
 
-Resolver.prototype.removeToken = function(pos) {
-	return this.tokens.splice(pos, 1);
-}
+	closePairs: function() {
+		return this.popWhile(function(that) {
+			return that.dentable && that.dentable.pairsAreClosed(that);
+		});
+	},
 
-Resolver.prototype.insertTag = function(pos, tag) {
-	var tok = [tag, '', H.loc(this.tokens[pos - 1])];
-	this.tokens.splice(pos, 0, tok);
-	return tok;
-}
+	fixBlocks: function() {
+		var tag, dent;
 
-Resolver.prototype.replaceTag = function(pos, tag) {
-	this.tokens[pos][0] = tag;
-	return this.tokens[pos];
-}
+		while (this.token()) {
+			// this.debug_tokens(i, line.level, awaiting_block);
+			tag = this.tag();
 
-Resolver.prototype.debug_tokens = function(i, indent_level, awaiting_block) {
-	var line = last(this.lines);
+			// check for block keyword
+			// but don't treat DO statement's WHILE as a block word
+			if ('WHILE' === tag && this.is_do) {
+				this.is_do = false;
+			} else if (H.has(BLOCK_TAGS, tag)) {
+				this.is_do = tag === 'DO';
+				this.block();
+			} else switch(tag) {
 
-	for (var j = 0; j < this.tokens.length; j++) {
-		var tok = [this.tokens[j][0], this.tokens[j][1]];
-		if (j === i) {
-			console.log('>', tok);
-		} else {
-			console.log(tok);
+				case 'TERMINATOR':
+					this.terminator();
+					break;
+
+				case 'INDENT':
+					this.indent();
+					break;
+
+				case 'OUTDENT':
+					this.outdent();
+					break;
+
+				case '\\':
+					this.block();
+					break;
+
+				case '->':
+					// take care of inline functions
+					if (! this.nextTagIs('INDENT')) {
+						this.appendTag('INDENT');
+					}
+					break;
+
+				case '(': case '[': case '{':
+					this.incrementPairs();
+					break;
+
+				case ')': case ']': case '}':
+					this.decrementPairs();
+					break;
+			}
+
+			if (this.awaiting_line && canBeginLine(tag)) {
+				this.line();
+				this.awaiting_line = false;
+			}
+
+			this.pos++;
 		}
-	}
-	console.log([indent_level, awaiting_block]);
-	console.log([this.lines]);
-	console.log();
-}
+	},
 
+	insertOutdents: function(dents) {
+		var dent, i;
+
+		for (i = dents.length - 1; i >= 0; i--) {
+			if (dents[i - 1]) {
+				dent = indentMinus(dents[i], dents[i-1]).fromJust();
+			} else {
+				dent = dents[i];
+			}
+
+			this.insertTagWithText(this.pos, 'OUTDENT', dent);
+		}
+	},
+
+	error: function(msg) {
+		H.error(msg, this.token());
+	}
+});
 
 function resolveBlocks(tokens) {
 	var r = new Resolver(tokens);
@@ -252,6 +442,13 @@ function resolveBlocks(tokens) {
 
 
 module.exports = {
-	resolveBlocks: resolveBlocks
+	Resolver: Resolver,
+	resolveBlocks: resolveBlocks,
+
+	// FIXME: These are exported for testing purposes
+	// Should use an intermediary for exporting to tests,
+	// and an outer file for exporting API
+	Line: Line,
+	Block: Block
 };
 
