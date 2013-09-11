@@ -199,9 +199,15 @@ ArityInvocation
 	;
 
 MethodCall
+	: NonCodeMethodCall
+	| NonCodeMethodCall WS Code
+		{ $$ = $1.appendFactor($3); }
+	;
+
+NonCodeMethodCall
 	: Identifier WS Atom
 		{ $$ = new N.FuncCall([$1, $3]); }
-	| MethodCall WS Atom
+	| NonCodeMethodCall WS Atom
 		{ $$ = $1.appendFactor($3); }
 	;
 
