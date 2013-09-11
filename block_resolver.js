@@ -420,6 +420,7 @@ $.extend(Resolver.prototype, {
 			}
 
 			this.insertTagWithText(this.pos, 'OUTDENT', dent);
+			this.pos++;
 		}
 	},
 

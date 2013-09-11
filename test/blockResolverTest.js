@@ -81,8 +81,9 @@ module.exports = {
 	'Zero-length outdents are not dropped at the end of Lines': function(b, assert) {
 		var r = new B.Resolver(getTokens('t = \\x -> x * x'));
 		r.line();
-		r.pos = 4; // ->
+		r.pos = 2; // \\
 		r.block();
+		r.pos = 4; // ->
 		r.appendTag('INDENT'); // inserting zero-length INDENT
 		r.pos = 5; // INDENT
 		r.indent();
@@ -92,6 +93,37 @@ module.exports = {
 		r.appendTag('OUTDENT');
 		r.pos = 9; // OUTDENT
 		r.outdent();
+
+		r.pos = 9;
+		assert.equal('OUTDENT', r.tag());
+		r.pos = 10;
+		assert.equal('TERMINATOR', r.tag());
+
+		r = new B.Resolver(getTokens('t = \\x -> \\y ->\n\tx * y'));
+		r.line();
+		r.pos = 2; // first \\
+		r.block();
+		r.pos = 4; // ->
+		r.appendTag('INDENT'); // inserting zero-length INDENT
+		r.pos = 5; // INDENT
+		r.indent();
+		assert.equal('INDENT', r.tag());
+		r.pos = 6; // second \\
+		r.block();
+		r.pos = 9; // INDENT
+		r.indent();
+		assert.equal('INDENT', r.tag());
+		r.pos = 10; // x
+		r.line();
+		r.pos = 13; // OUTDENT
+		r.outdent();
+
+		assert.equal('OUTDENT', r.tokens[13][0]);
+		assert.equal('OUTDENT', r.tokens[14][0], 'Necessary OUTDENT added at end of Line');
+		assert.equal(14, r.pos, 'moves _past_ inserted OUTDENTs, so we don\'t count them twice');
+
+		r.pos = 15;
+		assert.equal('TERMINATOR', r.tag());
 	},
 
 	'Blocks contain Lines': function(b, assert) {
@@ -100,7 +132,7 @@ module.exports = {
 
 		assert.ok(r.needsBlock(), 'When in unindented block, Resolver.needsBlock() is true');
 
-		r.pos = 2;
+		r.pos = 2; // INDENT
 		r.indent();
 
 		assert.ok(! r.needsBlock(), 'After indent, Resolver.needsBlock() is false');
@@ -108,13 +140,13 @@ module.exports = {
 			'Block is added by block()');
 		assert.equal('INDENT', r.tag(), 'INDENT is kept for Block');
 
-		r.pos = 3;
+		r.pos = 3; // second x
 		r.line();
 
 		assert.equal(2, r.indentables.length, 'Line is added to Resolver.indentables');
 		assert.equal('Line', r.dentable.type, 'Line is pushed on top of containing Block');
 
-		r.pos = 5;
+		r.pos = 5; // OUTDENT
 		r.outdent();
 
 		assert.equal(0, r.indentables.length,
@@ -144,21 +176,21 @@ module.exports = {
 		var r = new B.Resolver(toks);
 
 		r.line();
-		r.pos = 4;
+		r.pos = 2; // \\
 		r.block();
 
 		assert.equal('Line', r.dentable.owner && r.dentable.owner.type,
 			'Block is nested in Line it begins in');
 
-		r.pos = 5;
+		r.pos = 5; // INDENT
 		r.indent();
 
 		assert.equal('INDENT', r.tag(), 'INDENT kept for Block nested in Line');
 
-		r.pos = 6;
+		r.pos = 6; // x
 		r.line();
 
-		r.pos = 9;
+		r.pos = 9; // OUTDENT
 
 		r.outdent();
 		assert.equal(0, r.indentables.length);
@@ -169,18 +201,15 @@ module.exports = {
 
 		var r = new B.Resolver(toks);
 		r.line();
-		r.pos = 4; // first ->
+		r.pos = 2; // first \\
 		r.block();
+		r.pos = 4; // first ->
 		r.appendTag('INDENT'); // add INDENT that is not present
 		r.indent();
-		r.pos = 5; // second '\'
-		r.line();
-
-		r.pos = 8; // second ->
+		r.pos = 5; // second \\
 		r.block();
 		r.pos = 9; // existing INDENT
 		r.indent();
-
 		r.pos = 10; // x * y
 		r.line();
 
@@ -199,8 +228,6 @@ module.exports = {
 		r.pos = 2; // (
 		r.incrementPairs();
 		r.pos = 3; // '|'
-		r.line();
-		r.pos = 5; // ->
 		r.block();
 		r.pos = 6; // INDENT
 		r.indent();
@@ -227,11 +254,8 @@ module.exports = {
 		r.line();
 		r.pos = 2; // (
 		r.incrementPairs();
-		r.pos = 3; // '|'
+		r.pos = 3; // \\
 		assert.equal('\\', r.tag());
-		r.line();
-		r.pos = 5; // ->
-		assert.equal('->', r.tag());
 		r.block();
 		r.pos = 6; // INDENT (\t\t)
 		assert.equal('INDENT', r.tag());
