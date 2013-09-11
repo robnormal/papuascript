@@ -595,10 +595,8 @@ $.extend(Operation.prototype, {
 
 });
 
-// a FuncCall can have properties, as in getDB(name, passwd).address
-function FuncCall(factors, props) {
+function FuncCall(factors) {
 	this.factors = factors;
-	this.properties = props || [];
 }
 $.extend(FuncCall.prototype, {
 	is_expression: true,
@@ -614,20 +612,10 @@ $.extend(FuncCall.prototype, {
 		return this;
 	},
 	toString: function() {
-		var str = this.factors[0].toString() + in_parens(this.factors.slice(1));
-
-		for (var i in this.properties) if (this.properties.hasOwnProperty(i)) {
-			str += this.properties[i].toString();
-		}
-
-		return str;
+		return this.factors[0].toString() + in_parens(this.factors.slice(1));
 	},
 	children: function() {
 		return this.factors;
-	},
-	addProperty: function(prop) {
-		this.properties.push(prop);
-		return this;
 	},
 	lines: function() {
 		var
@@ -651,8 +639,10 @@ FuncCall.fromChain = function(call_or_factor, chain) {
 		link = chain[i];
 
 		if (link instanceof FuncCall) {
-			link.factors[0] = base.addProperty(new Access(link.factors[0]));
-			base = link;
+			base = new Value(base, [new Access(link.factors[0])]);
+			// replace incorrect callable at beginning of link with correct one
+			link.factors[0] = base;
+			base = new FuncCall(link.factors);
 		} else {
 			base = base.addProperty(new Access(link));
 		}
@@ -663,7 +653,7 @@ FuncCall.fromChain = function(call_or_factor, chain) {
 
 
 function Assign(assignee, op, value) {
-	if (!assignee) throw new Error('new Assign() requires 3 arguments');
+	if (!assignee || !op) throw new Error('new Assign() requires 3 arguments');
 	this.assignee = assignee;
 	this.op = op;
 	this.value = value;
@@ -1301,6 +1291,9 @@ $.extend(Unary.prototype, {
 	},
 	children: function() {
 		return this.term;
+	},
+	lines: function() {
+		return this.term.lines().prefix(this.op + ' ');
 	}
 
 });
