@@ -1231,9 +1231,14 @@ $.extend(If.prototype, {
 					Lines.join(Lines.mapNodes(this.elses.slice(0, -1)), ' else ')
 				);
 			}
-			ls.suffix(' else {')
-				.append(H.last(this.elses).lines())
-				.suffix('}');
+			if (H.last(this.elses) instanceof If) {
+				ls.suffix(' else ')
+					.append(H.last(this.elses).lines());
+			} else {
+				ls.suffix(' else {')
+					.append(H.last(this.elses).lines())
+					.suffix('}');
+			}
 		}
 
 		return ls;

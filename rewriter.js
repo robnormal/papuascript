@@ -2,39 +2,11 @@
 var H = require('./helpers.js');
 var B = require('./block_resolver.js');
 
-function map(xs, f) {
-	var ys, i, len;
-
-	if (void 0 !== xs.length) {
-		ys = [];
-		for (i = 0, len = xs.length; i < len; i++) {
-			ys[i] = f(xs[i]);
-		}
-	} else {
-		ys = {};
-		for (i in xs) { if (xs.hasOwnProperty(i)) {
-			ys[i] = f(xs[i]);
-		}}
-	}
-	return ys;
-}
-
-function getTags(tokens) {
-	return map(tokens, function(x) { return x[0]; });
-}
-
-
 function error(msg, token) {
 	throw new Error(msg + ' in line ' + (token[2].first_line+1) + ' column ' + (token[2].first_column+1));
 }
 
 var BR = ['TERMINATOR', 'INDENT', 'OUTDENT'];
-
-// undefined (the beginning of the file) returns TRUE here
-function startsNewLine(tok) {
-	return ! tok || H.has(BR, tok[0]);
-}
-
 
 // matches the first indent AFTER i
 function closingOutdent(tokens, i) {
@@ -82,22 +54,6 @@ function outdentNextOutdent(tokens, i) {
 	);
 
 	return tokens;
-}
-
-var addNewlineIfNecessary = function(tokens, i) {
-	if (tokens[i] &&
-		'TERMINATOR' !== tokens[i][0] &&
-		')' !== tokens[i][0] &&
-		']' !== tokens[i][0] &&
-		'}' !== tokens[i][0] &&
-		'OUTDENT' !== tokens[i][0]
-	) {
-		tokens.splice(i, 0, ['TERMINATOR', '', H.loc(tokens[i-1])]);
-
-		return true;
-	} else {
-		return false;
-	}
 }
 
 function cpsArrow(tokens) {
@@ -169,163 +125,6 @@ function cpsArrow(tokens) {
 	}
 
 	return tokens;
-}
-
-function readFunctionOneLiner(tokens, pos) {
-	var pairs = 0, indents = 0, body = [];
-
-	while (tokens[pos]) {
-		switch (tokens[pos][0]) {
-		case '(':
-		case '[':
-		case '{':
-			pairs++;
-			break;
-		case ')':
-		case ']':
-		case '}':
-			if (pairs) {
-				pairs--;
-			} else {
-				return [body, pos];
-			}
-			break;
-		case 'INDENT':
-			indents++;
-			break;
-		case 'OUTDENT':
-			indents--;
-			if (indents === 0 && !pairs) {
-				body.push(tokens[pos]);
-				return [body, pos];
-			}
-			break;
-		case 'TERMINATOR':
-			if (! indents) {
-				return [body, pos];
-			}
-			break;
-		}
-
-		body.push(tokens[pos]);
-		pos++;
-	}
-
-	// check that last token is not a newline
-	if (H.last(body)[0] === 'TERMINATOR') {
-		body.pop();
-		pos--;
-	}
-
-	return [body, pos];
-}
-
-function fixFunctionBlocks(tokens) {
-	var i = 0,
-		j, end;
-
-	while (tokens[i]) {
-		// one-line functions
-		if (tokens[i][0] === '->' && (!tokens[i+1] || tokens[i+1][0] !== 'INDENT')) {
-			tokens.splice(i+1, 0, ['INDENT', '', H.loc(tokens[i])]);
-			i++;
-
-			j = i+1;
-
-			while (tokens[j] &&
-				tokens[j][0] !== 'TERMINATOR' &&
-				tokens[j][0] !== 'INDENT'
-			) j++;
-
-			if (!tokens[j] || tokens[j][0] === 'TERMINATOR') {
-				tokens.splice(j, 0, ['OUTDENT', '', H.loc(tokens[j-1])]);
-			} else {
-			}
-			// In case of INDENT, do nothing.
-			// The corresponding OUTDENT already exists.
-		}
-		
-		i++;
-	}
-
-	return tokens;
-}
-
-function fixIndents(tokens) {
-	var
-		pos = tokens.length - 1,
-		outdents = [],
-		outdent, out_pos, indent;
-
-	while(tokens[pos]) {
-		if (tokens[pos][0] === 'OUTDENT') {
-			outdents.push([tokens[pos][1], pos]);
-		} else if (tokens[pos][0] === 'INDENT') {
-			indent = tokens[pos][1];
-			var i = outdents.length - 1;
-
-			while ((outdent = outdents[i] && outdents[i][0]) && indent.length) {
-				if (H.ends_with(indent, outdent)) {
-					// subtract outdent from end
-					indent = indent.substr(0, indent.length - outdent.length);
-
-					if (indent.length) {
-						// update original indent to reflect its effective indentation
-						tokens[pos][1] = outdent;
-
-						// add missing indent
-						tokens.splice(pos, 0,
-							['INDENT', indent, H.loc(tokens[pos])]
-						);
-					}
-
-					// get rid of used outdent
-					outdents.pop();
-				} else if (H.ends_with(outdent, indent)) {
-					// subtract indent from end
-					outdent = outdent.substr(0, outdent.length - indent.length);
-
-					if (outdent.length) {
-						out_pos = outdents[i][1];
-						// add missing outdent
-						tokens.splice(out_pos, 0,
-							['OUTDENT', indent + outdent, H.loc(tokens[out_pos])]
-						);
-
-						// update original outdent to reflect its effective indentation
-						tokens[out_pos][1] = outdent;
-					}
-
-					indent = '';
-					outdents[i][0] = outdent;
-				} else {
-					error('Unmatched outdent', tokens[pos]);
-				}
-
-				i--;
-			}
-
-			// close unclosed indent before final TERMINATOR
-			if (indent.length) {
-				tokens.splice(tokens.length - 1, 0,
-					['OUTDENT', indent, H.loc(tokens[tokens.length-1])]
-				);
-			}
-		}
-
-		pos--;
-	}
-
-	return tokens;
-}
-
-function deletePrecedingBR(tokens, i) {
-	while ('TERMINATOR' === tokens[i-1][0]) {
-		tokens.splice(i-1, 1);
-		i--;
-	}
-
-	return i;
 }
 
 function endsFactor(tok) {

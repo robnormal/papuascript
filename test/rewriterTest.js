@@ -66,51 +66,6 @@ function mkTokens(str) {
 }
 
 module.exports = {
-	'Pairs off indents and outdents': function(b, assert) {
-		var text1 =
-			'(\\x ->\n' +
-			'    x\n' +
-			'  ) b'; 
-		var raw = getTokens(text1);
-		console.log(raw);
-		console.log('######');
-		var toks = R.fixFunctionBlocks(raw);
-		console.log(toks);
-
-		assert.equal(toks[4][0], 'INDENT');
-		assert.equal(toks[5][0], 'INDENT', 'adds second indent to match outdent');
-		assert.equal(toks[6][0], 'IDENTIFIER', 'adds correct number of indents');
-
-		var text2 =
-			'\\x ->\n' +
-			'  while 1\n' +
-			'    print\n' +
-			'a';
-		raw = getTokens(text2);
-		toks = R.fixIndents(raw);
-
-		assert.equal(toks[8][0], 'OUTDENT');
-		assert.equal(toks[9][0], 'OUTDENT', 'adds second outdent to match indents');
-
-		var text3 =
-			'a\n' +
-			'    b\n' +
-			'  c\n' +
-			'd\n';
-
-		raw = getTokens(text3);
-		toks = R.fixIndents(raw);
-
-		assert.equal(toks[1][0], 'INDENT');
-		assert.equal(toks[2][0], 'INDENT', 'adds second indent to match outdents');
-		assert.equal(toks[4][0], 'OUTDENT');
-		assert.equal(toks[6][0], 'OUTDENT');
-		assert.equal(9, toks.length, 'Does not add too many indents or outdents');
-	},
-
-	'Checks matching pairs': function(b, assert) {
-	},
-
 	'Converts CPS arrow to continuation-passing function call': function(b, assert) {
 		var text1 =
 'while top\n' +
@@ -156,21 +111,6 @@ module.exports = {
 
 		assert.equal('FN_LIT_PARAM', toks[4][0], 'FN_LIT_PARAM added after parameters in function');
 		assert.equal('FN_LIT_PARAM', toks[6][0], 'all parameters marked');
-	},
-
-	'Puts function bodies in a single block': function(b, assert) {
-		var text = 'foo \\bar spam -> return 3';
-		var toks = R.fixFunctionBlocks(getTokens(text));
-
-		assert.equal('INDENT', toks[5][0]);
-		assert.equal('OUTDENT', toks[8][0]);
-
-		var text2 = 'foo \\bar spam -> j = 3\n  return bar + spam + j';
-		var raw = getTokens(text2);
-		var toks2 = R.fixFunctionBlocks(raw);
-
-		assert.equal('INDENT', toks2[5][0], 'adds indent after arrow');
-		assert.equal('RETURN', toks2[10][0], 'Removes indent of associated block');
 	},
 
 	'Removes non-semantic TERMINATORs': function(b, assert) {

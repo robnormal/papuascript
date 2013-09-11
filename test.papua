@@ -1,25 +1,8 @@
-/*
-	WHY THIS IS NOT OK: toInt x = parseInt x 10
-	I wanted it, but it doesn't work, because of nullary functions.
-	What does this following mean? 
+x = 5
 
-	foo.bar = print(foo)
+switch x
+	case 3:
+		6
+	case 4:
+		6
 
-	It's ambiguous - could be setting foo.bar to the value
-	returned by calling print now, or it could be a function
-	that takes no arguments and calls that
-*/
-
-
-lazyMult = (\xs -> map (\x ->
-			x * x
-		) xs
-	) [1,2]
-
-lazyMult2 = \x -> \y ->
-	x*y
-
-if 2
-	3
-else
-	5

@@ -131,7 +131,7 @@ function Resolver(tokens) {
 	this.indentables = [];
 
 	this.awaiting_line = true; // awaiting first line
-	this.is_do = false;
+	this.is_do = false; // whether current block is DO, so we don't mistake the final WHILE
 }
 Resolver.KEEP_OUTDENT = 0;
 Resolver.DROP_OUTDENT = 1;
@@ -154,8 +154,16 @@ $.extend(Resolver.prototype, {
 		return this.tokens[this.pos + 1] && this.tokens[this.pos + 1][0];
 	},
 
+	prevTag: function(tag) {
+		return this.tokens[this.pos - 1] && this.tokens[this.pos - 1][0];
+	},
+
 	nextTagIs: function(tag) {
 		return tag === this.nextTag();
+	},
+
+	prevTagIs: function(tag) {
+		return tag === this.prevTag();
 	},
 
 	appendTag: function(tag) {
@@ -330,7 +338,12 @@ $.extend(Resolver.prototype, {
 				outdents_needed.shift(); // we already have the first outdent
 				this.insertOutdents(outdents_needed);
 
-				if (canBeginLine(this.nextTag())) {
+				// Add TERMINATOR when next token starts a line
+				// WHILE starts a line only if we are not finishing a DO block
+				if (
+					canBeginLine(this.nextTag()) &&
+					!(this.is_do && this.nextTag() === 'WHILE')
+				) {
 					this.appendTag('TERMINATOR');
 				}
 			}
@@ -379,11 +392,16 @@ $.extend(Resolver.prototype, {
 			// but don't treat DO statement's WHILE as a block word
 			if ('WHILE' === tag && this.is_do) {
 				this.is_do = false;
-			} else if (H.has(BLOCK_TAGS, tag)) {
+
+			// Check for block tags, but ignore IF that follows ELSE
+			} else if (
+				H.has(BLOCK_TAGS, tag) &&
+				!('IF' === tag && this.prevTagIs('ELSE'))
+			) {
 				this.is_do = tag === 'DO';
 				this.block();
-			} else switch(tag) {
 
+			} else switch(tag) {
 				case 'TERMINATOR':
 					this.terminator();
 					break;

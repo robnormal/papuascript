@@ -71,7 +71,6 @@ var N = require('./nodes.js');
 
 %%
 
-
 /* The **Root** is the top-level node in the syntax tree. Since we parse bottom-up
    all parsing must end here. */
 Root
@@ -83,13 +82,18 @@ Root
 		{ return $1; }
 	;
 
+Eol
+	: TERMINATOR
+	| ';'
+	;
+
 /* Any list of statements and expressions, separated by line breaks */
 Body
   : Line
     { $$ = N.Block.wrap([$1]); }
-	| Body TERMINATOR Line
+	| Body Eol Line
     { $$ = $1.push($3); }
-	| Body TERMINATOR
+	| Body Eol
 	;
 
 /* Block and statements, which make up a line in a body. */
@@ -477,7 +481,7 @@ IfBlock
 	: IF Expression Block
 		{ $$ = new N.If($2, $3); }
 	| IfBlock ELSE IF Expression Block
-		{ $$ = $1.addElse(new N.If($4, $5)); }
+		{ $$ = $1.addElseIf($4, $5); }
 	;
 
 /* The full complement of *if* expressions, including postfix one-liner
