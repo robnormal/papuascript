@@ -182,9 +182,7 @@ Callable
 Assignable
 	: Identifier
 	| ThisProperty
-	| Parenthetical Accessor
-		{ $$ = new N.Value($1).add($2); }
-	| Assignable Accessor
+	| Callable Accessor
 		{ $$ = new N.Value($1).add($2); }
 	;
 
