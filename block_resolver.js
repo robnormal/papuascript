@@ -28,9 +28,25 @@ function trimNewlines(tokens, i) {
 	return trimmed;
 }
 
-function canBeginLine(tag) {
-	return -1 === ['TERMINATOR', 'INDENT', 'OUTDENT', ')', ']', '}'].indexOf(tag);
-}
+var canBeginLine = (function() {
+	var cant_start_line = [
+		'TERMINATOR',
+		'INDENT',
+		'OUTDENT',
+		')',
+		']',
+		'}',
+		'ELSE',
+		'CATCH',
+		'FINALLY',
+		'CASE',
+		'DEFAULT'
+	];
+
+	return function canBeginLine(tag) {
+		return -1 === cant_start_line.indexOf(tag);
+	};
+})();
 
 // removes zero-length markers ('|') from block level
 function realLevel(level) {
