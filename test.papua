@@ -1,8 +1,14 @@
-x = 5
-
-switch x
+y = switch x
 	case 3:
 		6
-	case 4:
-		6
+	case 6:
+		4
+
+try
+	blah()
+catch e
+	console.log e
+finally
+	yo()
+
 

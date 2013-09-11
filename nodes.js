@@ -93,13 +93,6 @@ var LineString, line, indent;
 
 Lines = function(l_strs) {
 	this.lines = l_strs;
-
-	$.each(l_strs, function(lstr) {
-		if (! (lstr instanceof LineString)) {
-			console.log(l_strs);
-			throw new Error();
-		}
-	});
 }
 
 $.extend(Lines.prototype, {
@@ -498,6 +491,7 @@ function Literal(value, yylineno) {
 }
 $.extend(Literal.prototype, {
 	is_expression: true,
+	needsSemicolon: true,
 	toString: function() {
 		return this.value;
 	},
@@ -533,6 +527,7 @@ Undefined = function(line) {
 }
 $.extend(Undefined.prototype, {
 	is_expression: true,
+	needsSemicolon: true,
 	toString: function() {
 		return 'void 0';
 	},
@@ -549,6 +544,7 @@ function Null(line) {
 }
 $.extend(Null.prototype, {
 	is_expression: true,
+	needsSemicolon: true,
 	toString: function() { return 'null'; },
 	children: function() {
 		return [];
@@ -564,6 +560,7 @@ function Bool(val, line) {
 }
 $.extend(Bool.prototype, {
 	is_expression: true,
+	needsSemicolon: true,
 	toString: function() {
 		return this.val ? 'true' : 'false';
 	},
@@ -743,6 +740,7 @@ function Obj(props) {
 }
 $.extend(Obj.prototype, {
 	is_expression: true,
+	needsSemicolon: true,
 	toString: function() {
 		var strs = [];
 		for (var i = 0, len = this.props.length; i < len; i++) {
@@ -832,6 +830,7 @@ function Value(base, props) {
 
 $.extend(Value.prototype, {
 	is_expression: true,
+	needsSemicolon: true,
 	children: function() {
 		return [this.base, this.properties];
 	},
@@ -958,7 +957,17 @@ $.extend(Try.prototype, {
 		return str;
 	},
 	children: function() {
-		return [this.block, this.caught, this.catchBlock, this.finallyBlock];
+		var ns = [this.block];
+		
+		if (this.caught) {
+			ns.push(this.caught);
+			ns.push(this.catchBlock);
+		}
+		if (this.finallyBlock) {
+			ns.push(this.finallyBlock);
+		}
+
+		return ns;
 	},
 	lines: function() {
 		var ls = this.block.lines().prefix('try {').suffix('}');
@@ -1121,16 +1130,25 @@ $.extend(Switch.prototype, {
 		return str + '}';
 	},
 	lines: function() {
-		return this.expr.lines()
+		var ls = this.expr.lines()
 			.prefix('switch (')
 			.suffix(') {\n')
-			.append(Lines.bindNodes(this.cases))
-			.suffix('default:')
-			.append(this.deflt.lines())
-			.suffix('}');
+			.append(Lines.bindNodes(this.cases));
+
+		if (this.deflt) {
+			ls.suffix('default:')
+				.append(this.deflt.lines())
+		}
+
+		ls.suffix('}');
+
+		return ls;
 	},
 	children: function() {
-		return [this.expr, this.cases, this.deflt];
+		var ns = [this.expr, this.cases];
+		if (this.deflt) ns.push(this.deflt);
+
+		return ns;
 	},
 	returnify: function() {
 		for (var i = 0, len = this.cases.length; i < len; i++) {
@@ -1183,6 +1201,7 @@ Break = function Break(yylineno) {
 };
 $.extend(Break.prototype, {
 	is_expression: false,
+	needsSemicolon: true,
 	toString: function() { return 'break;\n' },
 	lines: function() {
 		return line('break', this.line);
@@ -1271,6 +1290,7 @@ function Unary(op, term) {
 }
 $.extend(Unary.prototype, {
 	is_expression: true,
+	needsSemicolon: true,
 
 	setTerm: function(term) {
 		this.term = term;
@@ -1291,6 +1311,7 @@ Var = function Var(names) {
 
 $.extend(Var.prototype, {
 	is_expression: false,
+	needsSemicolon: true,
 
 	add: function(name) {
 		this.names.push(name);
