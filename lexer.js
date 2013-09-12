@@ -1,27 +1,8 @@
-/*jshint regexp: false, indent: false, boss: true */
+/*jshint regexp: false, white: false, boss: true */
 var H = require('./helpers.js');
 var R = require('./rewriter.js');
 
 function Lexer() {}
-
-// The inverse mappings of `BALANCED_PAIRS` we're trying to fix up, so we can
-// look things up from either end.
-var INVERSES = {};
-
-var BALANCED_PAIRS = [
-  ['(', ')'],
-  ['[', ']'],
-  ['{', '}'],
-  ['INDENT', 'OUTDENT']
-]
-
-for (var i = 0, len = BALANCED_PAIRS.length; i < len; i++) {
-	var left = BALANCED_PAIRS[i][0];
-	var rite = BALANCED_PAIRS[i][1];
-
-  INVERSES[rite] = left;
-  INVERSES[left] = rite;
-}
 
 var JS_KEYWORDS, PAPUA_KEYWORDS, RESERVED, STRICT_PROSCRIBED, JS_FORBIDDEN,
 		IDENTIFIER, NUMBER  , WHITESPACE, COMMENT   , MULTI_DENT, SIMPLESTR , JSTOKEN   ,
@@ -64,7 +45,7 @@ var BOM = 65279;
 IDENTIFIER = /^([$A-Za-z_\x7f-\uffff][$\w\x7f-\uffff]*)/;
 NUMBER  = /^0b[01]+|^0o[0-7]+|^0x[\da-f]+|^\d*\.?\d+(?:e[+-]?\d+)?/i;
 WHITESPACE = /^[^\n\S]+/;
-COMMENT    = /^\/\*([^#][\s\S]*?)\*\/|^(?:\s*\/\/.*)/;
+COMMENT    = /^\/\*(?:[\s\S]*?)\*\/|^(?:\s*\/\/.*)/;
 MULTI_DENT = /^(?:\n([^\n\S]*))+/;
 SINGLESTR  = /^'[^\\']*(?:\\.[^\\']*)*'/;
 DOUBLESTR  = /^"[^\\"]*(?:\\.[^\\"]*)*"/;
@@ -111,7 +92,78 @@ var NOT_SPACED_REGEX = NOT_REGEX.concat(')', '}', 'THIS', 'IDENTIFIER', 'STRING'
 var CALLABLE  = ['IDENTIFIER', 'STRING', 'REGEX', ')', ']', '}', '?', '@', 'THIS'];
 var INDEXABLE = CALLABLE.concat('NUMBER', 'BOOL', 'NULL', 'UNDEFINED');
 
+var whiteTokens = ['INDENT', 'OUTDENT', 'TERMINATOR'];
+var isWhitespaceToken = function(token) {
+	return whiteTokens.indexOf(token[0]) !== -1;
+}
+var addWhitespaceTokens = function(a, b) {
+	var tag_a = a[0], tag_b = b[0], txt_a = a[1], txt_b = b[1];
 
+	// extra TERMINATORs have no effect on indentation, so drop them
+	if (tag_a === 'TERMINATOR') {
+		return [b];
+	} else if (tag_b === 'TERMINATOR') {
+		return [a];
+	} else if (tag_a === 'INDENT') {
+		if (tag_b === 'INDENT') {
+			return [
+				['INDENT', txt_a + txt_b, a[2]]
+			];
+		// a is INDENT, b is OUTDENT
+		} else if (txt_a === txt_b) {
+			return [];
+		} else if (H.ends_with(a, b)) {
+			return [
+				['INDENT', H.stringMinus(a, b), a[2]]
+			];
+		} else if (H.ends_with(b, a)) {
+			return [
+				['OUTDENT', H.stringMinus(b, a), a[2]]
+			];
+		} else {
+			H.throwSyntaxError('Mismatched indent', b[2]);
+		}
+	} else {
+		if (tag_b === 'OUTDENT') {
+			return [
+				['OUTDENT', txt_b + txt_a, b[2]]
+			];
+		// a is OUTDENT, b is INDENT
+		} else if (txt_a === txt_b) {
+			return [];
+		} else if (H.begins_with(a, b)) {
+			return [
+				['OUTDENT', a.substr(b.length), a[2]]
+			];
+		} else if (H.begins_with(b, a)) {
+			return [
+				['INDENT', b.substr(a.length), b[2]]
+			];
+		} else {
+			H.throwSyntaxError('Mismatched indent', b[2]);
+		}
+	}
+}
+
+/**
+ * The presence of comments may give rise to consecutive INDENTs, OUTDENTs,
+ * and TERMINATORs. We merge them here, since comments should not effect
+ * lexing.
+ */
+var mergeIndentation = function(tokens) {
+	// must compare i to _current_ length of tokens
+	for (var i = 0; i < tokens.length; i++) {
+		if (tokens[i+1] &&
+			isWhitespaceToken(tokens[i]) &&
+			isWhitespaceToken(tokens[i+1])
+		) {
+			tokens[i] = addWhitespaceTokens(tokens[i], tokens[i+1]);
+			tokens.splice(i, 1);
+		}
+	}
+
+	return tokens;
+};
 
 Lexer.prototype = {
 	options: {
@@ -175,6 +227,7 @@ Lexer.prototype = {
 			i += consumed;
 		}
 
+		mergeIndentation(this.tokens);
 		this.endFile(this.tokens);
 
     return this.tokens;

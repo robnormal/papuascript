@@ -1,4 +1,5 @@
 var lex = require('../lexer.js');
+var $ = require('underscore');
 
 function doesntThrow(assert, f, err) {
 	try {
@@ -10,21 +11,13 @@ function doesntThrow(assert, f, err) {
 	}
 }
 
-function map(xs, f) {
-	var ys = {};
-	for (var i in xs) { if (xs.hasOwnProperty(i)) {
-		ys[i] = f(xs[i]);
-	}}
-	return ys;
-}
-
 function getTokens(str) {
 	lexer = new lex.Lexer();
 	return lexer.tokenize(str);
 }
 
 function tags(tokens) {
-	return map(tokens, function(x) { return x[0]; });
+	return $.map(tokens, function(x) { return x[0]; });
 }
 
 function eq(x, y) {
@@ -134,5 +127,15 @@ module.exports = {
 
 		var tags1 = tags(getTokens(text1));
 		assert.ok(eq(tags1, [ID, '=', ID, 'INDENT', NUM, 'OUTDENT', BR]));
+	},
+
+	'Comments do not affect lexing': function(b, assert) {
+		var text1 =
+			'x =\n' +
+			'/* comment */\n' +
+			'\t5';
+
+		var tags1 = tags(getTokens(text1));
+		assert.eql([ID, '=', 'INDENT', NUM, 'OUTDENT', BR], tags1);
 	}
 };
