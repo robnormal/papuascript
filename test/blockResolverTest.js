@@ -19,7 +19,7 @@ module.exports = {
 
 	'Lines continue when new indented line present': function(b, assert) {
 		var r = new B.Resolver(getTokens('t =\n\t4'));
-	
+
 		r.line();
 		r.pos = 2;
 		r.indent();
@@ -41,6 +41,26 @@ module.exports = {
 
 		r.pos = r.tokens.length - 2; // last token but one; very last is always TERMINATOR
 		assert.equal('NUMBER', r.tag(), 'Drops OUTDENT token when closing indented Line');
+
+		r = new B.Resolver(getTokens('x = \n\ta\n\tb'));
+		r.line();
+		r.pos = 2; // INDENT
+		r.indent();
+		r.pos = 2; // a
+		assert.equal('a', r.tokens[2][1], 'INDENT eliminated');
+
+		r.pos = 2; // a
+		r.line();
+		r.pos = 3; // TERMINATOR
+		r.terminator();
+		r.pos = 3; // b
+		assert.equal('b', r.tokens[3][1], 'TERMINATOR eliminated');
+
+		r.line();
+		r.pos = 4; // OUTDENT
+		r.outdent();
+		r.pos = 4; // TERMINATOR
+		assert.equal('TERMINATOR', r.tag());
 	},
 
 	'Zero-length outdents are not dropped at the end of Lines': function(b, assert) {
@@ -253,7 +273,6 @@ module.exports = {
 		var toks = getTokens('t = (\\x ->\n\t\tx * x\n\t) y');
 		var r = new B.Resolver(toks);
 		r.fixBlocks();
-
 		assert.equal('OUTDENT', r.tokens[10][0]);
 	}
 

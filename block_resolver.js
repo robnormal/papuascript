@@ -128,10 +128,11 @@ function Resolver(tokens) {
 
 	this.level = '';
 	this.pairs = 0;
+	this.loop = 0;
 	this.indentables = [];
 
-	this.awaiting_line = true; // awaiting first line
 	this.is_do = false; // whether current block is DO, so we don't mistake the final WHILE
+	this.awaiting_line = -1; // create line at first character
 }
 Resolver.KEEP_OUTDENT = 0;
 Resolver.DROP_OUTDENT = 1;
@@ -220,10 +221,29 @@ $.extend(Resolver.prototype, {
 		return popped;
 	},
 
+	awaitLine: function() {
+		this.awaiting_line = this.loop;
+	},
+
+	isAwaitingLine: function() {
+		return this.loop - 1 === this.awaiting_line;
+	},
+
+	justOpenedPair: function() {
+		return this.loop - 1 === this.opened_pair;
+	},
+
 	// opening paren starts a Line or Block
 	incrementPairs: function() {
 		this.pairs++;
-		this.awaiting_line = true;
+		this.awaitLine();
+		this.opened_pair = this.loop;
+		/*
+		throw new Error('FIXME: when creating a new Line inside a paren, ' +
+			'we must copy the level of the containing line, so that the ' +
+			'parenthesized line knows to ignore TERMINATORs'
+		);
+		*/
 	},
 
 	// closing paren ends a Line
@@ -251,11 +271,18 @@ $.extend(Resolver.prototype, {
 		}
 
 		this.push(b);
-		this.awaiting_line = false; // won't need a new line until INDENT
+		this.awaiting_line = false;
 	},
 
 	line: function() {
-		var ln = Line(this.level, this.pairs);
+		var ln;
+
+		if (this.justOpenedPair() && this.dentable) {
+			ln = Line(this.dentable.level, this.pairs);
+			ln.setIndent(this.dentable.indent);
+		} else {
+			ln = Line(this.level, this.pairs);
+		}
 
 		if (! isLine(this.dentable)) {
 
@@ -292,9 +319,16 @@ $.extend(Resolver.prototype, {
 			// erase newline
 			this.removeToken(this.pos);
 			this.pos--;
+
 		} else {
+			// TERMINATOR ends an inline block
+			if (isBlock(this.dentable) && ! this.dentable._rindent) {
+				this.insertTag(this.pos, 'OUTDENT');
+				this.pop();
+			}
+
 			this.pop();
-			this.awaiting_line = true;
+			this.awaitLine();
 		}
 	},
 
@@ -311,7 +345,7 @@ $.extend(Resolver.prototype, {
 
 			this.level = this.level + dent;
 			this.dentable.addIndent(dent);
-			this.awaiting_line = true;
+			this.awaitLine();
 		}
 	},
 
@@ -349,7 +383,7 @@ $.extend(Resolver.prototype, {
 			}
 		}
 
-		this.awaiting_line = true;
+		this.awaitLine();
 	},
 
 	popWhile: function(cond) {
@@ -385,7 +419,6 @@ $.extend(Resolver.prototype, {
 		var tag, dent;
 
 		while (this.token()) {
-			// this.debug_tokens(i, line.level, awaiting_block);
 			tag = this.tag();
 
 			// check for block keyword
@@ -425,21 +458,21 @@ $.extend(Resolver.prototype, {
 					}
 					break;
 
-				case '(': case '[': case '{':
+				case '(': case '[':
 					this.incrementPairs();
 					break;
 
-				case ')': case ']': case '}':
+				case ')': case ']':
 					this.decrementPairs();
 					break;
 			}
 
-			if (this.awaiting_line && canBeginLine(tag)) {
+			if (this.isAwaitingLine() && canBeginLine(tag)) {
 				this.line();
-				this.awaiting_line = false;
 			}
 
 			this.pos++;
+			this.loop++;
 		}
 	},
 

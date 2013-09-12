@@ -298,7 +298,7 @@ check_updated_vars = function(node, inner_scope, outer_scope) {
 
 			if (outer) {
 				if (defining) {
-					console.log('Warning: variable ' + v + ' shadowing variable in outer scope. ' +
+					console.log('Warning: variable "' + v + '" shadowing variable in outer scope. ' +
 						'Use := to update variables in the outer scope.');
 
 					updated = [];

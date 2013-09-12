@@ -1,6 +1,7 @@
 var L = require('../lexer.js');
 var R = require('../rewriter.js');
 var H = require('../helpers.js');
+var $ = require('underscore');
 var ID = 'IDENTIFIER', NUM = 'NUMBER', BR = 'TERMINATOR';
 
 function doesntThrow(assert, f, err) {
@@ -13,20 +14,20 @@ function doesntThrow(assert, f, err) {
 	}
 }
 
-function map(xs, f) {
-	var ys = {};
-	for (var i in xs) { if (xs.hasOwnProperty(i)) {
-		ys[i] = f(xs[i]);
-	}}
-	return ys;
-}
-
 function getTokens(text) {
 	return (new L.Lexer()).tokenize(text);
 }
 
 function getTags(tokens) {
-	return map(tokens, function(x) { return x[0]; });
+	return $.map(tokens, function(x) { return x[0]; });
+}
+
+function showTags(tokens) {
+	for (var i = 0; i < tokens.length; i++) {
+		console.log(tokens[i][0] === ID ?
+			tokens[i][1] : tokens[i][0]
+		);
+	}
 }
 
 function tags_equal(xs, ys) {
@@ -175,11 +176,9 @@ module.exports = {
 	},
 
 	'Preserves innermost INDENT and OUTDENT for blocks': function(b, assert) {
-		/*
-			(\ ->
-			    x
-			  ) y';
-			*/
+		// (\ ->
+		//     x
+		//   ) y';
 		var toks = mkTokens(
 			'( \\ -> INDENT INDENT IDENTIFIER OUTDENT ) IDENTIFIER OUTDENT TERMINATOR'
 		);
@@ -188,6 +187,44 @@ module.exports = {
 			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Removes INDENT related to expression, not inner block');
+
+		// x = \a -> b
+		toks = mkTokens(
+			'IDENTIFIER = \\ IDENTIFIER -> IDENTIFIER TERMINATOR'
+		);
+		R.resolveBlocks(toks);
+		var expected = mkTokens(
+			'IDENTIFIER = \\ IDENTIFIER -> INDENT IDENTIFIER OUTDENT TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Adds OUTDENT to end of inline function');
+	},
+
+	'INDENT, OUTDENT, and TERMINATOR are removed from inside lines': function(b, assert) {
+		var toks = getTokens('x = \n\ta\n\tb');
+		R.resolveBlocks(toks);
+		var expected = mkTokens(
+			'IDENTIFIER = IDENTIFIER IDENTIFIER TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'INDENT, OUTDENT, and TERMINATOR are removed from inside lines');
+
+		var toks = getTokens('x = \n\t[ a\n\t, b] c');
+		R.resolveBlocks(toks);
+		var expected = mkTokens(
+			'IDENTIFIER = [ IDENTIFIER , IDENTIFIER ] IDENTIFIER TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Treats TERMINATORs inside parens correctly');
+	},
+
+	'Newlines are OK in object literals (this matters in case we use {} for anything else)': function(b, assert) {
+		/* x = { a: b
+		 *     , c: d }
+		 */
+		var toks = getTokens('x = \n\t{ a: b\n\t, c: d }');
+		R.resolveBlocks(toks);
+		var expected = mkTokens(
+			'IDENTIFIER = { IDENTIFIER : IDENTIFIER , IDENTIFIER : IDENTIFIER } TERMINATOR'
+		);
+		assert.ok(tags_equal(toks, expected), 'Treats object literals as part of a line');
 	},
 
 	'"#" parenthesizes the rest of the expression': function(b, assert) {
@@ -230,10 +267,10 @@ module.exports = {
 	},
 
 	'Function literals can be parenthesized': function(b, assert) {
-		toks = mkTokens(
+		var toks = mkTokens(
 			'( \\ -> IDENTIFIER ) IDENTIFIER'
 		);
-		expected = mkTokens(
+		var expected = mkTokens(
 			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
 		);
 		R.rewrite(toks);
