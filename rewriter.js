@@ -196,6 +196,45 @@ function markFunctionParams(tokens) {
 	return tokens;
 }
 
+// Another grammar-cheat.
+function parenthesizeFunctions(tokens) {
+	var
+		i = 0,
+		indents = 0,
+		func_indents = [];
+
+	// arrays and objects can be
+	while (tokens[i]) {
+		switch (tokens[i][0]) {
+		case '\\':
+			tokens.splice(i, 0,
+				['(', '(', H.loc(tokens[i])]
+			);
+			i++;
+			func_indents.push(indents);
+			break;
+
+		case 'INDENT':
+			indents++;
+			break;
+		case 'OUTDENT':
+			indents--;
+			if (func_indents.length && H.last(func_indents) === indents) {
+				tokens.splice(i+1, 0,
+					[')', ')', H.loc(tokens[i])]
+				);
+				i++;
+				func_indents.pop();
+			}
+			break;
+		}
+
+		i++;
+	}
+
+	return tokens;
+}
+
 // FIXME: lots of dumb repeated code
 function finishPound(tokens, pos) {
 	var nested = 0;
@@ -259,11 +298,12 @@ function convertPoundSign(tokens, pos) {
 }
 
 function rewrite(tokens) {
-	return markFunctionParams(
-		B.resolveBlocks(
-			convertPoundSign(
-				cpsArrow(
-					tokens))));
+	return parenthesizeFunctions(
+		markFunctionParams(
+			B.resolveBlocks(
+				convertPoundSign(
+					cpsArrow(
+						tokens)))));
 }
 
 

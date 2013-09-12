@@ -485,7 +485,7 @@ IfBlock
 	: IF Expression Block
 		{ $$ = new N.If($2, $3); }
 	| IfBlock ELSE IF Expression Block
-		{ $$ = $1.addElseIf($4, $5); }
+		{ $$ = $1.addElse(new N.If($4, $5)); }
 	;
 
 /* The full complement of *if* expressions, including postfix one-liner

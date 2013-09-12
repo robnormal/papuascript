@@ -255,7 +255,7 @@ $.extend(Resolver.prototype, {
 
 		// There might have been an INDENT inside the parens
 		if (this.dentable && indentGreaterThan(this.level, this.dentable.level)) {
-			this.dentable.indent = this.level;
+			this.dentable.setIndent(this.level);
 		}
 	},
 
@@ -309,7 +309,7 @@ $.extend(Resolver.prototype, {
 			} // else, continue below
 		} else {
 			// update current line's indent
-			this.dentable.indent = this.level;
+			this.dentable.setIndent(this.level);
 			return Nothing;
 		}
 	},
@@ -344,7 +344,7 @@ $.extend(Resolver.prototype, {
 			}
 
 			this.level = this.level + dent;
-			this.dentable.addIndent(dent);
+			this.dentable.addIndent(this.level);
 			this.awaitLine();
 		}
 	},
@@ -361,7 +361,6 @@ $.extend(Resolver.prototype, {
 		}
 
 		if (diff.isNothing()) {
-			console.log([this.level, dent]);
 			this.error('Mismatched indent');
 		} else {
 			this.level = diff.fromJust();
@@ -373,7 +372,6 @@ $.extend(Resolver.prototype, {
 				} else {
 					this.replaceTag(this.pos, 'TERMINATOR');
 				}
-				this.pos--;
 			} else {
 				outdents_needed.shift(); // we already have the first outdent
 				this.insertOutdents(outdents_needed);
@@ -487,7 +485,8 @@ $.extend(Resolver.prototype, {
 
 		for (i = dents.length - 1; i >= 0; i--) {
 			if (dents[i - 1]) {
-				dent = indentMinus(dents[i], dents[i-1]).fromJust();
+				dent = dents[i].substr(dents[i-1].length);
+				// dent = indentMinus(dents[i], dents[i-1]).fromJust();
 			} else {
 				dent = dents[i];
 			}

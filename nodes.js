@@ -5,7 +5,7 @@ var H = require('./helpers');
 var LCOUNT = /\n/g
 
 var Block, AssignList, Try, While, For, If, Switch, Assign, Undefined, Return,
-	Code, Access, Var, Case, Break;
+	Code, Access, Var, Case, Break, Value;
 var Lines, concat, to_list, in_parens, repeat, list_bind;
 var vars_defined, check_updated_vars, var_string, can_define_vars, can_update_vars;
 
@@ -798,12 +798,20 @@ $.extend(Code.prototype, {
 	},
 
 	lines: function() {
-		return Lines.join(Lines.mapNodes(this.params), ',')
-			.prefix('function (')
-			.suffix(') { ')
-			.suffix(var_string(this.block))
-			.append(this.block.lines())
-			.suffix('}');
+		var blk = this.block.lines()
+			.prefix(var_string(this.block));
+
+		if (this.params && this.params.length) {
+			return Lines.join(Lines.mapNodes(this.params), ',')
+				.prefix('function (')
+				.suffix(') { ')
+				.append(blk)
+				.suffix('}');
+		} else {
+			return blk
+				.prefix('function () {')
+				.suffix('}');
+		}
 	}
 
 });

@@ -303,6 +303,37 @@ module.exports = {
 		r.pos = 7; // TERMINATOR
 		r.terminator();
 		assert.equal('TERMINATOR', r.tag());
+
+		// \foo ->
+		//   a
+		//     b
+		//   c
+
+		var toks = getTokens(
+			'\\foo ->\n' +
+			'\ta\n' +
+			'\t\tb\n' +
+			'\tc\n');
+
+		var r = new B.Resolver(toks);
+		r.block();
+		r.pos = 3; // INDENT
+		r.indent();
+		r.pos = 4; // a
+		r.line();
+		r.pos = 5; // INDENT
+		r.indent();
+		r.pos = 5; // b
+		r.pos = 6; // OUTDENT
+		r.outdent();
+		r.pos = 6; // TERMINATOR
+		assert.equal('TERMINATOR', r.tag());
+		r.pos = 7; // c
+		r.line();
+		r.pos = 8; // OUTDENT
+		assert.equal('OUTDENT', r.tag());
+		r.outdent();
+		assert.equal('OUTDENT', r.tag(), 'Keeps outdent at end of block containing indented Line');
 	}
 
 };
