@@ -69,12 +69,12 @@ function mkTokens(str) {
 module.exports = {
 	'Converts CPS arrow to continuation-passing function call': function(b, assert) {
 		var text1 =
-'while top\n' +
-'  indented\n' +
-'  foo <- bar\n' +
-'  bar_line1\n' +
-'  bar_line2\n' +
-'next thing';
+			'while top\n' +
+			'  indented\n' +
+			'  foo <- bar\n' +
+			'  bar_line1\n' +
+			'  bar_line2\n' +
+			'next thing';
 		var raw = getTokens(text1);
 		var toks = R.rewriteCpsArrow(raw);
 
@@ -89,6 +89,20 @@ module.exports = {
 			'OUTDENT' === toks[13][0] && 'OUTDENT' === toks[14][0],
 			'outdents at next outdent'
 		);
+	},
+
+	'CPS arrow integrates with blocks properly': function(b, assert) {
+		var text1 =
+			'bar <- foo\n' +
+			'while a\n' +
+			'  bar';
+
+		var raw = getTokens(text1);
+		var toks = R.rewriteCpsArrow(raw);
+		assert.equal('bar', toks[8][1]);
+		assert.equal('OUTDENT', toks[9][0]);
+		assert.equal('OUTDENT', toks[10][0]);
+		assert.equal('TERMINATOR', toks[11][0]);
 	},
 
 	'Adds WS between function call arguments': function(b, assert) {

@@ -6,8 +6,6 @@ function error(msg, token) {
 	throw new Error(msg + ' in line ' + (token[2].first_line+1) + ' column ' + (token[2].first_column+1));
 }
 
-var BR = ['TERMINATOR', 'INDENT', 'OUTDENT'];
-
 // matches the first indent AFTER i
 function closingOutdent(tokens, i) {
 	var
@@ -32,7 +30,7 @@ function closingOutdent(tokens, i) {
 	return false;
 }
 
-function outdentNextOutdent(tokens, i) {
+function outdentNextOutdent(tokens, i, text) {
 	var
 		indents = 0,
 		out = false,
@@ -43,14 +41,16 @@ function outdentNextOutdent(tokens, i) {
 	out_tok = tokens[out];
 
 	// if we get to EOF, add an outdent at the end
-	// use the last token for location info
+	//
+	// use the last token (minus one, since that's the final TERMINATOR)
+	// for location info
 	if (false === out) {
-		out = len;
-		out_tok = tokens[len - 1];
+		out = len - 1;
+		out_tok = tokens[len - 2];
 	}
 
 	tokens.splice(out, 0,
-		['OUTDENT', '', H.loc(out_tok)]
+		['OUTDENT', text, H.loc(out_tok)]
 	);
 
 	return tokens;
@@ -87,7 +87,12 @@ function cpsArrow(tokens) {
 				tokens.splice(i, 2);
 
 				// read tokens to end of line
-				while (i < tokens.length && tokens[i][0] !== 'TERMINATOR') i++;
+				while (i < tokens.length && tokens[i][0] !== 'TERMINATOR') {
+					if (tokens[i][0] === 'INDENT' || tokens[i][0] === 'OUTDENT') {
+						error('Cannot have empty block under CPS arrow (<-)');
+					}
+					i++;
+				}
 
 				// fix last token info
 				var last_on_line = tokens[i-1];
@@ -104,10 +109,10 @@ function cpsArrow(tokens) {
 					['\\', '', H.here(line, column)],
 					ident_token,
 					{0: '->', 1:'', 2: H.here(line, column), newLine: true},
-					['INDENT', '', H.here(line + 1, 0)]
+					['INDENT', '<-', H.here(line + 1, 0)]
 				);
 
-				tokens = outdentNextOutdent(tokens, i);
+				tokens = outdentNextOutdent(tokens, i, '<-');
 
 				// move past new OUTDENT
 				i++;
@@ -119,6 +124,7 @@ function cpsArrow(tokens) {
 
 		if (tag === 'TERMINATOR' || tag === 'INDENT' || tag === 'OUTDENT') {
 			line_start = true;
+			identifier = false;
 		} else {
 			line_start = false;
 		}
@@ -207,10 +213,14 @@ function parenthesizeFunctions(tokens) {
 	while (tokens[i]) {
 		switch (tokens[i][0]) {
 		case '\\':
-			tokens.splice(i, 0,
-				['(', '(', H.loc(tokens[i])]
-			);
-			i++;
+			// don't parenthesize if done already
+			if (!tokens[i-1] || tokens[i-1][0] !== '(') {
+				tokens.splice(i, 0,
+					['(', '(', H.loc(tokens[i])]
+				);
+				i++;
+			}
+
 			func_indents.push(indents);
 			break;
 
@@ -219,11 +229,15 @@ function parenthesizeFunctions(tokens) {
 			break;
 		case 'OUTDENT':
 			indents--;
+			// paren can only come at the end of the function, not after it
 			if (func_indents.length && H.last(func_indents) === indents) {
-				tokens.splice(i+1, 0,
-					[')', ')', H.loc(tokens[i])]
-				);
-				i++;
+				if (!tokens[i+1] || tokens[i+1][0] !== ')') {
+					tokens.splice(i+1, 0,
+						[')', ')', H.loc(tokens[i])]
+					);
+					i++;
+				}
+
 				func_indents.pop();
 			}
 			break;
@@ -300,9 +314,9 @@ function convertPoundSign(tokens, pos) {
 function rewrite(tokens) {
 	return parenthesizeFunctions(
 		markFunctionParams(
-			B.resolveBlocks(
-				convertPoundSign(
-					cpsArrow(
+			cpsArrow(
+				B.resolveBlocks(
+					convertPoundSign(
 						tokens)))));
 }
 
