@@ -245,7 +245,7 @@ var_string = function(node) {
 };
 
 can_define_vars = function(node) {
-	return true;
+	return !(node instanceof Code);
 }
 
 can_update_vars = function(node) {
@@ -298,8 +298,8 @@ check_updated_vars = function(node, inner_scope, outer_scope) {
 
 			if (outer) {
 				if (defining) {
-					console.log('Warning: variable ' + v + ' shadowing variable of same name. ' +
-						'Use := to update variables in the containing scope.');
+					console.log('Warning: variable ' + v + ' shadowing variable in outer scope. ' +
+						'Use := to update variables in the outer scope.');
 
 					updated = [];
 				} else if (! updating) {
@@ -801,7 +801,7 @@ $.extend(Code.prototype, {
 		return Lines.join(Lines.mapNodes(this.params), ',')
 			.prefix('function (')
 			.suffix(') { ')
-			.suffix(var_string(this))
+			.suffix(var_string(this.block))
 			.append(this.block.lines())
 			.suffix('}');
 	}
@@ -1350,5 +1350,8 @@ module.exports = {
 	FuncCall: FuncCall,
 	Unary: Unary,
 	Var: Var,
-	Case: Case
+	Case: Case,
+
+	// for testing
+	vars_defined: vars_defined
 };
