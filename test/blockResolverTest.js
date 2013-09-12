@@ -266,7 +266,7 @@ module.exports = {
 		assert.equal('TERMINATOR', r.tag(), 'Drops OUTDENT for end of Line');
 	},
 
-	'fixBlocks() removes indents from Lines, keeps them for Blocks': function(b, assert) {
+	'removes indents from Lines, keeps them for Blocks': function(b, assert) {
 		// this should do all the steps in the previous test, and thus should
 		// produce the same result
 
@@ -274,6 +274,35 @@ module.exports = {
 		var r = new B.Resolver(toks);
 		r.fixBlocks();
 		assert.equal('OUTDENT', r.tokens[10][0]);
+
+		// \foo ->
+		//   a
+		//     b
+		// bar
+
+		var toks = getTokens(
+			'\\foo ->\n' +
+			'\ta\n' +
+			'\t\tb\n' +
+			'bar');
+
+		var r = new B.Resolver(toks);
+		r.block();
+		r.pos = 3; // INDENT
+		r.indent();
+		r.pos = 4; // a
+		r.line();
+		r.pos = 5; // INDENT
+		r.indent();
+		r.pos = 5; // b
+		assert.equal('b', r.token()[1]);
+
+		r.pos = 6; // OUTDENT
+		assert.equal('OUTDENT', r.tag());
+		r.outdent();
+		r.pos = 7; // TERMINATOR
+		r.terminator();
+		assert.equal('TERMINATOR', r.tag());
 	}
 
 };

@@ -351,11 +351,17 @@ $.extend(Resolver.prototype, {
 
 	outdent: function() {
 		var
-			dent = getDent(this.token()[1]),
+			tok = this.token(),
+			dent = getDent(tok[1]),
 			diff = stringMinus(this.level, dent),
 			outdents_needed, i, len;
 
+		if ('OUTDENT' !== tok[0]) {
+			throw new Error('Logic error');
+		}
+
 		if (diff.isNothing()) {
+			console.log([this.level, dent]);
 			this.error('Mismatched indent');
 		} else {
 			this.level = diff.fromJust();

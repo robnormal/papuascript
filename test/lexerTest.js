@@ -86,8 +86,38 @@ module.exports = {
 			lexer = new lex.Lexer(),
 			tags1 = tags(lexer.tokenize(code));
 
-		assert.equal('INDENT', tags1[10], 'indents at indent after "do" after block statement');
+		assert.equal('INDENT', tags1[9], 'indents at indent after "do" after block statement');
 	},
+
+	'Correctly measures outdents': function(b, assert) {
+		var code =
+			'while 3\n' +
+			'\tif db\n' +
+			'\t\ta\n',
+
+			lexer = new lex.Lexer(),
+      toks = lexer.tokenize(code);
+
+		assert.equal('OUTDENT', toks[7][0]);
+		assert.equal('\t\t', toks[7][1], 'Computes correct outdent at end of file');
+
+    // \foo ->
+		//   a
+		//     b
+		// bar
+		var code =
+			'\\foo ->\n' +
+			'\talice\n' +
+			'\t\tbob\n' +
+      'bar',
+
+			lexer = new lex.Lexer(),
+      toks = lexer.tokenize(code);
+
+
+		assert.equal('OUTDENT', toks[7][0]);
+		assert.equal('\t\t', toks[7][1], 'Computes correct outdent in middle of file');
+  },
 
 	'TERMINATOR added to last line in document, even if no newline': function(b, assert) {
 		var

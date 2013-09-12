@@ -146,8 +146,8 @@ Lexer.prototype = {
 	},
 
 	tokenize: function(s) {
-		this.indents  = [''];             // The stack of all current indentation levels. Top-level indent is empty string
-		this.tokens   = [];             // Stream of parsed tokens in the form `['TYPE', value, location data]`.
+		this.level  = '';              // Current indent level
+		this.tokens   = [];            // Stream of parsed tokens in the form `['TYPE', value, location data]`.
 		
 		this.chunkLine = 0;            // The start line for the current @chunk.
 		this.chunkColumn = 0;          // The start column of the current @chunk.
@@ -370,7 +370,7 @@ Lexer.prototype = {
 	line: function() {
 		var diff, indent, match, size,
 			prev = H.last(this.tokens),
-			base_indent = this.indents.join('');
+			base_indent = this.level;
 
 		if (!(match = MULTI_DENT.exec(this.chunk))) {
 			return 0;
@@ -389,7 +389,7 @@ Lexer.prototype = {
 		} else if (H.begins_with(indent, base_indent)) {
 			diff = indent.substr(base_indent.length);
 			this.token('INDENT', diff, indent.length - diff.length, diff.length);
-			this.indents.push(diff);
+			this.level += diff;
 
 		// outdent
 		} else if (H.begins_with(base_indent, indent)) {
@@ -407,33 +407,11 @@ Lexer.prototype = {
   // Record an outdent token or multiple tokens, if we happen to be moving back
   // inwards past several recorded indents.
 	outdent: function(moveOut, noNewlines) {
-		var dent, len, last_indent;
+    var size = this.level.length - moveOut;
 
-		while (moveOut > 0) {
-			len = this.indents.length - 1;
+    this.token('OUTDENT', this.level.substr(size), 0, size);
+    this.level = this.level.substr(0, size);
 
-			if (len < 0) {
-				moveOut = 0;
-			} else {
-				last_indent = H.last(this.indents);
-				moveIn = last_indent.length;
-
-				if (moveIn === void 0) {
-					moveOut = 0;
-				} else {
-					// partial outdent; alter current indent
-					if (moveIn > moveOut) {
-						this.indents[len] = last_indent.substr(0, moveIn - moveOut);
-						this.token('OUTDENT', last_indent.substr(moveIn - moveOut), 0, moveIn);
-						moveOut = 0;
-					} else {
-						this.indents.pop();
-						this.token('OUTDENT', last_indent, 0, moveIn);
-						moveOut -= moveIn;
-					}
-				}
-			}
-		}
 		if (!(this.prevTag() === 'TERMINATOR' || noNewlines)) {
 			this.newlineToken(0);
 		}
@@ -460,7 +438,7 @@ Lexer.prototype = {
 	},
 
 	currentIndent: function() {
-		return this.indents.join('');
+		return this.level;
 	},
 
 	endFile: function() {
@@ -469,7 +447,7 @@ Lexer.prototype = {
 		// match final indent
 		if (indent.length) {
 			this.token('OUTDENT', indent, 0, this.tokens.length);
-			this.indents = [];
+			this.level = '';
 		}
 
 		// always ensure a newline is at the end
