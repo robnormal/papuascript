@@ -187,44 +187,18 @@ Assignable
 	;
 
 Invocation
-	: NonCodeInvocation
-	| CodeInvocation
-	;
-
-ArityInvocation
 	: Callable WS Atom
 		{ $$ = new N.FuncCall([$1, $3]); }
-	| NonCodeInvocation WS Atom
+	| Invocation WS Atom
 		{ $$ = $1.appendFactor($3); }
-	;
-
-MethodCall
-	: NonCodeMethodCall
-	| NonCodeMethodCall WS Code
-		{ $$ = $1.appendFactor($3); }
-	;
-
-NonCodeMethodCall
-	: Identifier WS Atom
-		{ $$ = new N.FuncCall([$1, $3]); }
-	| NonCodeMethodCall WS Atom
-		{ $$ = $1.appendFactor($3); }
-	;
-
-ReverseInvocation
-	: Atom '`' Assignable '`'
+	| Atom '`' Assignable '`'  /* reverse invocation, i.e., 2 `plus` 2 */
 		{ $$ = new N.FuncCall([$3, $1]); }
 	;
 
-NonCodeInvocation
-	: ArityInvocation
-	| ReverseInvocation
-	;
-
-CodeInvocation
-	: Callable WS Code
+MethodCall
+	: Identifier WS Atom
 		{ $$ = new N.FuncCall([$1, $3]); }
-	| NonCodeInvocation WS Code
+	| MethodCall WS Atom
 		{ $$ = $1.appendFactor($3); }
 	;
 
