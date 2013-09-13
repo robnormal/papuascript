@@ -89,7 +89,7 @@ function cpsArrow(tokens) {
 				// read tokens to end of line
 				while (i < tokens.length && tokens[i][0] !== 'TERMINATOR') {
 					if (tokens[i][0] === 'INDENT' || tokens[i][0] === 'OUTDENT') {
-						error('Cannot have empty block under CPS arrow (<-)');
+						error('Cannot have empty block under CPS arrow (<-)', tokens[i]);
 					}
 					i++;
 				}
