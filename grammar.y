@@ -276,6 +276,8 @@ AssignList
 Object
 	: '{' ObjectPropList '}'
 		{ $$ = new N.Obj($2); }
+	| '{' '}'
+		{ $$ = new N.Obj([], yylineno); }
 	;
 
 ObjectPropList

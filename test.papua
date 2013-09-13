@@ -1,7 +1,6 @@
-y = switch x
-	case 3:
+y = if x
 		6
-	case 6:
+	else
 		4
 
 try

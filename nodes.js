@@ -725,8 +725,9 @@ $.extend(AssignList.prototype, {
 });
 
 
-function Obj(props) {
+function Obj(props, lineno) {
 	this.props = props;
+	this.lineno = lineno;
 }
 $.extend(Obj.prototype, {
 	is_expression: true,
@@ -744,19 +745,25 @@ $.extend(Obj.prototype, {
 	},
 
 	lines: function() {
-		var liness = [];
+		var
+			liness = [],
+			ls;
 
-		for (var i = 0, len = this.props.length; i < len; i++) {
-			liness.push(
-				this.props[i][0].lines()
-					.suffix(': ')
-					.append(this.props[i][1].lines())
-			);
+		if (! this.props.length) {
+			return new Lines([new LineString('{}', this.lineno)]);
+		} else {
+			for (var i = 0, len = this.props.length; i < len; i++) {
+				liness.push(
+					this.props[i][0].lines()
+						.suffix(': ')
+						.append(this.props[i][1].lines())
+				);
+			}
+
+			return Lines.join(liness, ', ')
+				.prefix('{')
+				.suffix('}');
 		}
-
-		return Lines.join(liness, ', ')
-			.prefix('{')
-			.suffix('}');
 	}
 });
 
