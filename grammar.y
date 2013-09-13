@@ -14,6 +14,7 @@ var N = require('./nodes.js');
 %token FN_DEF_PARAM
 %token FOR
 %token IN
+%token INSTANCEOF
 %token IDENTIFIER
 %token IF
 %token INDENT
@@ -59,12 +60,13 @@ var N = require('./nodes.js');
 %left      "+" "-"
 %left      "SHIFT"
 %left      "RELATION"
+%left      "INSTANCEOF" "IN" 
 %left      "COMPARE"
 %left      "LOGIC"
 %left      "SPACEDOT"
 %nonassoc  "INDENT" "OUTDENT"
 %right     "=" ":" "COMPOUND_ASSIGN" "RETURN" "THROW"
-%right     "IN" "CASE"
+%right     "CASE"
 %right     "IF" "ELSE" "FOR" "WHILE"
 
 %start Root
@@ -437,6 +439,8 @@ Binary
 	| COMPARE
 	| LOGIC
 	| RELATION
+	| INSTANCEOF
+	| IN
 	;
 
 /* Parenthetical expressions. Note that the **Parenthetical** is a **Value**

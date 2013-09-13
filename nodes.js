@@ -589,7 +589,7 @@ $.extend(Operation.prototype, {
 	},
 	lines: function() {
 		return this.a.lines()
-			.suffix(this.op.toString())
+			.suffix(' ' + this.op.toString() + ' ')
 			.append(this.b.lines());
 	}
 

@@ -158,7 +158,7 @@ var mergeIndentation = function(tokens) {
 			isWhitespaceToken(tokens[i+1])
 		) {
 			var newspace = addWhitespaceTokens(tokens[i], tokens[i+1]);
-			tokens.splice(i, 2, newspace);
+			Array.prototype.splice.apply(tokens, [i, 2].concat(newspace));
 			i -= newspace.length;
 		}
 	}
