@@ -230,9 +230,8 @@ module.exports = {
 	},
 
 	'Newlines are OK in object literals (this matters in case we use {} for anything else)': function(b, assert) {
-		/* x = { a: b
-		 *     , c: d }
-		 */
+		// x = { a: b
+		//     , c: d }
 		var toks = getTokens('x = \n\t{ a: b\n\t, c: d }');
 		R.resolveBlocks(toks);
 		var expected = mkTokens(
@@ -270,7 +269,24 @@ module.exports = {
 		);
 		R.convertPoundSign(toks);
 		assert.ok(tags_equal(toks, expected), 'parens include to EOF if no break or closing container');
+	},
 
+	'# and <- work when used together': function(b, assert) {
+		var toks1 = getTokens('foo <- bar # eggs spam\nfoo');
+		var toks2 = getTokens('foo <- bar (eggs spam)\nfoo');
+
+		var rewrite = $.compose(
+			R.parenthesizeFunctions, R.markFunctionParams, R.rewriteCpsArrow, R.resolveBlocks, R.convertPoundSign
+		);
+
+		var partial = $.compose(
+			R.markFunctionParams, R.rewriteCpsArrow, R.convertPoundSign
+		);
+
+		partial(toks1);
+		partial(toks2);
+
+		assert.eql(getTags(toks2), getTags(toks1));
 	},
 
 	'dot preceded by whitespace becomes SPACEDOT': function(b, assert) {

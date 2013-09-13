@@ -97,7 +97,7 @@ function cpsArrow(tokens) {
 				// fix last token info
 				var last_on_line = tokens[i-1];
 				delete last_on_line.newLine;
-				last_on_line[2].spaced = true;
+				last_on_line.spaced = true;
 
 				// add function literal with identifier as argument
 				var line = tokens[i][2].last_line;
@@ -326,6 +326,7 @@ module.exports = {
 	resolveBlocks: B.resolveBlocks,
 	markFunctionParams: markFunctionParams,
 	convertPoundSign: convertPoundSign,
+	parenthesizeFunctions: parenthesizeFunctions,
 	rewrite: rewrite
 };
 
