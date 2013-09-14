@@ -135,7 +135,7 @@ function cpsArrow(tokens) {
 
 function endsFactor(tok) {
 	return H.has(
-		['IDENTIFIER', 'STRING', 'THIS', 'NUMBER', 'BOOL', 'NULL', 'UNDEFINED', 'REGEX', ']',')','}', '`' ],
+		['IDENTIFIER', 'STRING', 'THIS', 'NUMBER', 'INTEGER', 'BOOL', 'NULL', 'UNDEFINED', 'REGEX', ']',')','}', '`' ],
 		tok[0]
 	);
 }
@@ -143,7 +143,7 @@ function endsFactor(tok) {
 // "`" also starts a factor, but we leave its left side unmarked; backticks are special
 function startsFactor(tok) {
 	return H.has(
-		['\\', 'IDENTIFIER', 'STRING', 'THIS', 'NUMBER', 'BOOL', 'NULL', 'UNDEFINED', 'REGEX', '[','(','{' ],
+		['\\', 'IDENTIFIER', 'STRING', 'THIS', 'NUMBER', 'INTEGER', 'BOOL', 'NULL', 'UNDEFINED', 'REGEX', '[','(','{' ],
 		tok[0]
 	);
 }

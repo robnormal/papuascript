@@ -5,7 +5,7 @@ var H = require('./helpers');
 var LCOUNT = /\n/g
 
 var Block, AssignList, Try, While, For, If, Switch, Assign, Undefined, Return,
-	Code, Access, Var, Case, Break, Value;
+	Code, Access, Var, Case, Break, Value, Import;
 var Lines, concat, to_list, in_parens, repeat, list_bind;
 var vars_defined, check_updated_vars, var_string, can_define_vars, can_update_vars;
 
@@ -382,6 +382,14 @@ Block.indent = -1;
 $.extend(Block.prototype, {
 	push: function(nodes) {
 		this.nodes.push(nodes);
+		return this;
+	},
+
+	merge: function(blk) {
+		for (var i = 0, len = blk.nodes.length; i < len; i++) {
+			this.push(blk.nodes[i]);
+		}
+
 		return this;
 	},
 
@@ -1337,6 +1345,43 @@ $.extend(Var.prototype, {
 	}
 });
 
+Import = function Import(obj, members, owner) {
+	this.obj = obj;
+	this.members = members;
+	this.owner = owner;
+
+	this.vars_defined = this.members.xs;
+	if (owner) {
+		this.vars_defined.push(owner);
+	}
+};
+
+$.extend(Import.prototype, {
+	is_expression: false,
+	needsSemicolon: false,
+
+	children: function() {
+		return [];
+	},
+	lines: function() {
+		var ls = this.obj.lines();
+
+		ls.prefix('(function() { var owner = ');
+		ls.suffix(';');
+
+		for (var i = 0, len = this.members.xs.length; i < len; i++) {
+			ls.suffix(this.members.xs[i] + ' = owner.' + this.members.xs[i] + ';');
+		}
+
+		if (this.owner) {
+			ls.suffix(this.owner + ' = owner;');
+		}
+
+		return ls.suffix('})();');
+	}
+});
+
+
 
 module.exports = {
 	LOC: LOC,
@@ -1366,6 +1411,7 @@ module.exports = {
 	Unary: Unary,
 	Var: Var,
 	Case: Case,
+	Import: Import,
 
 	// for testing
 	vars_defined: vars_defined

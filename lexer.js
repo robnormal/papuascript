@@ -8,7 +8,7 @@ var JS_KEYWORDS, PAPUA_KEYWORDS, RESERVED, STRICT_PROSCRIBED, JS_FORBIDDEN,
 		IDENTIFIER, NUMBER  , WHITESPACE, COMMENT   , MULTI_DENT, SIMPLESTR , JSTOKEN   ,
 		OPERATORS, UNARY   , LOGIC   , SHIFT   , COMPARE , MATH    , RELATION, BOOL,
 		MULTILINER      , TRAILING_SPACES , COMPOUND_ASSIGN, SINGLESTR, DOUBLESTR, REGEX,
-		UNARY_ASSIGN, PAPUA_OPS
+		UNARY_ASSIGN, PAPUA_OPS, INTEGER
 		;
 
 // Keywords that CoffeeScript shares in common with JavaScript.
@@ -20,14 +20,14 @@ JS_KEYWORDS = [
 	'do', 'try', 'catch', 'finally'
 ];
 
-PAPUA_KEYWORDS = [];
+PAPUA_KEYWORDS = ['import'];
 
 // The list of keywords that are reserved by JavaScript, but not used, or are
 // used by CoffeeScript internally. We throw an error when these are encountered,
 // to avoid having a JavaScript error at runtime.
 RESERVED = [
   'function', 'void', 'with', 'const', 'enum',
-  'export', 'import', 'native',
+  'export', 'native',
   'implements', 'interface', 'package', 'private', 'protected',
   'public', 'static', 'yield', 'class', 'extends', 'super'
 ];
@@ -43,6 +43,7 @@ var BOM = 65279;
 
 // Token matching regexes.
 IDENTIFIER = /^([$A-Za-z_\x7f-\uffff][$\w\x7f-\uffff]*)/;
+INTEGER  = /^\d+/;
 NUMBER  = /^0b[01]+|^0o[0-7]+|^0x[\da-f]+|^\d*\.?\d+(?:e[+-]?\d+)?/i;
 WHITESPACE = /^[^\n\S]+/;
 COMMENT    = /^\/\*(?:[\s\S]*?)\*\/|^(?:\s*\/\/.*)/;
@@ -80,17 +81,11 @@ BOOL = ['TRUE', 'FALSE'];
 // See: http://www.mozilla.org/js/language/js20-2002-04/rationale/syntax.html#regular-expressions
 //
 // Our list is shorter, due to sans-parentheses method calls.
-var NOT_REGEX = ['NUMBER', 'REGEX', 'BOOL', 'NULL', 'UNDEFINED', '++', '--'];
+var NOT_REGEX = ['NUMBER', 'INTEGER', 'REGEX', 'BOOL', 'NULL', 'UNDEFINED', '++', '--'];
 
 // If the previous token is not spaced, there are more preceding tokens that
 // force a division parse:
 var NOT_SPACED_REGEX = NOT_REGEX.concat(')', '}', 'THIS', 'IDENTIFIER', 'STRING', ']');
-
-// Tokens which could legitimately be invoked or indexed. An opening
-// parentheses or bracket following these tokens will be recorded as the start
-// of a function invocation or indexing operation.
-var CALLABLE  = ['IDENTIFIER', 'STRING', 'REGEX', ')', ']', '}', '?', '@', 'THIS'];
-var INDEXABLE = CALLABLE.concat('NUMBER', 'BOOL', 'NULL', 'UNDEFINED');
 
 var whiteTokens = ['INDENT', 'OUTDENT', 'TERMINATOR'];
 var isWhitespaceToken = function(token) {
@@ -216,6 +211,7 @@ Lexer.prototype = {
 				this.whitespace() ||
 				this.line() ||
 				this.string() ||
+				this.integer() ||
 				this.number() ||
 				this.regex() ||
 				this.literal();
@@ -259,6 +255,19 @@ Lexer.prototype = {
     if (id === 'own' && this.prevTag() === 'FOR') {
       this.token('OWN', id);
       return id.length;
+		}
+
+		if (id === 'import') {
+      this.token('IMPORT', id);
+			this.importing = true;
+			return id.length;
+		}
+
+		// "as" is only special in an import statement
+		if (id === 'as' && this.importing) {
+      this.token('AS', id);
+			this.importing = false;
+			return id.length;
 		}
 
     var tag = 'IDENTIFIER';
@@ -309,14 +318,26 @@ Lexer.prototype = {
     return input.length;
 	},
 
+  integer: function() {
+		var match = INTEGER.exec(this.chunk);
+		if (!match) return 0;
+
+    var integer = match[0];
+    this.token('INTEGER', integer, 0, integer.length);
+    return integer.length;
+	},
+
 	// RR - pretty sure this is OK
   // Matches numbers, including decimals, hex, and exponential notation.
   // Be careful not to interfere with ranges-in-progress.
   number: function() {
-		var match = NUMBER.exec(this.chunk);
+		var
+			match = NUMBER.exec(this.chunk),
+			number, prev, lexedLength, octalLiteral, binaryLiteral;
+
 		if (!match) return 0;
 
-    var number = match[0];
+    number = match[0];
 
     if (/^0[BOX]/.test(number)) {
       this.error('radix prefix ' + number + ' must be lowercase');
@@ -326,21 +347,29 @@ Lexer.prototype = {
       this.error("decimal literal '#{number}' must not be prefixed with '0'");
 		} else if (/^0\d+/.test(number)) {
       this.error("octal literal '#{number}' must be prefixed with '0o'");
+		} else if (0 === number.indexOf('.') && (prev = this.prevToken()) &&
+				! prev.spaced
+		) {
+			// catch array indexing via '.'
+			this.token('.', '.', 0, 1);
+			this.token('INTEGER', number.slice(1), 0, number.length - 1);
+
+			return number.length;
 		}
 
-    var lexedLength = number.length;
-		var octalLiteral = /^0o([0-7]+)/.exec(number);
-    var binaryLiteral = /^0b([01]+)/.exec(number);
+		lexedLength = number.length;
+		octalLiteral = /^0o([0-7]+)/.exec(number);
+		binaryLiteral = /^0b([01]+)/.exec(number);
 
-    if (octalLiteral) {
-      number = '0x' + parseInt(octalLiteral[1], 8).toString(16);
+		if (octalLiteral) {
+			number = '0x' + parseInt(octalLiteral[1], 8).toString(16);
 		}
-    if (binaryLiteral) {
-      number = '0x' + parseInt(binaryLiteral[1], 2).toString(16);
+		if (binaryLiteral) {
+			number = '0x' + parseInt(binaryLiteral[1], 2).toString(16);
 		}
 
-    this.token('NUMBER', number, 0, lexedLength);
-    return lexedLength;
+		this.token('NUMBER', number, 0, lexedLength);
+		return lexedLength;
 	},
 
   // Matches strings, including multi-line strings. Ensures that quotation marks
@@ -622,6 +651,10 @@ Lexer.prototype = {
 		var tok = H.last(this.tokens);
 
 		return tok && tok[1];
+	},
+
+	prevToken: function() {
+		return H.last(this.tokens);
 	},
 
 	// RR - vetted

@@ -17,9 +17,11 @@ var N = require('./nodes.js');
 %token INSTANCEOF
 %token IDENTIFIER
 %token IF
+%token IMPORT
 %token INDENT
 %token INDEX_END
 %token INDEX_START
+%token INTEGER
 %token LOGIC
 %token MATH
 %token NULL
@@ -80,8 +82,26 @@ Root
 		{ $$ = new N.Block([]); }
   | Body
 		{ return $1; }
-  | Block TERMINATOR
+  | Block Eol
 		{ return $1; }
+	| ImportList Body
+		{ return $1.merge($2);; }
+	| ImportList Block Eol
+		{ return $1.merge($2);; }
+	;
+
+Import
+	: IMPORT Parenthetical WS Array Eol
+		{ $$ = new N.Import($2, $4, null); }
+	| IMPORT Parenthetical AS Identifier WS Array Eol
+		{ $$ = new N.Import($2, $6, $4); }
+	;
+
+ImportList
+	: Import
+		{ $$ = new N.Block([$1]); }
+	| Import ImportList
+		{ $$ = $2.push($1); }
 	;
 
 Eol
@@ -219,6 +239,8 @@ they can also serve as keys in object literals. */
 AlphaNumeric
 	: NUMBER
     { $$ = new N.Literal(yytext, yylineno); }
+	| INTEGER
+    { $$ = new N.Literal(yytext, yylineno); }
 	| STRING
     { $$ = new N.Literal(yytext, yylineno); }
 	;
@@ -327,12 +349,10 @@ FnLitParams
 Accessor
 	: '.' Identifier
     { $$ = new N.Access($2); }
-	| Index
-	;
-
-Index
-	: '[' Expression ']'
+	| '[' Expression ']'
 		{ $$ = new N.Index($2); }
+	| '.' INTEGER
+		{ $$ = new N.Index(new N.Literal($2, yylineno)); }
 	;
 
 /* A reference to a property on *this*. */
