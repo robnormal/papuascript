@@ -107,13 +107,13 @@ var addWhitespaceTokens = function(a, b) {
 		// a is INDENT, b is OUTDENT
 		} else if (txt_a === txt_b) {
 			return [];
-		} else if (H.ends_with(a, b)) {
+		} else if (H.ends_with(txt_a, txt_b)) {
 			return [
-				['INDENT', H.stringMinus(a, b), a[2]]
+				['INDENT', H.stringMinus(txt_a, txt_b), a[2]]
 			];
-		} else if (H.ends_with(b, a)) {
+		} else if (H.ends_with(txt_b, txt_a)) {
 			return [
-				['OUTDENT', H.stringMinus(b, a), a[2]]
+				['OUTDENT', H.stringMinus(txt_b, txt_a), a[2]]
 			];
 		} else {
 			H.throwSyntaxError('Mismatched indent', b[2]);
@@ -126,13 +126,13 @@ var addWhitespaceTokens = function(a, b) {
 		// a is OUTDENT, b is INDENT
 		} else if (txt_a === txt_b) {
 			return [];
-		} else if (H.begins_with(a, b)) {
+		} else if (H.begins_with(txt_a, txt_b)) {
 			return [
-				['OUTDENT', a.substr(b.length), a[2]]
+				['OUTDENT', txt_a.substr(txt_b.length), a[2]]
 			];
-		} else if (H.begins_with(b, a)) {
+		} else if (H.begins_with(txt_b, txt_a)) {
 			return [
-				['INDENT', b.substr(a.length), b[2]]
+				['INDENT', txt_b.substr(txt_a.length), b[2]]
 			];
 		} else {
 			H.throwSyntaxError('Mismatched indent', b[2]);
