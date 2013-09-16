@@ -7,6 +7,7 @@ var N = require('./nodes.js');
 %token CATCH
 %token COMPARE
 %token COMPOUND_ASSIGN
+%token CPS
 %token DEBUGGER
 %token DEFAULT
 %token ELSE
@@ -80,11 +81,11 @@ var N = require('./nodes.js');
 Root
 	: /* empty */
 		{ $$ = new N.Block([]); }
-  | Body
+  | LineList
 		{ return $1; }
   | Block Eol
 		{ return $1; }
-	| ImportList Body
+	| ImportList LineList
 		{ return $1.merge($2);; }
 	| ImportList Block Eol
 		{ return $1.merge($2);; }
@@ -104,24 +105,31 @@ ImportList
 		{ $$ = $2.push($1); }
 	;
 
+BlockLike
+	: Expression Eol
+	| Block
+	| Line Block
+	;
+
 Eol
 	: TERMINATOR
 	| ';'
 	;
 
 /* Any list of statements and expressions, separated by line breaks */
-Body
+LineList
   : Line
     { $$ = N.Block.wrap([$1]); }
-	| Body Eol Line
+	| LineList Eol Line
     { $$ = $1.push($3); }
-	| Body Eol
+	| LineList Eol
 	;
 
 /* Block and statements, which make up a line in a body. */
 Line
 	: Expression
 	| Statement
+	| Cps
 	;
 
 /* Pure statements which cannot be expressions. */
@@ -230,7 +238,7 @@ token stream. */
 Block
 	: INDENT OUTDENT
   	{ $$ = new N.Block([]); }
-	| INDENT Body OUTDENT
+	| INDENT LineList OUTDENT
   	{ $$ = $2; }
 	;
 
@@ -307,6 +315,8 @@ ObjectPropList
 		{ $$ = [$1]; }
 	| ObjectPropList ',' ObjectPropDef
 		{ $$ = $1.concat([$3]); }
+	| ObjectPropList Eol ',' ObjectPropDef
+		{ $$ = $1.concat([$4]); }
 	;
 
 /* definition of a property in an object literal */
@@ -332,15 +342,22 @@ Return
 /* of **Block** preceded by a function arrow, with an optional parameter
 /* list. */
 Code
-	: '\' FnLitParams "->" Block
-		{ $$ = new N.Code($2, $4); }
-	| '\' "->" Block
-		{ $$ = new N.Code([], $3); }
+	: FnLitParams "->" BlockLike
+		{ $$ = new N.Code($1, $3); }
+	;
+
+Cps
+	: CpsParams <- Expression
+	;
+
+CpsParams
+	: CPS Identifier FN_LIT_PARAM
+	| CpsParams Identifier FN_LIT_PARAM
 	;
 
 FnLitParams
-	: Identifier FN_LIT_PARAM
-		{ $$ = [$1]; }
+	: '\'
+		{ $$ = []; }
 	| FnLitParams Identifier FN_LIT_PARAM
 		{ $$ = $1.concat($2); }
 	;
@@ -494,5 +511,19 @@ If
 	: IfBlock
 	| IfBlock ELSE Block
     { $$ = $1.addElse($3); }
+	;
+
+/* The full complement of *if* expressions, including postfix one-liner
+/* *if* and *unless*. */
+IfCaseExpr
+	: IF CASE IfCase
+    { $$ = $3; }
+	| IfCaseExpr IfCase
+    { $$ = $1.addElse($2); }
+	;
+
+IfCase
+	: Expression '->' BlockLike
+		{ $$ = new N.If($2, $3); }
 	;
 

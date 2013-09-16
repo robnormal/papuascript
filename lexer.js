@@ -87,10 +87,6 @@ var NOT_REGEX = ['NUMBER', 'INTEGER', 'REGEX', 'BOOL', 'NULL', 'UNDEFINED', '++'
 // force a division parse:
 var NOT_SPACED_REGEX = NOT_REGEX.concat(')', '}', 'THIS', 'IDENTIFIER', 'STRING', ']');
 
-var whiteTokens = ['INDENT', 'OUTDENT', 'TERMINATOR'];
-var isWhitespaceToken = function(token) {
-	return whiteTokens.indexOf(token[0]) !== -1;
-}
 var addWhitespaceTokens = function(a, b) {
 	var tag_a = a[0], tag_b = b[0], txt_a = a[1], txt_b = b[1];
 
@@ -149,8 +145,8 @@ var mergeIndentation = function(tokens) {
 	// must compare i to _current_ length of tokens
 	for (var i = 0; i < tokens.length; i++) {
 		if (tokens[i+1] &&
-			isWhitespaceToken(tokens[i]) &&
-			isWhitespaceToken(tokens[i+1])
+			H.isWhitespaceToken(tokens[i]) &&
+			H.isWhitespaceToken(tokens[i+1])
 		) {
 			var newspace = addWhitespaceTokens(tokens[i], tokens[i+1]);
 			Array.prototype.splice.apply(tokens, [i, 2].concat(newspace));

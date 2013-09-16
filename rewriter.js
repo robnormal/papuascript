@@ -1,9 +1,21 @@
 /*jshint white: false */
 var H = require('./helpers.js');
-var B = require('./block_resolver.js');
+var B = require('./blocker.js');
 
 function error(msg, token) {
 	throw new Error(msg + ' in line ' + (token[2].first_line+1) + ' column ' + (token[2].first_column+1));
+}
+
+function appendTag(tokens, i, tag) {
+	tokens.splice(i + 1, 0,
+		[tag, '', H.here(tokens[i][2].first_line, tokens[i][2].first_column)]
+	);
+}
+
+function insertTag(tokens, i, tag) {
+	tokens.splice(i, 0,
+		[tag, '', H.here(tokens[i][2].first_line, tokens[i][2].first_column)]
+	);
 }
 
 // matches the first indent AFTER i
@@ -149,6 +161,28 @@ function startsFactor(tok) {
 }
 
 
+function markCpsParams(tokens, i) {
+	return 0;
+	var count = 0;
+
+	if ('<-' !== tokens[i][1]) return tokens;
+
+	i--;
+	while (tokens[i] && tokens[i][0] === 'IDENTIFIER') {
+		count++;
+		appendTag(tokens, i, 'FN_LIT_PARAM');
+		i--;
+	}
+
+	if (! tokens[i] || H.isWhitespaceToken(tokens[i])) {
+		insertTag(tokens, 0, 'CPS');
+	} else {
+		error('Bad function parameter: "' + tokens[i][1], tokens[i]);
+	}
+
+	return count + 1;
+}
+
 // FIXME: This solves a problem I had writing the grammar.
 // It could probably be solved in the grammar, since it's
 // not an ambiguity, but I don't want to do it right now
@@ -179,6 +213,8 @@ function markFunctionParams(tokens) {
 			}
 		} else if ('\\' === tag) {
 			param_list = true;
+		} else if ('<-' === tag) {
+			i += markCpsParams(tokens, i);
 		}
 
 		// mark function calls
@@ -323,7 +359,7 @@ function rewrite(tokens) {
 
 module.exports = {
 	rewriteCpsArrow: cpsArrow,
-	resolveBlocks: B.resolveBlocks,
+	resolveBlocks: B.fixBlocks,
 	markFunctionParams: markFunctionParams,
 	convertPoundSign: convertPoundSign,
 	parenthesizeFunctions: parenthesizeFunctions,
