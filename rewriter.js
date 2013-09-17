@@ -19,179 +19,6 @@ function insertTag(tokens, i, tag) {
 	);
 }
 
-function closingOutdent2(tokens, i) {
-	var
-		indent = I.EmptyDent(),
-		len = tokens.length,
-		rem, dent, firstOutdent;
-
-	while (i < len) {
-		if (tokens[i][0] === 'INDENT') {
-			indent = indent.before(I.dentize(tokens[i]));
-			console.log(indent, tokens[i]);
-		} else if (tokens[i][0] === 'OUTDENT') {
-			dent = I.dentize(tokens[i]);
-			rem = indent.before(dent);
-			console.log(indent, dent, rem, rem.isEmpty());
-
-			if (rem.isIndent() || rem.isEmpty()) {
-				indent = rem;
-			} else {
-				console.log(indent, dent, rem, rem.isEmpty());
-				if (indent.isEmpty()) {
-					// clean break
-					return i;
-				} else {
-					// have to split the outdent
-					firstOutdent = H.clipStart(dent.text, rem.text);
-
-					tokens[i][1] = firstOutdent;
-					tokens.splice(i+1, 0, ['OUTDENT', rem.text, H.loc(tokens[i])]);
-
-					return i;
-				}
-			}
-		}
-
-		i++;
-	}
-
-	// didn't find a match
-	return false;
-}
-
-// finds OUTDENT matching the first INDENT _after_ i
-function closingOutdent(tokens, i) {
-	var
-		indents = 0,
-		len = tokens.length;
-
-	while (i < len) {
-		if (tokens[i][0] === 'INDENT') {
-			indents++;
-		} else if (tokens[i][0] === 'OUTDENT') {
-			indents--;
-
-			if (indents === 0) {
-				return i;
-			}
-		}
-
-		i++;
-	}
-
-	// didn't find a match
-	return false;
-}
-
-function outdentNextOutdent(tokens, i, text) {
-	var
-		indents = 0,
-		out = false,
-		out_tok,
-		len = tokens.length;
-
-	out = closingOutdent2(tokens, i);
-	out_tok = tokens[out];
-
-	// if we get to EOF, add an outdent at the end
-	//
-	// use the last token (minus one, since that's the final TERMINATOR)
-	// for location info
-	if (false === out) {
-		out = len - 1;
-		out_tok = tokens[len - 2];
-	}
-
-	tokens.splice(out, 0,
-		['OUTDENT', text, H.loc(out_tok)],
-		[')', text, H.loc(out_tok)]
-	);
-
-	return tokens;
-}
-
-function cpsArrow(tokens) {
-	var
-		i = 0,
-		line_start = true, // whether any nonwhitespace has been encountered on this line
-		identifier = false, // current identifier, if any
-		tag; // current token's tag
-
-	while (i < tokens.length) {
-		tag = tokens[i][0];
-
-		// ident at start of line is a possible CPS
-		if (line_start && tag === 'IDENTIFIER') {
-
-			identifier = i;
-			i++;
-
-		// if in an ident. list, check to see if something happens
-		// otherwise, move on to next token
-		} else if (tag === '<-') {
-			// if previous was an ident, we have a CPS arrow
-			if (false === identifier) {
-				error('Unexpected CPS arrow', tokens[i]);
-			} else {
-				// go back to identifier
-				i = identifier;
-				var ident_token = tokens[identifier];
-
-				// remove identifier and arrow
-				tokens.splice(i, 2);
-
-				// read tokens to end of line
-				while (i < tokens.length && tokens[i][0] !== 'TERMINATOR') {
-					if (tokens[i][0] === 'INDENT' || tokens[i][0] === 'OUTDENT') {
-						error('Cannot have empty block under CPS arrow (<-)', tokens[i]);
-					}
-					i++;
-				}
-				if (! tokens[i]) {
-					error('Cannot have empty block under CPS arrow (<-)', tokens[i]);
-				}
-
-				// fix last token info
-				var last_on_line = tokens[i-1];
-				delete last_on_line.newLine;
-				last_on_line.spaced = true;
-
-				// add function literal with identifier as argument
-				var line = tokens[i][2].last_line;
-				var column = tokens[i][2].last_column;
-
-				// do one whole insertion, so include TERMINATOR and add INDENT after
-				// replace newline with whole thing
-				tokens.splice(i, 1,
-					['(', '', H.here(line, column)],
-					['\\', '', H.here(line, column)],
-					ident_token,
-					{0: '->', 1:'', 2: H.here(line, column), newLine: true},
-					['INDENT', '<-', H.here(line + 1, 0)]
-				);
-
-				tokens = outdentNextOutdent(tokens, i + 5, '<-');
-
-				// move past new OUTDENT
-				i +=2 ;
-			}
-		} else {
-			identifier = false;
-			i++;
-		}
-
-		if (tag === 'TERMINATOR' || tag === 'INDENT' || tag === 'OUTDENT') {
-			line_start = true;
-			identifier = false;
-		} else {
-			line_start = false;
-		}
-	}
-
-	return tokens;
-}
-
 function endsFactor(tok) {
 	return H.has(
 		['IDENTIFIER', 'STRING', 'THIS', 'NUMBER', 'INTEGER', 'BOOL', 'NULL', 'UNDEFINED', 'REGEX', ']',')','}', '`' ],
@@ -383,8 +210,6 @@ function convertPoundSign(tokens, pos) {
 
 function rewrite(tokens) {
 	return markFunctionParams(
-				// parenthesizeFunctions(
-					// cpsArrow(
 			B.resolveBlocks(
 					convertPoundSign(
 						tokens)));
@@ -392,7 +217,6 @@ function rewrite(tokens) {
 
 
 module.exports = {
-	rewriteCpsArrow: cpsArrow,
 	resolveBlocks: B.fixBlocks,
 	markFunctionParams: markFunctionParams,
 	convertPoundSign: convertPoundSign,

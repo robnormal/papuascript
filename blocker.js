@@ -281,14 +281,14 @@ $.extend(Blocker.prototype, {
 		this.mustConsume(['['], 'Logic error in fixArray');
 
 		while (this.tag() !== ']') {
-			this.skipWhitespace();
+			this.dropWhitespace();
 			this.expression(false, startDent);
 
-			this.skipWhitespace();
+			this.dropWhitespace();
 			this.consume([',']);
 		}
 
-		this.skipWhitespace();
+		this.dropWhitespace();
 		this.mustConsume([']'], 'Bad Array');
 	},
 
@@ -296,20 +296,20 @@ $.extend(Blocker.prototype, {
 		this.mustConsume(['{'], 'Logic error in fixObject');
 
 		while (this.has() && this.tag() !== '}') {
-			this.skipWhitespace();
+			this.dropWhitespace();
 			this.mustConsume(['IDENTIFIER'], 'Expected IDENTIFIER, found ' + this.tag());
 
-			this.skipWhitespace();
+			this.dropWhitespace();
 			this.mustConsume([':'], 'Expected ":", found ' + this.tag());
 
-			this.skipWhitespace();
+			this.dropWhitespace();
 			this.expression(false, startDent);
 
-			this.skipWhitespace();
+			this.dropWhitespace();
 			this.consume([',']);
 		}
 				
-		this.skipWhitespace();
+		this.dropWhitespace();
 		this.mustConsume(['}'], 'Expected "}", found ' + this.tag());
 	},
 
@@ -362,7 +362,7 @@ $.extend(Blocker.prototype, {
 
 
 		$.each(cps, function(mark) {
-			that.fixCps2(that.bookmarks[mark], that.bookmarks[end]);
+			that.fixCps(that.bookmarks[mark], that.bookmarks[end]);
 		});
 	},
 
@@ -526,7 +526,7 @@ $.extend(Blocker.prototype, {
 		this.consume([',']);
 	},
 
-	fixCps2: function(arrow, end) {
+	fixCps: function(arrow, end) {
 		this.insertTagAt(end - 1, 'CPSSTOP');
 
 		// find first thing before arrow that isn't an identifier
@@ -537,76 +537,6 @@ $.extend(Blocker.prototype, {
 		}
 
 		this.insertTagAt(i + 1, 'CPS');
-	},
-
-	fixCps: function(arrow, end) {
-		var
-			i = arrow - 1,
-			atEOF = this.tokens.length === end,
-			toks, preCount, line, column, arr, here;
-
-		if (atEOF) {
-		} else {
-			end--;
-		}
-
-		this.insertTagAndText(end, 'OUTDENT', '<-');
-		this.insertTagAndText(end + 1, ')');
-		// this.insertTagAndText(end + 2, 'TERMINATOR');
-
-		while (this.tagAt(i) === 'IDENTIFIER') {
-			i--;
-		}
-		if (this.tokens[i] && ! H.isWhitespaceToken(this.tokens[i])) {
-			this.error('Only IDENTIFIER expected on line before "<-"');
-		}
-
-		i++; // i is now at the first IDENTIFIER being passed
-
-		// remove identifier and arrow
-		preCount = arrow - i + 1;
-
-		toks = this.tokens.splice(i, preCount);
-		toks.pop(); // toks now has only identifiers
-
-		this.pos -= preCount;
-
-		// read tokens to end of line
-		while (this.tokens[i] && this.tokens[i][0] !== 'TERMINATOR') {
-			if (this.tokens[i][0] === 'INDENT' || this.tokens[i][0] === 'OUTDENT') {
-				this.error('Cannot have empty block under CPS arrow (<-)', i);
-			}
-
-			i++;
-		}
-
-		if (! this.tokens[i]) {
-			this.error('Cannot have empty block under CPS arrow (<-)', i);
-		}
-
-		// fix token at end of line
-		delete this.tokens[i-1].newLine;
-		this.tokens[i-1].spaced = true;
-
-		here = H.loc(this.tokens[i]);
-
-		// replace newline with (\a b ... -> INDENT
-		arr = ['->', '', here];
-		arr.newLine = true;
-
-		var fn_start_toks = [
-			['(', '', here],
-			['\\', '', here]
-		].concat(toks).concat([
-			arr,
-			['INDENT', '<-', H.here(here.first_line + 1, 0)]
-		]);
-
-		// annoyingly, splice is n-array, so...
-		var splice_args = [i, 1].concat(fn_start_toks);
-		Array.prototype.splice.apply(this.tokens, splice_args);
-
-		this.pos += preCount + 3; // number of identifiers, plus 4 for ( \ -> INDENT
 	},
 
 	addIndent: function() {
@@ -635,10 +565,8 @@ $.extend(Blocker.prototype, {
 				return false;
 			}
 
-			if ('INDENT' === tok[0]) {
-				dent = dent.before(Indent(tok[1]));
-			} else if ('OUTDENT' === tok[0]) {
-				dent = dent.before(Outdent(tok[1]));
+			if ('INDENT' === tok[0] || 'OUTDENT' === tok[0]) {
+				dent = dent.before(dentize(tok));
 			}
 		}
 
@@ -685,10 +613,15 @@ $.extend(Blocker.prototype, {
 		this.next();
 	},
 
-	skipWhitespace: function() {
-		this.consume(['INDENT']);
-		this.consume(['TERMINATOR']);
-		this.consume(['OUTDENT']);
+	dropWhitespace: function() {
+		if (
+			this.consume(['INDENT']) ||
+			this.consume(['TERMINATOR']) ||
+			this.consume(['OUTDENT'])
+		) {
+			this.pos--;
+			this.removeToken(this.pos);
+		}
 	},
 
 	isOutdented: function() {
