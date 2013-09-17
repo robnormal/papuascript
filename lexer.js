@@ -51,7 +51,6 @@ MULTI_DENT = /^(?:\n([^\n\S]*))+/;
 SINGLESTR  = /^'[^\\']*(?:\\.[^\\']*)*'/;
 DOUBLESTR  = /^"[^\\"]*(?:\\.[^\\"]*)*"/;
 JSTOKEN    = /^`[^\\`]*(?:\\.[^\\`]*)*`/;
-REGEX = /(\/(?![\s=])[^\[\/\n\\]*(?:(?:\\[\s\S]|\[[^\]\n\\]*(?:\\[\s\S][^\]\n\\]*)*\])[^\[\/\n\\]*)*\/)([imgy]{0,4})(?!\w)/;
 
 // Token cleaning regexes.
 MULTILINER      = /\n/g;
@@ -74,18 +73,6 @@ UNARY   = ['!', '~', 'NEW', 'TYPEOF', 'DELETE'];
 
 RELATION = ['IN', 'INSTANCEOF'];
 BOOL = ['TRUE', 'FALSE'];
-
-// Tokens which a regular expression will never immediately follow, but which
-// a division operator might.
-//
-// See: http://www.mozilla.org/js/language/js20-2002-04/rationale/syntax.html#regular-expressions
-//
-// Our list is shorter, due to sans-parentheses method calls.
-var NOT_REGEX = ['NUMBER', 'INTEGER', 'REGEX', 'BOOL', 'NULL', 'UNDEFINED', '++', '--'];
-
-// If the previous token is not spaced, there are more preceding tokens that
-// force a division parse:
-var NOT_SPACED_REGEX = NOT_REGEX.concat(')', '}', 'THIS', 'IDENTIFIER', 'STRING', ']');
 
 var addWhitespaceTokens = function(a, b) {
 	var tag_a = a[0], tag_b = b[0], txt_a = a[1], txt_b = b[1];
@@ -404,36 +391,41 @@ Lexer.prototype = {
 		return match ? match[0].length : 0;
 	},
 
-	// RR - vetted (as long as the REGEX regex is OK)
-	// Matches regular expression literals. Lexing regular expressions is difficult
-	// to distinguish from division, so we borrow some basic heuristics from
-	// JavaScript and Ruby.
 	regex: function() {
-		var flags, match, match_text, prev, regex;
-		if (this.chunk.charAt(0) !== '/') {
+		var match, i, chr, backslashes,
+			len = this.chunk.length;
+
+		if ('/' !== this.chunk.charAt(0) || ! this.chunk.charAt(1) || this.chunk.charAt(1).match(/[\s\/*]/)) {
 			return 0;
 		}
 
-		prev = H.last(this.tokens);
-		var non_rgx_tags = prev.spaced ? NOT_REGEX : NOT_SPACED_REGEX;
+		i = 1;
+		backslashes = 0;
+		while (i < len) {
+			chr = this.chunk.charAt(i);
+			if (chr === '\n') {
+				break;
+			} else if (chr === '\\') {
+				backslashes++;
+			} else {
+				if (chr === '/' && 0 === backslashes % 2) {
+					break;
+				} else {
+					backslashes = 0;
+				}
+			}
 
-		if (prev && H.has(non_rgx_tags, prev[0])) {
-			return 0;
+			i++;
 		}
-		if (!(match = REGEX.exec(this.chunk))) {
-			return 0;
+
+		if (i >= len) {
+			this.error('Incomplete regex');
+		} else {
+			i++;
+			this.token('REGEX', this.chunk.substr(0, i), 0, i);
+
+			return i;
 		}
-
-		match_text = match[0];
-		regex = match[1];
-		flags = match[2];
-
-		if (regex.slice(0, 2) === '/*') {
-			this.error('regular expressions cannot begin with `*`');
-		}
-		this.token('REGEX', "" + regex + flags, 0, match.length);
-
-		return match.length;
 	},
 
   // Matches newlines, indents, and outdents, and determines which is which.
