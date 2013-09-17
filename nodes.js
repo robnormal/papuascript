@@ -652,7 +652,7 @@ FuncCall.fromChain = function(call_or_factor, chain) {
 			link.factors[0] = base;
 			base = new FuncCall(link.factors);
 		} else {
-			base = base.addProperty(new Access(link));
+			base = new Value(base).add(new Access(link));
 		}
 	}
 
@@ -1381,6 +1381,23 @@ $.extend(Import.prototype, {
 	}
 });
 
+var Cps = function(expr, args, code) {
+	var fnCall;
+
+	if (expr instanceof FuncCall) {
+		fnCall = expr;
+	} else {
+		fnCall = new FuncCall([expr]);
+	}
+
+	$.each(args, function(arg) {
+		fnCall.appendFactor(arg);
+	});
+
+	fnCall.appendFactor(code);
+
+	return fnCall;
+};
 
 
 module.exports = {
@@ -1412,6 +1429,7 @@ module.exports = {
 	Var: Var,
 	Case: Case,
 	Import: Import,
+	Cps: Cps,
 
 	// for testing
 	vars_defined: vars_defined

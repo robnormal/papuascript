@@ -1,6 +1,7 @@
 /*jshint white: false */
 var H = require('./helpers.js');
 var B = require('./blocker.js');
+var I = require('./indents.js');
 
 function error(msg, token) {
 	throw new Error(msg + ' in line ' + (token[2].first_line+1) + ' column ' + (token[2].first_column+1));
@@ -18,7 +19,48 @@ function insertTag(tokens, i, tag) {
 	);
 }
 
-// matches the first indent AFTER i
+function closingOutdent2(tokens, i) {
+	var
+		indent = I.EmptyDent(),
+		len = tokens.length,
+		rem, dent, firstOutdent;
+
+	while (i < len) {
+		if (tokens[i][0] === 'INDENT') {
+			indent = indent.before(I.dentize(tokens[i]));
+			console.log(indent, tokens[i]);
+		} else if (tokens[i][0] === 'OUTDENT') {
+			dent = I.dentize(tokens[i]);
+			rem = indent.before(dent);
+			console.log(indent, dent, rem, rem.isEmpty());
+
+			if (rem.isIndent() || rem.isEmpty()) {
+				indent = rem;
+			} else {
+				console.log(indent, dent, rem, rem.isEmpty());
+				if (indent.isEmpty()) {
+					// clean break
+					return i;
+				} else {
+					// have to split the outdent
+					firstOutdent = H.clipStart(dent.text, rem.text);
+
+					tokens[i][1] = firstOutdent;
+					tokens.splice(i+1, 0, ['OUTDENT', rem.text, H.loc(tokens[i])]);
+
+					return i;
+				}
+			}
+		}
+
+		i++;
+	}
+
+	// didn't find a match
+	return false;
+}
+
+// finds OUTDENT matching the first INDENT _after_ i
 function closingOutdent(tokens, i) {
 	var
 		indents = 0,
@@ -49,7 +91,7 @@ function outdentNextOutdent(tokens, i, text) {
 		out_tok,
 		len = tokens.length;
 
-	out = closingOutdent(tokens, i);
+	out = closingOutdent2(tokens, i);
 	out_tok = tokens[out];
 
 	// if we get to EOF, add an outdent at the end
@@ -62,7 +104,8 @@ function outdentNextOutdent(tokens, i, text) {
 	}
 
 	tokens.splice(out, 0,
-		['OUTDENT', text, H.loc(out_tok)]
+		['OUTDENT', text, H.loc(out_tok)],
+		[')', text, H.loc(out_tok)]
 	);
 
 	return tokens;
@@ -105,6 +148,9 @@ function cpsArrow(tokens) {
 					}
 					i++;
 				}
+				if (! tokens[i]) {
+					error('Cannot have empty block under CPS arrow (<-)', tokens[i]);
+				}
 
 				// fix last token info
 				var last_on_line = tokens[i-1];
@@ -118,16 +164,17 @@ function cpsArrow(tokens) {
 				// do one whole insertion, so include TERMINATOR and add INDENT after
 				// replace newline with whole thing
 				tokens.splice(i, 1,
+					['(', '', H.here(line, column)],
 					['\\', '', H.here(line, column)],
 					ident_token,
 					{0: '->', 1:'', 2: H.here(line, column), newLine: true},
 					['INDENT', '<-', H.here(line + 1, 0)]
 				);
 
-				tokens = outdentNextOutdent(tokens, i, '<-');
+				tokens = outdentNextOutdent(tokens, i + 5, '<-');
 
 				// move past new OUTDENT
-				i++;
+				i +=2 ;
 			}
 		} else {
 			identifier = false;
@@ -163,24 +210,6 @@ function startsFactor(tok) {
 
 function markCpsParams(tokens, i) {
 	return 0;
-	var count = 0;
-
-	if ('<-' !== tokens[i][1]) return tokens;
-
-	i--;
-	while (tokens[i] && tokens[i][0] === 'IDENTIFIER') {
-		count++;
-		appendTag(tokens, i, 'FN_LIT_PARAM');
-		i--;
-	}
-
-	if (! tokens[i] || H.isWhitespaceToken(tokens[i])) {
-		insertTag(tokens, 0, 'CPS');
-	} else {
-		error('Bad function parameter: "' + tokens[i][1], tokens[i]);
-	}
-
-	return count + 1;
 }
 
 // FIXME: This solves a problem I had writing the grammar.
@@ -273,6 +302,11 @@ function parenthesizeFunctions(tokens) {
 					);
 					i++;
 				}
+				if (! tokens[i+1] || ! H.isWhitespaceToken(tokens[i+1][0])) {
+					tokens.splice(i+1, 0,
+						['TERMINATOR', '', H.loc(tokens[i])]
+					);
+				}
 
 				func_indents.pop();
 			}
@@ -348,12 +382,12 @@ function convertPoundSign(tokens, pos) {
 }
 
 function rewrite(tokens) {
-	return parenthesizeFunctions(
-		markFunctionParams(
-			cpsArrow(
-				B.resolveBlocks(
+	return markFunctionParams(
+				// parenthesizeFunctions(
+					// cpsArrow(
+			B.resolveBlocks(
 					convertPoundSign(
-						tokens)))));
+						tokens)));
 }
 
 

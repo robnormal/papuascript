@@ -1,352 +1,391 @@
-var H = require('./helpers.js');
-var $ = require('underscore');
+var
+	H = require('./helpers.js'),
+	$ = require('underscore'),
+	I = require('./indents.js'),
+	log = console.log,
+	set = H.set,
+	last = H.last,
+	Indent = I.Indent,
+	Outdent = I.Outdent,
+	EmptyDent = I.EmptyDent,
+	dentize = I.dentize;
 
-var set = H.set; // used often
 
 function showTags(toks) {
+	var text;
+
 	for (var i = 0; i < toks.length; i++) {
-		console.log(i, ':', toks[i][0] === 'IDENTIFIER' ? toks[i][1] : toks[i][0]);
+		switch(toks[i][0]) {
+		case 'IDENTIFIER':
+			text = toks[i][1];
+			break;
+		case 'INDENT':
+		case 'OUTDENT':
+			text = toks[i][0] + ' - ' + [toks[i][1]] ;
+			break;
+		default:
+			text = toks[i][0];
+		}
+
+		console.log(i, ':', text);
 	}
 }
 
-/**
- * Helper functions used in Blocker.expression()
- */
-var
-	doFixIf = function(that, st) {
-		if ('CASE' === that.nextTag()) {
-			return that.fixIfCase();
-		} else {
-			return that.fixIf();
-		}
-	},
+// GLOBAL state variables :(
+var $exprWasIndented = [false];
+var $blockCps = [];
 
-	doFixSwitch = function(that, st) {
-	},
 
-	doFixFunction = function(that, st) {
-	};
-
+function indentExpressions() {
+	for (var i = 0, len = $exprWasIndented.length; i < len; i++) {
+		$exprWasIndented[i] = true;
+	}
+}
 
 function Blocker(tokens) {
 	this.tokens = tokens;
 	this.pos = 0;
-	this.indent = 0;
+	this.indent = EmptyDent();
+	this.bookmarks = [];
 }
+Blocker.BLOCK = 1;
+Blocker.EXPRESSION = 2;
 	
 $.extend(Blocker.prototype, {
+	tokenAt: function(i) {
+		return this.tokens[i];
+	},
+
 	token: function() {
-		return this.tokens[this.pos];
+		return this.tokenAt(this.pos);
 	},
+
+	next: function() {
+		this.pos++;
+	},
+
 	has: function() {
-		return this.token();
+		return !!this.token();
 	},
-	tag: function() {
-		var t = this.tokens[this.pos];
+
+	tagAt: function(i) {
+		var t = this.tokens[i];
 		return t && t[0];
 	},
-	nextTag: function() {
-		return this.tokens[this.pos + 1];
+
+	tag: function() {
+		return this.tagAt(this.pos);
 	},
+
+	nextTag: function() {
+		return this.tagAt(this.pos + 1);
+	},
+
+	prevTag: function() {
+		return this.tagAt(this.pos - 1);
+	},
+
 	text: function() {
 		var t = this.tokens[this.pos];
 		return t && t[1];
 	},
+
+	clipDent: function (haystack, needle, errMsg) {
+		if (H.ends_with(haystack, needle)) {
+			return H.clipEnd(haystack, needle);
+		} else {
+			this.error('Mismatched indent');
+		}
+	},
+
+	bookmark: function(pos) {
+		this.bookmarks.push(pos);
+		return this.bookmarks.length - 1;
+	},
+
+	addedToken: function(pos) {
+		for (var i = 0, len = this.bookmarks.length; i < len; i++) {
+			if (this.bookmarks[i] >= pos) {
+				this.bookmarks[i]++;
+			}
+		}
+
+		if (this.pos >= pos) {
+			this.pos++;
+		}
+	},
+
 	removeToken: function() {
 		this.tokens.splice(this.pos, 1);
-		return this.pos--;
 	},
+
+	insertTagAt: function(pos, tag) {
+		this.insertTagAndText(pos, tag, '');
+	},
+
+	insertTagAndText: function(pos, tag, text) {
+		var i, len = this.tokens.length;
+
+		if (pos >= len) {
+			i = len - 1;
+		} else if (pos < 0) {
+			i = 0;
+		} else {
+			i = pos;
+		}
+
+		this.tokens.splice(pos, 0, [tag, text, H.loc(this.tokens[i])]);
+		this.addedToken(pos);
+	},
+
+	insertTag: function(tag) {
+		this.insertTagAt(this.pos, tag);
+	},
+
+	insertTagAfter: function(tag) {
+		this.insertTagAt(this.pos + 1, tag);
+	},
+
 	replaceTag: function(tag) {
 		this.tokens[this.pos][0] = tag;
 	},
 
-
-	balanceBlocks: function() {
-		/**
-		 * NOTE: a function may take a block _or_ an expression, but not both
-		 * Thus, we need not deal with "zero-length" indents; inline functions
-		 * simplify have no indent, and no other block keywords can also be inline
-		 */
-
-		var i = 0, indents = [],
-			last_in, tag, text, new_dents;
-
-		while (this.tokens[i]) {
-			tag = this.tokens[i][0];
-			text = this.tokens[i][1];
-
-			switch (tag) {
-			case 'INDENT':
-				indents.push({ pos: i, text: text });
-				break;
-			case 'OUTDENT':
-				last_in = H.last(indents);
-
-				if (! last_in) {
-					throw new Error('Logic error: found more outdents than indents');
-				}
-
-				if (last_in.text !== text) {
-					if (H.ends_with(last_in.text, text)) {
-						new_dents = this.splitIndentEnd(last_in.pos, last_in.text, text);
-						this.tokens.splice(last_in.pos, 1, new_dents[0], new_dents[1]);
-
-					// outdent consumes several indents
-					} else if (H.ends_with(text, last_in.text)) {
-						new_dents = this.splitOutdentEnd(i, text, last_in.text);
-						this.tokens.splice(i, 1, new_dents[0], new_dents[1]);
-					} else {
-						this.error('Indent mismatch', this.tokens[i]);
-					}
-				}
-
-				// every outdent eliminates exactly 1 indent
-				indents.pop();
-
-				break;
-			}
-
-			i++;
+	trimTerminators: function() {
+		while (this.tagAt(0) === 'TERMINATOR') {
+			this.tokens.shift();
 		}
-
-		return this;
 	},
 
 	fixBlocks: function() {
-		this.balanceBlocks();
-
-		this.block(
-			{ pos: 0, indent: 0 },
-			true
-		);
-
-		return this;
+		// try {
+			this.trimTerminators();
+			this.block(true, false);
+			return this;
+		// } catch (e) {
+			// this.error(e.message);
+		// }
 	},
 
 	fixDo: function() {
-		this.checkTag('DO', 'Logic error in fixWhile');
-
-		this.pos++;
+		this.mustConsume(['DO'], 'Logic error in fixWhile');
 		this.block();
-
-		this.checkTag('WHILE', 'Bad do statement');
+		this.mustConsume(['WHILE'], 'Missing WHILE clause for DO statment');
 		this.expression();
-
-		return this;
 	},
 
 	fixWhile: function() {
-		this.checkTag('WHILE', 'Logic error in fixWhile');
-
-		this.pos++;
+		this.mustConsume(['WHILE'], 'Logic error in fixWhile');
 		this.expression(true);
-
-		return this.block();
+		this.block();
 	},
 
 	fixFor: function() {
-		this.checkTag('FOR', 'Logic error in fixFor');
-
-		this.pos++;
+		this.mustConsume(['FOR'], 'Logic error in fixFor');
 
 		// initializations
-		while (';' !== this.tag()) {
+		while (this.has() && ';' !== this.tag()) {
 			this.expressionList();
 		}
+		this.mustConsume([';'], 'Missing ";" in FOR clause');
 
 		// conditions - remember indents
-		while (';' !== this.tag()) {
+		while (this.has() && ';' !== this.tag()) {
 			this.expressionList();
 		}
+		this.mustConsume([';'], 'Missing ";" in FOR clause');
 
 		// increments
-		while ('INDENT' !== this.tag()) {
+		while (this.has() && 'INDENT' !== this.tag()) {
 			this.expressionList();
 		}
+		if (!this.has) this.error('Empty FOR statement');
 
-		return this.block();
+		this.block();
 	},
 
 	fixIf: function() {
-		this.checkTag('IF', 'Logic error in fixIf');
-		this.pos++;
-
+		this.mustConsume(['IF'], 'Logic error in fixIf');
 		this.exprThenBlock();
 
-		while ('ELSE' === this.tag() && 'IF' === this.nextTag()) {
-			this.pos += 2;
+		while (this.consume(['ELSE', 'IF'])) {
 			this.exprThenBlock();
 		}
 
-		if ('ELSE' === this.tag()) {
-			this.pos++;
+		if (this.consume(['ELSE'])) {
 			this.block();
 		}
-
-		return this;
 	},
 
 	exprThenBlock: function() {
 		this.expression(true);
 		this.block();
-
-		return this;
 	},
 
 	fixIfCase: function() {
-		this.checkTag('IF', 'Logic error in fixIfCase');
-		this.pos++;
-		this.checkTag('CASE', 'Logic error in fixIfCase');
+		var startDent = this.indent;
+		
+		this.mustConsume(['IF','CASE'], 'Logic error in fixIfCase');
+		this.expression(true);
 
-		this.exprThenBlock();
-
-		// cases _must_ be indented from switch
-		this.checkTag('INDENT', 'Bad switch');
-
+		this.mustConsume(['INDENT'], 'Cases must be indented from IF CASE');
 		while ('OUTDENT' !== this.tag()) {
 			this.expression();
-			this.checkTag('->', 'Bad if-case case');
-
-			this.pos++;
+			this.mustConsume(['->'], 'IF CASE: Expected "->"');
 			this.expressionOrBlock();
 		}
 
-		this.checkTag('OUTDENT', 'Bad if-case block');
-		return this;
+		this.mustOutdent(startDent, 'IF CASE block');
 	},
 
 	fixSwitch: function() {
-		this.checkTag('SWITCH', 'Logic error in fixSwitch');
-		this.pos++;
+		var startDent = this.indent;
 
-		// thing being switched
+		this.mustConsume(['SWITCH'], 'Logic error in fixSwitch');
 		this.expression(true);
-
-		// cases _must_ be indented from switch
-		this.checkTag('INDENT', 'Bad switch');
+		this.mustConsume(['INDENT'], 'Cases must be indented from switch');
 
 		while ('OUTDENT' !== this.tag()) {
 			// account for comma-separated cases
 			do {
-				this.checkTag('CASE', 'Bad switch');
-				this.pos++;
+				this.mustConsume(['CASE'], 'Expected CASE');
 				this.expression(true);
-			} while (',' === this.tag());
+			} while (this.consume([',']));
 
-			this.indent = 0;
 			this.block();
 		}
 
-		this.checkTag('OUTDENT', 'Bad case block');
-
-		return this;
+		this.mustOutdent(startDent, 'SWITCH block');
 	},
 
 	fixTry: function() {
-		this.checkTag('TRY', 'Logic error in fixIf');
-		this.pos++;
-
+		this.mustConsume(['TRY'], 'Logic error in fixIf');
 		this.block();
 
-		if ('CATCH' === this.tag()) {
-			this.pos++;
-			this.checkTag('IDENTIFIER', 'Bad catch identifier');
-			this.pos++;
+		if (this.consume(['CATCH'])) {
+			this.mustConsume(['IDENTIFIER'], 'CATCH: Expected IDENTIFIER');
 			this.block();
 		}
 
-		if ('FINALLY' === this.tag()) {
-			this.pos++;
+		if (this.consume(['FINALLY'])) {
 			this.block();
 		}
-
-		return this;
 	},
 
-	fixParens: function() {
-		this.checkTag('(', 'Logic error in fixParens');
-
-		this.pos++;
-		this.expression();
-
-		this.checkTag(')', 'Bad expression in parentheses');
-		this.pos++;
-
-		return this;
+	fixParens: function(startDent) {
+		this.mustConsume(['('], 'Logic error in fixParens');
+		this.expression(false, startDent);
+		this.mustConsume([')'], 'Bad expression in parentheses');
 	},
 
-	fixArray: function() {
-		this.checkTag('[', 'Logic error in fixArray');
-		this.pos++;
+	fixArray: function(startDent) {
+		this.mustConsume(['['], 'Logic error in fixArray');
 
 		while (this.tag() !== ']') {
-			this.expression();
-			this.pos++;
-		}
-		this.pos++; // skip ]
+			this.skipWhitespace();
+			this.expression(false, startDent);
 
-		return this;
+			this.skipWhitespace();
+			this.consume([',']);
+		}
+
+		this.skipWhitespace();
+		this.mustConsume([']'], 'Bad Array');
 	},
 
-	fixObject: function() {
-		this.checkTag('{', 'Logic error in fixObject');
-		this.pos++;
+	fixObject: function(startDent) {
+		this.mustConsume(['{'], 'Logic error in fixObject');
 
 		while (this.has() && this.tag() !== '}') {
-			this.checkTag('IDENTIFIER', 'Bad object');
-			this.pos++;
+			this.skipWhitespace();
+			this.mustConsume(['IDENTIFIER'], 'Expected IDENTIFIER, found ' + this.tag());
 
-			this.checkTag(':', 'Bad object');
-			this.pos++;
+			this.skipWhitespace();
+			this.mustConsume([':'], 'Expected ":", found ' + this.tag());
 
-			this.expression();
-			if (',' === this.tag()) {
-				this.pos++;
-			} else {
-				this.checkTag('}', 'Bad object');
-			}
+			this.skipWhitespace();
+			this.expression(false, startDent);
+
+			this.skipWhitespace();
+			this.consume([',']);
 		}
-		this.pos++; // skip }
-
-		return this;
+				
+		this.skipWhitespace();
+		this.mustConsume(['}'], 'Expected "}", found ' + this.tag());
 	},
 
 	fixFunction: function() {
-		this.checkTag('\\', 'Logic error in fixFunction');
-		this.pos++;
+		var begin = this.pos;
+
+		this.mustConsume(['\\'], 'Logic error in fixFunction');
 
 		// parameters
 		while (this.has() && this.tag() !== '->') {
-			if ('IDENTIFIER' === this.tag()) {
-				this.pos++;
-			} else {
-				this.checkTag('->', 'Bad function');
-			}
+			this.consume(['IDENTIFIER']);
 		}
 
-		this.pos++; // move past '->'
+		this.mustConsume(['->'], 'Bad function');
+		this.functionBody();
 
-		return this.expressionOrBlock();
+		// put in parens
+		if (this.tagAt(begin - 1) !== '(') {
+			this.insertTagAt(begin, '(');
+			this.insertTag(')'); // before final OUTDENT
+		}
+	},
+
+	// Turn function body into a block if it is an expression
+	functionBody: function() {
+		var
+			begin = this.pos,
+			res = this.expressionOrBlock();
+
+		if (res === Blocker.EXPRESSION) {
+			this.insertTagAt(begin, 'INDENT');
+			this.insertTagAt(this.pos - 1, 'TERMINATOR'); // expression won't have one yet
+			this.insertTagAt(this.pos - 1, 'OUTDENT');
+			// does not affect $maxDents, since these aren't real INDENT or OUTDENT
+
+			// we consumed a TERMINATOR at the end of the expression, but we need that now
+			this.pos--;
+		}
+			
 	},
 
 	block: function(isTop) {
+		$blockCps.push([]);
+		this.processBlock(isTop);
+
+		var
+			cps = $blockCps.pop(),
+			end = this.bookmark(this.pos),
+			that = this;
+
+
+		$.each(cps, function(mark) {
+			that.fixCps2(that.bookmarks[mark], that.bookmarks[end]);
+		});
+	},
+
+	processBlock: function(isTop) {
 		var startDent = this.indent;
 
 		if (! isTop) {
-			this.checkTag('INDENT', 'Bad block');
-			this.indent++;
-			this.pos++;
+			this.mustConsume(['INDENT'], 'Bad block');
+
+
+			if (this.indent.text === '') {
+				throw new Error('Empty indent level after indent');
+			}
 		}
 
 		while (this.has()) {
 			switch (this.tag()) {
+
 			case 'OUTDENT':
-				this.pos++;
-				this.indent--;
-				if (startDent >= this.indent) {
-					return this;
-				}
-				break;
+				this.consumeOutdentSplit(startDent);
+
+				// blocks cannot have more than one OUTDENT
+				return;
 
 			case 'FOR':
 				this.fixFor();
@@ -364,23 +403,40 @@ $.extend(Blocker.prototype, {
 				throw new Error('Logic Error: cannot find INDENT inside block');
 			default:
 				this.expression();
+
+				// make sure expressions are separated by newlines
+				if (this.prevTag() !== 'TERMINATOR' && this.tag() !== 'TERMINATOR') {
+					this.insertTag('TERMINATOR');
+				}
 			}
 		}
 
 		// we only get here if we found no OUTDENT, which means we are at the
 		// top level
-		if (isTop) {
-			return this;
-		} else {
+		if (! isTop) {
 			throw new Error('Logic error');
 		}
 
 	},
 
-	expression: function(noIndent) {
-		var startDent = this.indent;
+	expression: function(noIndent, startDent) {
+		$exprWasIndented.push(false);
+		this.processExpression(noIndent, startDent);
+		$exprWasIndented.pop();
+	},
 
-		while (1) {
+	processExpression: function(noIndent, startDent) {
+		if (void 0 === startDent) {
+			startDent = this.indent;
+		}
+
+		while (this.has()) {
+			if (startDent.greaterStartThan(this.indent) || (
+				last($exprWasIndented) && startDent.equals(this.indent)
+			)) {
+				return;
+			}
+
 			switch (this.tag()) {
 			case ')':
 			case ']':
@@ -388,40 +444,36 @@ $.extend(Blocker.prototype, {
 			case ',':
 			case '->': // end of if-case condition
 			case void 0:
-				return this;
+				return;
 
 			case 'TERMINATOR':
-				if (this.indent > startDent) {
+				if (this.indent.greaterStartThan(startDent)) {
 					this.removeToken();
 				} else {
-					this.pos++; // expression includes TERMINATOR
-					return this;
+					this.next(); // expression includes TERMINATOR
+					return;
 				}
 				break;
 
 			case 'INDENT':
-				this.indent++;
-				this.removeToken();
+				if (noIndent) {
+					return;
+				} else {
+					this.addIndent();
+					this.removeToken();
+				}
 				break;
 
 			case 'OUTDENT':
-				if (startDent >= this.indent) { // expression does not include OUTDENT
-					return this;
-				} else { // expression includes OUTDENT
-					this.indent--;
+				var newIndent = this.indent.before(dentize(this.token()));
 
-					if (startDent === this.indent) { // OUTDENT ends the expression
-						if ($.contains(['TERMINATOR', 'OUTDENT'], this.nextTag())) {
-							this.removeToken();
-						} else {
-							this.replaceTag('TERMINATOR');
-						}
-						this.pos++;
-
-						return this;
-					} else {
-						this.removeToken();
-					}
+				// if outdenting past the expression, don't consume the OUTDENT
+				// Leave it to the parent element
+				if (newIndent.lessStartThan(startDent)) {
+					return;
+				} else {
+					this.addIndent();
+					this.removeToken();
 				}
 				break;
 
@@ -439,16 +491,20 @@ $.extend(Blocker.prototype, {
 				this.fixFunction();
 				break;
 			case '{':
-				this.fixObject();
+				this.fixObject(startDent);
 				break;
 			case '[':
-				this.fixArray();
+				this.fixArray(startDent);
 				break;
 			case '(':
-				this.fixParens();
+				this.fixParens(startDent);
+				break;
+			case '<-':
+				last($blockCps).push(this.bookmark(this.pos));
+				this.next();
 				break;
 			default:
-				this.pos++;
+				this.next();
 				break;
 			}
 
@@ -457,25 +513,182 @@ $.extend(Blocker.prototype, {
 
 	expressionOrBlock: function() {
 		if ('INDENT' === this.tag()) {
-			return this.block();
+			this.block();
+			return Blocker.BLOCK;
 		} else {
-			return this.expression();
+			this.expression(true);
+			return Blocker.EXPRESSION;
 		}
 	},
 
 	expressionList: function() {
 		this.expression();
-		if (',' === this.tag()) {
-			this.pos++;
+		this.consume([',']);
+	},
+
+	fixCps2: function(arrow, end) {
+		this.insertTagAt(end - 1, 'CPSSTOP');
+
+		// find first thing before arrow that isn't an identifier
+		var i = arrow - 1;
+		while (this.tokens[i] && this.tokens[i][0] === 'IDENTIFIER') {
+			this.insertTagAt(i + 1, 'FN_LIT_PARAM');
+			i--;
 		}
 
-		return this;
+		this.insertTagAt(i + 1, 'CPS');
+	},
+
+	fixCps: function(arrow, end) {
+		var
+			i = arrow - 1,
+			atEOF = this.tokens.length === end,
+			toks, preCount, line, column, arr, here;
+
+		if (atEOF) {
+		} else {
+			end--;
+		}
+
+		this.insertTagAndText(end, 'OUTDENT', '<-');
+		this.insertTagAndText(end + 1, ')');
+		// this.insertTagAndText(end + 2, 'TERMINATOR');
+
+		while (this.tagAt(i) === 'IDENTIFIER') {
+			i--;
+		}
+		if (this.tokens[i] && ! H.isWhitespaceToken(this.tokens[i])) {
+			this.error('Only IDENTIFIER expected on line before "<-"');
+		}
+
+		i++; // i is now at the first IDENTIFIER being passed
+
+		// remove identifier and arrow
+		preCount = arrow - i + 1;
+
+		toks = this.tokens.splice(i, preCount);
+		toks.pop(); // toks now has only identifiers
+
+		this.pos -= preCount;
+
+		// read tokens to end of line
+		while (this.tokens[i] && this.tokens[i][0] !== 'TERMINATOR') {
+			if (this.tokens[i][0] === 'INDENT' || this.tokens[i][0] === 'OUTDENT') {
+				this.error('Cannot have empty block under CPS arrow (<-)', i);
+			}
+
+			i++;
+		}
+
+		if (! this.tokens[i]) {
+			this.error('Cannot have empty block under CPS arrow (<-)', i);
+		}
+
+		// fix token at end of line
+		delete this.tokens[i-1].newLine;
+		this.tokens[i-1].spaced = true;
+
+		here = H.loc(this.tokens[i]);
+
+		// replace newline with (\a b ... -> INDENT
+		arr = ['->', '', here];
+		arr.newLine = true;
+
+		var fn_start_toks = [
+			['(', '', here],
+			['\\', '', here]
+		].concat(toks).concat([
+			arr,
+			['INDENT', '<-', H.here(here.first_line + 1, 0)]
+		]);
+
+		// annoyingly, splice is n-array, so...
+		var splice_args = [i, 1].concat(fn_start_toks);
+		Array.prototype.splice.apply(this.tokens, splice_args);
+
+		this.pos += preCount + 3; // number of identifiers, plus 4 for ( \ -> INDENT
+	},
+
+	addIndent: function() {
+		var dent = dentize(this.token());
+		this.indent = this.indent.before(dent);
+
+		if (dent.isIndent()) {
+			indentExpressions();
+		}
 	},
 
 	checkTag: function(tag, msg) {
 		if (tag !== this.tag()) {
-			this.error(msg, this.token());
+			this.error(msg, this.pos);
 		}
+	},
+
+	// if tags matches the tags of the next set of tokens,
+	// move past them and return true
+	consume: function(tags) {
+		var tok, dent = EmptyDent();
+
+		for (var i = 0, len = tags.length; i < len; i++) {
+			tok = this.tokens[this.pos+i];
+			if (! tok || tok[0]!== tags[i]) {
+				return false;
+			}
+
+			if ('INDENT' === tok[0]) {
+				dent = dent.before(Indent(tok[1]));
+			} else if ('OUTDENT' === tok[0]) {
+				dent = dent.before(Outdent(tok[1]));
+			}
+		}
+
+		this.addIndent(dent);
+		this.pos += tags.length;
+
+		return true;
+	},
+
+	mustConsume: function(tags, msg) {
+		if (! this.consume(tags)) {
+			this.error(msg, this.pos);
+		}
+	},
+
+	mustOutdent: function(indent, msg) {
+		this.checkTag('OUTDENT', 'Unexpected OUTDENT');
+		var outdent = dentize(this.token());
+
+		if (outdent.isNegationOf(this.indent)) {
+			this.next();
+		} else if (this.indent.greaterThan(outdent)) {
+			this.indent = this.indent.before(outdent);
+			this.next();
+		} else {
+			var tok = this.token();
+			tok[1] = outdent.after(this.indent);
+			// do not pass token;
+		}
+	},
+
+	consumeOutdentSplit: function(minIndent) {
+		var
+			outdent = dentize(this.token()),
+			newIndent = this.indent.before(outdent);
+
+		// if outdenting past the expression, don't consume the OUTDENT
+		// Leave it to the parent element
+		if (newIndent.lessStartThan(minIndent)) {
+			this.splitOutdentEnd(minIndent);
+		}
+
+		this.addIndent();
+		this.next();
+	},
+
+	skipWhitespace: function() {
+		this.consume(['INDENT']);
+		this.consume(['TERMINATOR']);
+		this.consume(['OUTDENT']);
 	},
 
 	isOutdented: function() {
@@ -483,37 +696,27 @@ $.extend(Blocker.prototype, {
 		return ! this.has() || 'OUTDENT' === this.tag();
 	},
 
-	splitIndentEnd: function(pos, indent, tail) {
+	splitOutdentEnd: function(splittingIndent) {
+		if (this.tag() !== 'OUTDENT') throw Error('Logic error');
+
 		var
-			tok = this.tokens[pos],
-			clipped = H.clipEnd(indent, tail);
+			big_outdent = dentize(this.token()),
+			outdent1 = H.clipStart(this.indent.text, splittingIndent.text),
+			outdent2 = H.clipEnd(big_outdent.text, outdent1);
 
-		return [
-			set(tok, 1, clipped),
-			set(tok, 1, tail)
-		];
-	},
-
-	splitOutdentEnd: function(pos, indent, tail) {
-		var
-			tok = this.tokens[pos],
-			clipped = H.clipEnd(indent, tail);
-
-		return [
-			set(tok, 1, tail),
-			set(tok, 1, clipped)
-		];
+		this.tokens[this.pos][1] = outdent2;
+		this.tokens.splice(this.pos, 0, ['OUTDENT', outdent1, H.loc(this.token())]);
 	},
 
 	error: function(msg, pos) {
-		H.throwSyntaxError(msg, this.tokens[pos] && this.tokens[pos][2]);
+		H.error(msg, this.tokens[pos] || last(this.tokens));
 	}
 });
 
 module.exports = {
 	Blocker: Blocker,
 	resolveBlocks: function(tokens) {
-		return (new Blocker(tokens).fixBlocks()).tokens;
+		return (new Blocker(tokens)).fixBlocks().tokens;
 	}
 };
 

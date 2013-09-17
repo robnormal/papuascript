@@ -1,7 +1,9 @@
 var H = require('../helpers.js');
 var lex = require('../lexer.js');
-var B = require('../block_resolver.js');
+var R = require('../rewriter.js');
+var B = require('../blocker.js');
 var ID = 'IDENTIFIER', NUM = 'NUMBER', BR = 'TERMINATOR';
+var log = console.log;
 
 function getTokens(str) {
 	var lexer = new lex.Lexer();
@@ -9,6 +11,34 @@ function getTokens(str) {
 }
 
 module.exports = {
+	'Properly formats functions': function(b, assert) {
+		var text =
+			'\\err ->\n' +
+			'  log err.stack\n' +
+			'x';
+		var toks = getTokens(text);
+		B.resolveBlocks(toks);
+		assert.equal('(', toks[0][0], 'Encloses function in parentheses');
+		assert.equal('INDENT', toks[4][0], 'Maintains indent');
+		assert.equal('TERMINATOR', toks[9][0], 'Adds TERMINATOR after last line in body');
+		assert.equal('OUTDENT', toks[10][0], 'Maintains outdent');
+		assert.equal(')', toks[11][0], 'Puts closing paren after OUTDENT');
+		assert.equal('TERMINATOR', toks[12][0], 'Adds TERMINATOR after function in block');
+	},
+
+	'CPS arrow function put in parens': function(b, assert) {
+		var text =
+			'food <- x\n' +
+			'blah';
+
+		var toks = getTokens(text);
+		R.rewrite(toks);
+		assert.equal('WS', toks[1][0], 'Function marked as param of other function');
+		assert.equal('(', toks[2][0], 'Parenthesis inserted before inserted function');
+		assert.equal(')', toks[toks.length - 2][0], 'Parens closed before final TERMINATOR');
+	}
+
+	/*
 	'Line.isUnindented detects when Line is closed by indentation': function(b, assert) {
 		var
 			l = B.Line('\t\t', 0, null),
@@ -335,6 +365,7 @@ module.exports = {
 		r.outdent();
 		assert.equal('OUTDENT', r.tag(), 'Keeps outdent at end of block containing indented Line');
 	}
+*/
 
 };
 

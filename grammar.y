@@ -8,6 +8,7 @@ var N = require('./nodes.js');
 %token COMPARE
 %token COMPOUND_ASSIGN
 %token CPS
+%token CPSSTOP
 %token DEBUGGER
 %token DEFAULT
 %token ELSE
@@ -107,8 +108,10 @@ ImportList
 
 BlockLike
 	: Expression Eol
+		{ $$ = new N.Block([$1]); }
 	| Block
 	| Line Block
+		{ $$ = new N.Block([$1, $2]); }
 	;
 
 Eol
@@ -347,12 +350,15 @@ Code
 	;
 
 Cps
-	: CpsParams <- Expression
+	: CpsParams "<-" Expression Eol LineList CPSSTOP
+		{ $$ = new N.Block([ N.Cps($3, $1, new N.Code($1, $5)) ]); }
 	;
 
 CpsParams
 	: CPS Identifier FN_LIT_PARAM
+		{ $$ = [$2]; }
 	| CpsParams Identifier FN_LIT_PARAM
+		{ $$ = $1.push($2); }
 	;
 
 FnLitParams
