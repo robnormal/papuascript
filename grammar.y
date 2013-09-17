@@ -72,6 +72,7 @@ var N = require('./nodes.js');
 %right     "=" ":" "COMPOUND_ASSIGN" "RETURN" "THROW"
 %right     "CASE"
 %right     "IF" "ELSE" "FOR" "WHILE"
+%right     "#"
 
 %start Root
 
@@ -153,13 +154,11 @@ Statement
 Expression
 	: Term
 	| Op
-	| Code
+	/* | Code   -- unnecessary, since Code is always contained in parens */
 	;
 
 Op
-	: Term Binary Term
-    { $$ = new N.Operation($2, $1, $3); }
-	| Op Binary Term
+	: Expression Binary Term
     { $$ = new N.Operation($2, $1, $3); }
 	;
 
@@ -494,11 +493,14 @@ Binary
 /* the trick. */
 Parenthetical
 	: '(' Expression ')'
-		{ $$ = $2; }
-/* leftover from CoffeScript?
-	| '(' INDENT Expression OUTDENT ')'
-		{ $$ = $3; }
-*/
+		{ $$ = new N.Parenthetical($2); }
+	| '(' Code ')'
+		{ $$ = new N.Parenthetical($2); }
+	;
+
+PoundClause
+	: '#' Expression
+		{ $$ = new N.Parenthetical($2); }
 	;
 
 /* The most basic form of *if* is a condition and an action. The following

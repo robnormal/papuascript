@@ -588,7 +588,7 @@ $.extend(Blocker.prototype, {
 
 		if (outdent.isNegationOf(this.indent)) {
 			this.next();
-		} else if (this.indent.greaterThan(outdent)) {
+		} else if (this.indent.greaterEndThan(outdent)) {
 			this.indent = this.indent.before(outdent);
 			this.next();
 		} else {
@@ -639,6 +639,54 @@ $.extend(Blocker.prototype, {
 
 		this.tokens[this.pos][1] = outdent2;
 		this.tokens.splice(this.pos, 0, ['OUTDENT', outdent1, H.loc(this.token())]);
+	},
+
+	markFunctionParams: function() {
+		var
+			i = 0,
+			param_list = false; // whether we are waiting for a block (e.g., in a WHILE condition)
+
+		// arrays and objects can be
+		while (this.has()) {
+		/*
+			var tag = this.tag();
+			var prev = this.prevTag();
+
+			if (param_list) {
+				if ('->' === tag) {
+					param_list = false;
+				} else if ('IDENTIFIER' === tag) {
+					this.insertTagAt(i+1, 'FN_LIT_PARAM');
+					this.next(); // pass the FN_LIT_PARAM token
+				} else {
+					this.error('Bad function parameter list');
+				}
+			} else if ('\\' === tag) {
+				param_list = true;
+			} else if ('<-' === tag) {
+				i += markCpsParams(tokens, i);
+			}
+
+			// mark function calls
+			if (prev && prev.spaced && endsFactor(prev) && startsFactor(tokens[i])) {
+				tokens.splice(i, 0,
+					['WS', '', H.loc(tokens[i])]
+				);
+				i++;
+			}
+
+			// Take this opportunity to mark SPACEDOTs
+			if ('.' === tag && (!prev || prev.spaced)) {
+				tokens.splice(i, 1,
+					['SPACEDOT', '.', H.loc(tokens[i])]
+				);
+			}
+
+			*/
+			i++;
+		}
+	
+		return this.tokens;
 	},
 
 	error: function(msg, pos) {

@@ -758,7 +758,7 @@ $.extend(Obj.prototype, {
 			ls;
 
 		if (! this.props.length) {
-			return new Lines([new LineString('{}', this.lineno)]);
+			return new Lines([new LineString('{}', this.lineno, false)]);
 		} else {
 			for (var i = 0, len = this.props.length; i < len; i++) {
 				liness.push(
@@ -1381,7 +1381,25 @@ $.extend(Import.prototype, {
 	}
 });
 
-var Cps = function(expr, args, code) {
+var Parenthetical = function Parenthetical(expr) {
+	this.expr = expr;
+};
+
+$.extend(Parenthetical.prototype, {
+	is_expression: true,
+	needsSemicolon: true,
+
+	children: function() {
+		return [this.expr];
+	},
+	lines: function() {
+		return this.expr.lines()
+			.prefix('(')
+			.suffix(')');
+	}
+});
+
+var Cps = function Cps(expr, args, code) {
 	var fnCall;
 
 	if (expr instanceof FuncCall) {
@@ -1429,6 +1447,7 @@ module.exports = {
 	Var: Var,
 	Case: Case,
 	Import: Import,
+	Parenthetical: Parenthetical,
 	Cps: Cps,
 
 	// for testing
