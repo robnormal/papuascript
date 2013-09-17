@@ -53,7 +53,7 @@ function begins_with(haystack, needle) {
 }
 
 function ends_with(haystack, needle) {
-	return haystack.substr(-needle.length) === needle;
+	return !needle || haystack.substr(-needle.length) === needle;
 }
 
 function str_after_str(haystack, needle) {
