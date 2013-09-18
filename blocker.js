@@ -36,12 +36,19 @@ function showTags(toks) {
 var $exprWasIndented = [false];
 var $blockCps = [];
 
-
 function indentExpressions() {
 	for (var i = 0, len = $exprWasIndented.length; i < len; i++) {
 		$exprWasIndented[i] = true;
 	}
 }
+
+var
+	atArrow = function atArrow(that) {
+		return that.tag() === '->';
+	},
+	atComma = function atComma(that) {
+		return that.tag() === ',';
+	};
 
 function Blocker(tokens) {
 	this.tokens = tokens;
@@ -244,7 +251,7 @@ $.extend(Blocker.prototype, {
 
 		this.mustConsume(['INDENT'], 'Cases must be indented from IF CASE');
 		while ('OUTDENT' !== this.tag()) {
-			this.expression();
+			this.expression(false, void 0, atArrow);
 			this.mustConsume(['->'], 'IF CASE: Expected "->"');
 			res = this.expressionOrBlock();
 
@@ -302,9 +309,7 @@ $.extend(Blocker.prototype, {
 
 		while (this.tag() !== ']') {
 			this.dropWhitespace();
-			this.expression(false, startDent, function(that) {
-				return that.tag() === ',';
-			});
+			this.expression(false, startDent, atComma);
 
 			this.dropWhitespace();
 			this.consume([',']);
@@ -325,9 +330,7 @@ $.extend(Blocker.prototype, {
 			this.mustConsume([':'], 'Expected ":", found ' + this.tag());
 
 			this.dropWhitespace();
-			this.expression(false, startDent, function(that) {
-				return that.tag() === ',';
-			});
+			this.expression(false, startDent, atComma);
 
 			this.dropWhitespace();
 			this.consume([',']);
@@ -364,13 +367,15 @@ $.extend(Blocker.prototype, {
 			res = this.expressionOrBlock();
 
 		if (res === Blocker.EXPRESSION) {
-			this.insertTagAt(begin, 'INDENT');
-			this.insertTag('TERMINATOR'); // expression won't have one yet
-			this.insertTag('OUTDENT');
-			// does not affect $maxDents, since these aren't real INDENT or OUTDENT
+			// unconsume TERMINATOR, since it is needed for containing expresssion
+			// expressionOrBlock() will not consume OUTDENT, so ignore that case
+			if (this.prevTag() === 'TERMINATOR') {
+				this.pos--;
+			}
 
-			// we consumed a TERMINATOR at the end of the expression, but we need that now
-			this.pos--;
+			this.insertTagAt(begin, 'INDENT');
+			this.insertTagAt(this.pos, 'TERMINATOR'); // expression may not have one yet
+			this.insertTagAt(this.pos, 'OUTDENT');
 		}
 			
 	},
@@ -429,9 +434,7 @@ $.extend(Blocker.prototype, {
 				this.expression();
 
 				// make sure expressions are separated by newlines
-				if (this.prevTag() !== 'TERMINATOR' && this.tag() !== 'TERMINATOR') {
-					this.insertTag('TERMINATOR');
-				}
+				this.insertTerminator();
 			}
 		}
 
@@ -441,6 +444,12 @@ $.extend(Blocker.prototype, {
 			throw new Error('Logic error');
 		}
 
+	},
+
+	insertTerminator: function() {
+		if (this.prevTag() !== 'TERMINATOR' && this.tag() !== 'TERMINATOR') {
+			this.insertTag('TERMINATOR');
+		}
 	},
 
 	expression: function(noIndent, startDent, stopWhen) {
@@ -467,7 +476,6 @@ $.extend(Blocker.prototype, {
 			case ')':
 			case ']':
 			case '}':
-			case '->': // end of if-case condition
 			case void 0:
 				return;
 

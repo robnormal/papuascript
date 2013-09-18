@@ -197,8 +197,11 @@ module.exports = {
 	'Treats DO WHILE correctly': function(b, assert) {
 		var toks;
 
-		toks = mkTokens(
-			'DO INDENT IDENTIFIER OUTDENT WHILE IDENTIFIER TERMINATOR NUMBER'
+		toks = getTokens(
+			'do\n' +
+			'    x\n' +
+			'while y\n' +
+			'4'
 		);
 
 		try {
@@ -207,32 +210,29 @@ module.exports = {
 			assert.ok(false, 'Knows that the WHILE goes with the preceding DO');
 		}
 		var expected = mkTokens(
-			'DO INDENT IDENTIFIER OUTDENT WHILE IDENTIFIER TERMINATOR NUMBER TERMINATOR'
+			'DO INDENT IDENTIFIER TERMINATOR OUTDENT WHILE IDENTIFIER TERMINATOR INTEGER TERMINATOR'
 		);
-		assert.ok(tags_equal(toks, expected), 'Knows that the WHILE goes with the preceding DO');
+		assert.eql(getTags(expected), getTags(toks), 'Knows that the WHILE goes with the preceding DO');
 	},
 
 	'Preserves innermost INDENT and OUTDENT for blocks': function(b, assert) {
-		// (\ ->
-		//     x
-		//   ) y';
-		var toks = mkTokens(
-			'( \\ -> INDENT INDENT IDENTIFIER OUTDENT ) IDENTIFIER OUTDENT TERMINATOR'
+		var toks = getTokens(
+			'(\\ ->\n' +
+			'    x\n' +
+			'  ) y'
 		);
-		B.resolveBlocks(toks);
+		R.rewrite(toks);
 		var expected = mkTokens(
-			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
+			'( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) WS IDENTIFIER TERMINATOR'
 		);
-		assert.ok(tags_equal(toks, expected), 'Removes INDENT related to expression, not inner block');
+		assert.ok(tags_equal(toks, expected), 'indents block, but not expression');
 
-		// x = \a -> b
-		toks = mkTokens(
-			'IDENTIFIER = \\ IDENTIFIER -> IDENTIFIER TERMINATOR'
-		);
-		B.resolveBlocks(toks);
+		var toks = getTokens('x = \\ -> b');
+		R.rewrite(toks);
 		var expected = mkTokens(
-			'IDENTIFIER = \\ IDENTIFIER -> INDENT IDENTIFIER OUTDENT TERMINATOR'
+			'IDENTIFIER = ( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) TERMINATOR'
 		);
+		// showTags(expected);
 		assert.ok(tags_equal(toks, expected), 'Adds OUTDENT to end of inline function');
 	},
 
