@@ -241,7 +241,7 @@ $.extend(Blocker.prototype, {
 			}
 		}
 
-		this.mustOutdent(startDent, 'IF CASE block');
+		this.outdent(startDent);
 	},
 
 	fixSwitch: function() {
@@ -261,7 +261,7 @@ $.extend(Blocker.prototype, {
 			this.block();
 		}
 
-		this.mustOutdent(startDent, 'SWITCH block');
+		this.outdent(startDent);
 	},
 
 	fixTry: function() {
@@ -289,7 +289,9 @@ $.extend(Blocker.prototype, {
 
 		while (this.tag() !== ']') {
 			this.dropWhitespace();
-			this.expression(false, startDent);
+			this.expression(false, startDent, function(that) {
+				return that.tag() === ',';
+			});
 
 			this.dropWhitespace();
 			this.consume([',']);
@@ -310,7 +312,9 @@ $.extend(Blocker.prototype, {
 			this.mustConsume([':'], 'Expected ":", found ' + this.tag());
 
 			this.dropWhitespace();
-			this.expression(false, startDent);
+			this.expression(false, startDent, function(that) {
+				return that.tag() === ',';
+			});
 
 			this.dropWhitespace();
 			this.consume([',']);
@@ -401,7 +405,7 @@ $.extend(Blocker.prototype, {
 				this.fixWhile();
 				break;
 			case 'DO':
-				this.fixWhile();
+				this.fixDo();
 				break;
 			case 'TRY':
 				this.fixTry();
@@ -426,18 +430,20 @@ $.extend(Blocker.prototype, {
 
 	},
 
-	expression: function(noIndent, startDent) {
+	expression: function(noIndent, startDent, stopWhen) {
 		$exprWasIndented.push(false);
-		this.processExpression(noIndent, startDent);
+		this.processExpression(noIndent, startDent, stopWhen);
 		$exprWasIndented.pop();
 	},
 
-	processExpression: function(noIndent, startDent) {
+	processExpression: function(noIndent, startDent, stopWhen) {
 		if (void 0 === startDent) {
 			startDent = this.indent;
 		}
 
 		while (this.has()) {
+			if (stopWhen && stopWhen(this)) return;
+
 			if (startDent.greaterStartThan(this.indent) || (
 				last($exprWasIndented) && startDent.equals(this.indent)
 			)) {
@@ -448,7 +454,6 @@ $.extend(Blocker.prototype, {
 			case ')':
 			case ']':
 			case '}':
-			case ',':
 			case '->': // end of if-case condition
 			case void 0:
 				return;
@@ -589,19 +594,15 @@ $.extend(Blocker.prototype, {
 		}
 	},
 
-	mustOutdent: function(startDent, msg) {
+	outdent: function(startDent, msg) {
 		this.checkTag('OUTDENT', 'Expected OUTDENT');
 		var newDent = this.indent.before(dentize(this.token()));
 
-		log(startDent, newDent);
-		if (newDent.equals(startDent)) {
-			this.addIndent();
-			this.next();
-		} else if (startDent.greaterEndThan(newDent)) {
-			// split OUTDENT in 2
+		if (startDent.greaterEndThan(newDent)) {
 			this.consumeOutdentSplit(startDent);
 		} else {
-			this.error('Mismatched indent');
+			this.addIndent();
+			this.next();
 		}
 	},
 
