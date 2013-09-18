@@ -393,15 +393,15 @@ Lexer.prototype = {
 		var
 			match = this.chunk.match(COMMENT),
 			nested = 0,
-			matchEnd, firstPair, i, len;
+			matched_chars, matchEnd, firstPair, i, len;
 
 		if (!match) return 0;
 
-		matchEnd = match[0].slice(match[0].length - 2);
+		matched_chars = match[0].length;
+		matchEnd = match[0].slice(matched_chars - 2);
 
 		if (matchEnd === '/*') {
-			// start after "/*"
-			for (i = match.length + 2, len = this.chunk.length; i < len; i++) {
+			for (i = matched_chars, len = this.chunk.length; i < len; i++) {
 				firstPair = this.chunk.substr(i, 2);
 
 				if ('/*' === firstPair) {

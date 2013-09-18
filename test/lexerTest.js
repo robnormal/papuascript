@@ -131,25 +131,18 @@ module.exports = {
 	},
 
 	'Comments do not affect lexing': function(b, assert) {
-		var text1 =
-			'x =\n' +
+		var text3 =
+			'\\foo ->\n' +
+			'  bar\n' +
+			'\n' +
+			'\n' +
 			'/* comment */\n' +
-			'\t5';
+			'spam';
 
-		var tags1 = tags(getTokens(text1));
-		assert.eql([ID, '=', 'INDENT', INT, 'OUTDENT', BR], tags1);
-
-		var text2 =
-			'\\foo ->' + '\n' +
-			'  a' + '\n' +
-			'/* */' + '\n' +
-			'  b' + '\n'
-			;
-
-		var tags2 = tags(getTokens(text2));
+		var tags3 = tags(getTokens(text3));
 		assert.eql(
-			['\\', ID, '->', 'INDENT', ID, BR, ID, 'OUTDENT', BR],
-			tags2);
+			['\\', ID, '->', 'INDENT', ID, 'OUTDENT', ID, BR],
+			tags3);
 	},
 
 	'Block comments can be nested': function(b, assert) {
