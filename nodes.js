@@ -96,6 +96,9 @@ Lines = function(l_strs) {
 }
 
 $.extend(Lines.prototype, {
+	isEmpty: function() {
+		return ! this.lines.length;
+	},
 	firstNonIndent: function() {
 		var i = 0;
 		while (this.lines[i] && this.lines[i].isIndent()) {
@@ -407,8 +410,12 @@ $.extend(Block.prototype, {
 		}
 
 		for (var i = 0, len = this.nodes.length; i < len; i++) {
-			ls.append(this.nodes[i].lines())
-				.suffix(this.nodes[i].needsSemicolon ? ';' : '');
+			var node_ls = this.nodes[i].lines();
+
+			if (!node_ls.isEmpty()) {
+				ls.append(node_ls)
+					.suffix(this.nodes[i].needsSemicolon ? ';' : '');
+			}
 		}
 
 		if (Block.indent > 0) {
@@ -1309,24 +1316,28 @@ $.extend(Unary.prototype, {
 
 });
 
-Var = function Var(names) {
+Var = function Var(names, lineno) {
 	this.names = names;
+	this.lineno = lineno;
+	this.vars_defined = $.map(names, function(ident) {
+		return ident.value;
+	});
 }
 
 $.extend(Var.prototype, {
 	is_expression: false,
-	needsSemicolon: true,
+	needsSemicolon: false,
 
 	add: function(name) {
 		this.names.push(name);
+		this.vars_defined.push(name.value);
 		return this;
 	},
 	children: function() {
 		return [];
 	},
 	lines: function() {
-		return Lines.join(Lines.mapNodes(this.names), ',')
-			.prefix('var ');
+		return new Lines([new LineString('', this.lineno, false)]);
 	}
 });
 

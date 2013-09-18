@@ -293,9 +293,9 @@ Identifier
 
 Var
 	: VAR Identifier
-    { $$ = new N.Var([$2]); }
+    { $$ = new N.Var([$2], yylineno); }
 	| Var ',' Identifier
-    { $$ = $1.add($3); }
+    { $$ = $1.add($3, yylineno); }
 	;
 
 /* Comma-separated assignments */
