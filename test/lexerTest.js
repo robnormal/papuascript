@@ -1,5 +1,6 @@
 var lex = require('../lexer.js');
 var $ = require('underscore');
+var log = console.log;
 
 function doesntThrow(assert, f, err) {
 	try {
@@ -12,7 +13,7 @@ function doesntThrow(assert, f, err) {
 }
 
 function getTokens(str) {
-	lexer = new lex.Lexer();
+	var lexer = new lex.Lexer();
 	return lexer.tokenize(str);
 }
 
@@ -31,7 +32,7 @@ function eq(x, y) {
 	return true;
 }
 
-var ID = 'IDENTIFIER', NUM = 'NUMBER', BR = 'TERMINATOR';
+var ID = 'IDENTIFIER', NUM = 'NUMBER', INT = 'INTEGER', BR = 'TERMINATOR';
 
 module.exports = {
 	'Tokenizes operators as literal text': function(b, assert) {
@@ -53,7 +54,7 @@ module.exports = {
 			good = 'this\n \t is\n \t   indented\n \t correctly',
 			bad  = 'this\n \t is\n \t   indented\n  wrong';
 
-		lexer = new lex.Lexer();
+		var lexer = new lex.Lexer();
 
 		doesntThrow(assert, function() {
 			lexer.tokenize(good);
@@ -117,7 +118,7 @@ module.exports = {
 			text1 = 'x = 4',
 			tags1 = tags(getTokens(text1));
 
-		assert.equal(true, eq(tags1, [ID, '=', NUM, BR]));
+		assert.equal(true, eq(tags1, [ID, '=', INT, BR]));
 	},
 
 	'Outdents final indent': function(b, assert) {
@@ -126,7 +127,7 @@ module.exports = {
 			'  3';
 
 		var tags1 = tags(getTokens(text1));
-		assert.ok(eq(tags1, [ID, '=', ID, 'INDENT', NUM, 'OUTDENT', BR]));
+		assert.ok(eq(tags1, [ID, '=', ID, 'INDENT', INT, 'OUTDENT', BR]));
 	},
 
 	'Comments do not affect lexing': function(b, assert) {
@@ -136,6 +137,18 @@ module.exports = {
 			'\t5';
 
 		var tags1 = tags(getTokens(text1));
-		assert.eql([ID, '=', 'INDENT', NUM, 'OUTDENT', BR], tags1);
+		assert.eql([ID, '=', 'INDENT', INT, 'OUTDENT', BR], tags1);
+
+		var text2 =
+			'\\foo ->' + '\n' +
+			'  a' + '\n' +
+			'/* */' + '\n' +
+			'  b' + '\n'
+			;
+
+		var tags2 = tags(getTokens(text2));
+		assert.eql(
+			['\\', ID, '->', 'INDENT', ID, BR, ID, 'OUTDENT', BR],
+			tags2);
 	}
 };

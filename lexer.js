@@ -1,6 +1,7 @@
 /*jshint regexp: false, white: false, boss: true */
 var H = require('./helpers.js');
 var R = require('./rewriter.js');
+var log  = console.log;
 
 function Lexer() {}
 
@@ -46,7 +47,7 @@ IDENTIFIER = /^([$A-Za-z_\x7f-\uffff][$\w\x7f-\uffff]*)/;
 INTEGER  = /^\d+/;
 NUMBER  = /^0b[01]+|^0o[0-7]+|^0x[\da-f]+|^\d*\.?\d+(?:e[+-]?\d+)?/i;
 WHITESPACE = /^[^\n\S]+/;
-COMMENT    = /^\/\*(?:[\s\S]*?)\*\/|^(?:\s*\/\/.*)/;
+COMMENT    = /^\s*\/\*(?:[\s\S]*?)\*\/|^(?:\s*\/\/.*)/;
 MULTI_DENT = /^(?:\n([^\n\S]*))+/;
 SINGLESTR  = /^'[^\\']*(?:\\.[^\\']*)*'/;
 DOUBLESTR  = /^"[^\\"]*(?:\\.[^\\"]*)*"/;
@@ -189,7 +190,8 @@ Lexer.prototype = {
 
 
 		while (!!(this.chunk = code.substr(i))) {
-			consumed = this.identifier() ||
+			consumed =
+				this.identifier() ||
 				this.comment() ||
 				this.whitespace() ||
 				this.line() ||
