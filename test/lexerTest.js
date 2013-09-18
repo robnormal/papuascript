@@ -150,5 +150,25 @@ module.exports = {
 		assert.eql(
 			['\\', ID, '->', 'INDENT', ID, BR, ID, 'OUTDENT', BR],
 			tags2);
+	},
+
+	'Block comments can be nested': function(b, assert) {
+		var text1 =
+			'/* this is\n' +
+			'/* a nested comment */\n' +
+			'     end outside */';
+
+		var tags1 = tags(getTokens(text1));
+		assert.eql([BR], tags1);
+	},
+
+	'Unclosed Block comment consumes rest of file': function(b, assert) {
+		var text1 =
+			'foo bar /*\n' +
+			'^ this comment does not close\n' +
+			'***';
+		var tags1 = tags(getTokens(text1));
+		assert.eql([ID, ID, BR], tags1);
 	}
+
 };

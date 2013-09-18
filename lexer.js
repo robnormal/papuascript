@@ -47,11 +47,13 @@ IDENTIFIER = /^([$A-Za-z_\x7f-\uffff][$\w\x7f-\uffff]*)/;
 INTEGER  = /^\d+/;
 NUMBER  = /^0b[01]+|^0o[0-7]+|^0x[\da-f]+|^\d*\.?\d+(?:e[+-]?\d+)?/i;
 WHITESPACE = /^[^\n\S]+/;
-COMMENT    = /^\s*\/\*(?:[\s\S]*?)\*\/|^(?:\s*\/\/.*)/;
+// COMMENT    = /^\s*\(/\*)(?:[\s\S]*?)\*\/|^(?:\s*\/\/.*)/;
+COMMENT    = /^\s*(?:\/\*|\/\/)/;
 MULTI_DENT = /^(?:\n([^\n\S]*))+/;
 SINGLESTR  = /^'[^\\']*(?:\\.[^\\']*)*'/;
 DOUBLESTR  = /^"[^\\"]*(?:\\.[^\\"]*)*"/;
 JSTOKEN    = /^`[^\\`]*(?:\\.[^\\`]*)*`/;
+TO_EOL     = /[^\n]*/
 
 // Token cleaning regexes.
 MULTILINER      = /\n/g;
@@ -388,9 +390,37 @@ Lexer.prototype = {
 
 	// RR - vetted
 	comment: function() {
-		var match = this.chunk.match(COMMENT);
+		var
+			match = this.chunk.match(COMMENT),
+			nested = 0,
+			matchEnd, firstPair, i, len;
 
-		return match ? match[0].length : 0;
+		if (!match) return 0;
+
+		matchEnd = match[0].slice(match[0].length - 2);
+
+		if (matchEnd === '/*') {
+			// start after "/*"
+			for (i = match.length + 2, len = this.chunk.length; i < len; i++) {
+				firstPair = this.chunk.substr(i, 2);
+
+				if ('/*' === firstPair) {
+					nested++;
+				} else if ('*/' === firstPair) {
+					if (! nested) {
+						i += 2; // consume "*/"
+						break;
+					} else {
+						nested--;
+					}
+				}
+			}
+
+			// if comment is unclosed, consume the rest of the file
+			return i;
+		} else {
+			return this.chunk.match(TO_EOL)[0].length;
+		}
 	},
 
 	regex: function() {

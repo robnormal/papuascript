@@ -382,6 +382,8 @@ Accessor
 ThisProperty
 	: '@' Identifier
 		{ $$ = new N.Value(new N.Identifier('this'), [new N.Access($2)]); }
+	| THIS Accessor
+		{ $$ = new N.Value(new N.Identifier('this'), [$2]); }
 	;
 
 /* The array literal. */
