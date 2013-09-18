@@ -53,9 +53,7 @@ function markFunctionParams(tokens) {
 			if ('->' === tag) {
 				param_list = false;
 			} else if (tag === 'IDENTIFIER') {
-				tokens.splice(i + 1, 0,
-					['FN_LIT_PARAM', '', H.here(tokens[i].first_line, tokens[i].first_column)]
-				);
+				insertTag(tokens, i + 1, 'FN_LIT_PARAM');
 
 				// pass the FN_LIT_PARAM token
 				i++;
@@ -68,9 +66,7 @@ function markFunctionParams(tokens) {
 
 		// mark function calls
 		if (prev && prev.spaced && endsFactor(prev) && startsFactor(tokens[i])) {
-			tokens.splice(i, 0,
-				['WS', '', H.loc(tokens[i])]
-			);
+			insertTag(tokens, i, 'WS');
 			i++;
 		}
 
@@ -100,9 +96,7 @@ function parenthesizeFunctions(tokens) {
 		case '\\':
 			// don't parenthesize if done already
 			if (!tokens[i-1] || tokens[i-1][0] !== '(') {
-				tokens.splice(i, 0,
-					['(', '(', H.loc(tokens[i])]
-				);
+				insertTag(tokens, i, '(');
 				i++;
 			}
 
@@ -117,15 +111,11 @@ function parenthesizeFunctions(tokens) {
 			// paren can only come at the end of the function, not after it
 			if (func_indents.length && H.last(func_indents) === indents) {
 				if (!tokens[i+1] || tokens[i+1][0] !== ')') {
-					tokens.splice(i+1, 0,
-						[')', ')', H.loc(tokens[i])]
-					);
+					insertTag(tokens, i+1, ')');
 					i++;
 				}
 				if (! tokens[i+1] || ! H.isWhitespaceToken(tokens[i+1][0])) {
-					tokens.splice(i+1, 0,
-						['TERMINATOR', '', H.loc(tokens[i])]
-					);
+					insertTag(tokens, i+1, 'TERMINATOR');
 				}
 
 				func_indents.pop();
@@ -161,7 +151,7 @@ function finishPound(tokens, pos) {
 		case ']':
 		case '}':
 			if (nested === 0) {
-				tokens.splice(pos, 0, [')','',H.loc(tokens[pos])]);
+				insertTag(tokens, pos, ')');
 				return pos;
 			} else {
 				--nested;
@@ -170,7 +160,7 @@ function finishPound(tokens, pos) {
 
 		case 'TERMINATOR':
 		case 'OUTDENT':
-			tokens.splice(pos, 0, [')','',H.loc(tokens[pos])]);
+			insertTag(tokens, pos, ')');
 			return pos;
 		}
 
@@ -178,7 +168,7 @@ function finishPound(tokens, pos) {
 	}
 
 	// if EOF without closing, close there
-	tokens.splice(pos, 0, [')','',H.loc(tokens[pos-1])]);
+	insertTag(tokens, pos, ')');
 	pos++;
 
 	return pos;

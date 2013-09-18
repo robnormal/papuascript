@@ -29,6 +29,7 @@ function showTags(toks) {
 
 		console.log(i, ':', text);
 	}
+	console.log();
 }
 
 // GLOBAL state variables :(
@@ -119,11 +120,7 @@ $.extend(Blocker.prototype, {
 		this.tokens.splice(this.pos, 1);
 	},
 
-	insertTagAt: function(pos, tag) {
-		this.insertTagAndText(pos, tag, '');
-	},
-
-	insertTagAndText: function(pos, tag, text) {
+	insertTagAndTextAt: function(pos, tag, text) {
 		var i, len = this.tokens.length;
 
 		if (pos >= len) {
@@ -138,6 +135,14 @@ $.extend(Blocker.prototype, {
 		this.addedToken(pos);
 	},
 
+	insertTagAndText: function(tag, text) {
+		this.insertTagAndTextAt(this.pos, tag, text);
+	},
+
+	insertTagAt: function(pos, tag) {
+		this.insertTagAndTextAt(pos, tag, '');
+	},
+
 	insertTag: function(tag) {
 		this.insertTagAt(this.pos, tag);
 	},
@@ -148,6 +153,14 @@ $.extend(Blocker.prototype, {
 
 	replaceTag: function(tag) {
 		this.tokens[this.pos][0] = tag;
+	},
+
+	replaceText: function(text) {
+		this.replaceTextAt(this.pos, text);
+	},
+
+	replaceTextAt: function(pos, text) {
+		this.tokens[pos][1] = text;
 	},
 
 	trimTerminators: function() {
@@ -352,8 +365,8 @@ $.extend(Blocker.prototype, {
 
 		if (res === Blocker.EXPRESSION) {
 			this.insertTagAt(begin, 'INDENT');
-			this.insertTagAt(this.pos - 1, 'TERMINATOR'); // expression won't have one yet
-			this.insertTagAt(this.pos - 1, 'OUTDENT');
+			this.insertTag('TERMINATOR'); // expression won't have one yet
+			this.insertTag('OUTDENT');
 			// does not affect $maxDents, since these aren't real INDENT or OUTDENT
 
 			// we consumed a TERMINATOR at the end of the expression, but we need that now
@@ -643,8 +656,8 @@ $.extend(Blocker.prototype, {
 			outdent1 = H.clipStart(this.indent.text, splittingIndent.text),
 			outdent2 = H.clipEnd(big_outdent.text, outdent1);
 
-		this.tokens[this.pos][1] = outdent2;
-		this.tokens.splice(this.pos, 0, ['OUTDENT', outdent1, H.loc(this.token())]);
+		this.replaceText(outdent2);
+		this.insertTagAndText('OUTDENT', outdent1);
 	},
 
 	markFunctionParams: function() {

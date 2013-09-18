@@ -70,6 +70,7 @@ function mkTokens(str) {
 
 module.exports = {
 	'Converts CPS arrow to continuation-passing function call': function(b, assert) {
+		/*
 		var text1 =
 			'while top\n' +
 			'  indented\n' +
@@ -91,9 +92,11 @@ module.exports = {
 			'OUTDENT' === toks[13][0] && 'OUTDENT' === toks[14][0],
 			'outdents at next outdent'
 		);
+	 */
 	},
 
 	'CPS arrow integrates with blocks properly': function(b, assert) {
+		/*
 		var text1 =
 			'bar <- foo\n' +
 			'while a\n' +
@@ -105,6 +108,7 @@ module.exports = {
 		assert.equal('OUTDENT', toks[9][0]);
 		assert.equal('OUTDENT', toks[10][0]);
 		assert.equal('TERMINATOR', toks[11][0]);
+	 */
 	},
 
 	'Adds WS between function call arguments': function(b, assert) {
@@ -130,6 +134,13 @@ module.exports = {
 		assert.equal('FN_LIT_PARAM', toks[6][0], 'all parameters marked');
 	},
 
+	'Encloses functions in parentheses': function(b, assert) {
+		var nl_text = 'a = \\b ->\n  c';
+		var nl_toks = B.resolveBlocks(getTokens(nl_text));
+		assert.equal('(', nl_toks[2][0]);
+		assert.equal(')', nl_toks[10][0]);
+	},
+
 	'Removes non-semantic TERMINATORs': function(b, assert) {
 		var nl_text = '\n\nsome code';
 		var nl_toks = B.resolveBlocks(getTokens(nl_text));
@@ -138,21 +149,24 @@ module.exports = {
 		nl_text = 'a = \\b ->\n  c';
 		nl_toks = B.resolveBlocks(getTokens(nl_text));
 
-		log(nl_toks);
-		assert.equal('INDENT', nl_toks[5][0], 'leaves function blocks intact');
+		assert.equal('INDENT', nl_toks[6][0], 'leaves function blocks intact');
 	},
 
 	'Removes redundant TERMINATORs': function(b, assert) {
 		var toks, expected;
 
-		toks = mkTokens(
-			'IDENTIFIER = \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER OUTDENT IDENTIFIER TERMINATOR'
+		toks = getTokens(
+			'x = \\a ->\n' +
+			'  b\n' +
+			'c'
 		);
+
 		B.resolveBlocks(toks);
 		expected = mkTokens(
-			'IDENTIFIER = \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER OUTDENT TERMINATOR IDENTIFIER TERMINATOR'
+			'IDENTIFIER = ( \\ IDENTIFIER -> INDENT IDENTIFIER TERMINATOR OUTDENT ) TERMINATOR IDENTIFIER TERMINATOR'
 		);
-		assert.ok(tags_equal(toks, expected), 'Inserts required TERMINATOR after OUTDENT when newlines matter');
+
+		assert.eql(getTags(toks), getTags(expected), 'Inserts required TERMINATOR after OUTDENT when newlines matter');
 
 		toks = mkTokens(
 			'IDENTIFIER INDENT IDENTIFIER OUTDENT IDENTIFIER'
@@ -162,16 +176,22 @@ module.exports = {
 			'IDENTIFIER IDENTIFIER TERMINATOR IDENTIFIER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'Inserts required TERMINATOR after OUTDENT at top level');
+	},
 
-		toks = mkTokens(
-			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER'
+	'Treats function literals in indented expressions correctly': function(b, assert) {
+		var toks = getTokens(
+			'a\n' +
+			'  \\foods -> foods'
 		);
-		B.resolveBlocks(toks);
-		expected = mkTokens(
-			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
-		);
-		assert.ok(tags_equal(toks, expected), 'Does not add TERMINATOR before closing container symbols - parens, etc');
 
+		R.rewrite(toks);
+		var exp = 'IDENTIFIER WS ( \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER TERMINATOR';
+		var expected = getTags(mkTokens(exp));
+
+		assert.eql(
+			getTags(toks).slice(0, expected.length),
+			expected
+		);
 	},
 
 	'Treats DO WHILE correctly': function(b, assert) {
