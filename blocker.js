@@ -222,7 +222,9 @@ $.extend(Blocker.prototype, {
 	},
 
 	fixIfCase: function() {
-		var startDent = this.indent;
+		var
+			startDent = this.indent,
+			res;
 		
 		this.mustConsume(['IF','CASE'], 'Logic error in fixIfCase');
 		this.expression(true);
@@ -231,7 +233,12 @@ $.extend(Blocker.prototype, {
 		while ('OUTDENT' !== this.tag()) {
 			this.expression();
 			this.mustConsume(['->'], 'IF CASE: Expected "->"');
-			this.expressionOrBlock();
+			res = this.expressionOrBlock();
+
+			// add TERMINATOR, if necessary
+			if (res === Blocker.EXPRESSION && this.prevTag() !== 'TERMINATOR') {
+				this.insertTag('TERMINATOR');
+			}
 		}
 
 		this.mustOutdent(startDent, 'IF CASE block');
@@ -582,26 +589,24 @@ $.extend(Blocker.prototype, {
 		}
 	},
 
-	mustOutdent: function(indent, msg) {
-		this.checkTag('OUTDENT', 'Unexpected OUTDENT');
-		var outdent = dentize(this.token());
+	mustOutdent: function(startDent, msg) {
+		this.checkTag('OUTDENT', 'Expected OUTDENT');
+		var newDent = this.indent.before(dentize(this.token()));
 
-		if (outdent.isNegationOf(this.indent)) {
+		log(startDent, newDent);
+		if (newDent.equals(startDent)) {
+			this.addIndent();
 			this.next();
-		} else if (this.indent.greaterEndThan(outdent)) {
-			this.indent = this.indent.before(outdent);
-			this.next();
+		} else if (startDent.greaterEndThan(newDent)) {
+			// split OUTDENT in 2
+			this.consumeOutdentSplit(startDent);
 		} else {
-			var tok = this.token();
-			tok[1] = outdent.after(this.indent);
-			// do not pass token;
+			this.error('Mismatched indent');
 		}
 	},
 
 	consumeOutdentSplit: function(minIndent) {
-		var
-			outdent = dentize(this.token()),
-			newIndent = this.indent.before(outdent);
+		var newIndent = this.indent.before(dentize(this.token()));
 
 		// if outdenting past the expression, don't consume the OUTDENT
 		// Leave it to the parent element

@@ -104,7 +104,7 @@ ImportList
 	: Import
 		{ $$ = new N.Block([$1]); }
 	| Import ImportList
-		{ $$ = $2.push($1); }
+    { $2.push($1); $$ = $2; }
 	;
 
 BlockLike
@@ -125,7 +125,7 @@ LineList
   : Line
     { $$ = N.Block.wrap([$1]); }
 	| LineList Eol Line
-    { $$ = $1.push($3); }
+    { $1.push($3); $$ = $1; }
 	| LineList Eol
 	;
 
@@ -166,6 +166,7 @@ Term
 	: Atom
 	| Invocation
 	| If
+	| IfCase
 	| Switch
 	| Unary Atom
 		{ $$ = $1.setTerm($2); }
@@ -357,7 +358,7 @@ CpsParams
 	: CPS Identifier FN_LIT_PARAM
 		{ $$ = [$2]; }
 	| CpsParams Identifier FN_LIT_PARAM
-		{ $$ = $1.push($2); }
+    { $1.push($2); $$ = $1; }
 	;
 
 FnLitParams
@@ -523,15 +524,25 @@ If
 
 /* The full complement of *if* expressions, including postfix one-liner
 /* *if* and *unless*. */
-IfCaseExpr
-	: IF CASE IfCase
-    { $$ = $3; }
-	| IfCaseExpr IfCase
+IfCase
+	: IF CASE INDENT IfCaseList OUTDENT
+    { $$ = N.If.fromList($4); }
+	/* | IfCase IfCaseCase
     { $$ = $1.addElse($2); }
+*/
 	;
 
-IfCase
+IfCaseList
+	: IfCaseSingle
+    { $$ = [$1]; }
+	| IfCaseList IfCaseSingle
+    { $1.push($2); $$ = $1; }
+	;
+
+IfCaseSingle
 	: Expression '->' BlockLike
-		{ $$ = new N.If($2, $3); }
+		{ $$ = new N.If($1, $3); }
+	| DEFAULT '->' BlockLike
+		{ $$ = $3; }
 	;
 

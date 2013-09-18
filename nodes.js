@@ -1226,6 +1226,16 @@ function If(cond, block) {
 	this.block = block;
 	this.elses = [];
 }
+
+If.fromList = function(ifs) {
+	var ifObj = ifs.shift();
+	for (var i = 0, len = ifs.length; i < len; i++) {
+		ifObj.addElse(ifs[i]);
+	}
+
+	return ifObj;
+};
+
 $.extend(If.prototype, {
 	is_expression: true,
 	addElse: function(if_or_block) {
