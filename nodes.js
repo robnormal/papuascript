@@ -1017,16 +1017,19 @@ $.extend(While.prototype, {
 		return [this.cond, this.block];
 	},
 	lines: function() {
-		var ls = this.block.lines();
+		var ls;
 
 		if (this.is_do) {
+			ls = this.block.lines();
 			ls.prefix('do {')
 				.suffix('} while (')
 				.append(this.cond.lines())
 				.suffix(')');
 		} else {
+			ls = this.cond.lines();
 			ls.prefix('while (')
-				.append(this.cond.lines())
+				.suffix(') {')
+				.append(this.block.lines())
 				.suffix('}');
 		}
 
