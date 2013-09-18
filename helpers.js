@@ -94,8 +94,6 @@ function find_init(xs, str) {
 }
 
 function throwSyntaxError(message, location) {
-	var error = new SyntaxError(message);
-
 	if (location) {
 		if (! location.last_line) {
 			location.last_line = location.first_line;
@@ -103,15 +101,15 @@ function throwSyntaxError(message, location) {
 		if (! location.last_column) {
 			location.last_column = location.first_column;
 		}
-
-		error.location = location;
+		
+		message += ' in line ' + (location.first_line + 1) + ' column ' + (location.first_column + 1);
 	}
 
-	throw error;
+	throw new SyntaxError(message);
 }
 
 function error(msg, token) {
-	throw new Error(msg + ' in line ' + (token[2].first_line+1) + ' column ' + (token[2].first_column+1));
+	throwSyntaxError(msg, token[2]);
 }
 
 
