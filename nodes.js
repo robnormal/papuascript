@@ -1046,7 +1046,10 @@ $.extend(For.prototype, {
 	children: function() {
 		var children = [];
 		for (var x in this.loop) if (this.loop.hasOwnProperty(x)) {
-			children.push(this.loop[x]);
+			// only keep parsed objects, not flags
+			if (this.loop[x].children) {
+				children.push(this.loop[x]);
+			}
 		}
 		children.push(this.block);
 
@@ -1082,7 +1085,7 @@ $.extend(For.prototype, {
 			blk = this.block.lines(),
 			ls;
 
-		if (this.loop.in) {
+		if (this.loop['in']) {
 			ls = this.loop.obj.lines()
 				.prefix('var _obj; for (' + this.loop.id + ' in (_obj=')
 				.suffix('))');

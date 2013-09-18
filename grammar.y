@@ -446,7 +446,7 @@ ForHead
 	: FOR Identifier IN Expression
     { $$ = new N.For({ in: true, id: $2, obj: $4}); }
 	| FOR OWN Identifier IN Expression
-    { $$ = new N.For({ in: true, own: true, id: $2, obj: $4}); }
+    { $$ = new N.For({ in: true, own: true, id: $3, obj: $5}); }
 	| FOR AssignList ';' Expression ';' AssignList
     { $$ = new N.For({ init: $2, check: $4, step: $6}); }
 	;

@@ -202,24 +202,39 @@ $.extend(Blocker.prototype, {
 	fixFor: function() {
 		this.mustConsume(['FOR'], 'Logic error in fixFor');
 
-		// initializations
-		while (this.has() && ';' !== this.tag()) {
-			this.expressionList();
-		}
-		this.mustConsume([';'], 'Missing ";" in FOR clause');
+		if ('OWN' === this.tag()) {
+			this.next();
+			this.fixForIn();
+		} else if ('IDENTIFIER' === this.tag() && 'IN' === this.nextTag()) {
+			this.fixForIn();
+		} else {
 
-		// conditions - remember indents
-		while (this.has() && ';' !== this.tag()) {
-			this.expressionList();
-		}
-		this.mustConsume([';'], 'Missing ";" in FOR clause');
+			// initializations
+			while (this.has() && ';' !== this.tag()) {
+				this.expressionList();
+			}
+			this.mustConsume([';'], 'Missing ";" in FOR clause');
 
-		// increments
-		while (this.has() && 'INDENT' !== this.tag()) {
-			this.expressionList();
-		}
-		if (!this.has) this.error('Empty FOR statement');
+			// conditions - remember indents
+			while (this.has() && ';' !== this.tag()) {
+				this.expressionList();
+			}
+			this.mustConsume([';'], 'Missing ";" in FOR clause');
 
+			// increments
+			while (this.has() && 'INDENT' !== this.tag()) {
+				this.expressionList();
+			}
+			if (!this.has()) this.error('Empty FOR statement');
+
+			this.block();
+		}
+	},
+
+	fixForIn: function() {
+		this.mustConsume(['IDENTIFIER'], 'Expected IDENTIFIER, got ' + this.tag());
+		this.mustConsume(['IN'], 'Expected IN, got ' + this.tag());
+		this.expression(true);
 		this.block();
 	},
 
@@ -475,6 +490,7 @@ $.extend(Blocker.prototype, {
 			case ')':
 			case ']':
 			case '}':
+			case ';':
 			case void 0:
 				return;
 
@@ -554,7 +570,7 @@ $.extend(Blocker.prototype, {
 	},
 
 	expressionList: function() {
-		this.expression();
+		this.expression(true, void 0, atComma);
 		this.consume([',']);
 	},
 
