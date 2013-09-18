@@ -333,6 +333,26 @@ module.exports = {
 		assert.equal(toks[2][1], 'bar', 'removes dot');
 	},
 
+	'Blocks get TERMINATORs after them when they are lines in a block': function(b, assert) {
+		var toks = getTokens(
+			'while x\n' +
+			'  print\n' +
+			'x'
+		);
+
+		R.rewrite(toks);
+		assert.equal('TERMINATOR', toks[6][0]);
+
+		var toks = getTokens(
+			'if x\n' +
+			'  print\n' +
+			'x'
+		);
+
+		R.rewrite(toks);
+		assert.equal('TERMINATOR', toks[6][0]);
+	},
+
 	'Function literals can be parenthesized': function(b, assert) {
 		/*
 		var toks = mkTokens(

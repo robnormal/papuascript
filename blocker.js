@@ -446,10 +446,10 @@ $.extend(Blocker.prototype, {
 				throw new Error('Logic Error: cannot find INDENT inside block');
 			default:
 				this.expression();
-
-				// make sure expressions are separated by newlines
-				this.insertTerminator();
 			}
+
+			// separate block parts with TERMINATOR
+			this.insertTerminator();
 		}
 
 		// we only get here if we found no OUTDENT, which means we are at the
