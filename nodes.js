@@ -397,28 +397,6 @@ $.extend(Block.prototype, {
 		return this.nodes;
 	},
 
-	toString: function(line) {
-		Block.indent++;
-		var brace_indent = repeat('  ', Block.indent - 1);
-		var line_indent = Block.indent > 0 ? (brace_indent + '  ') : '';
-
-		var str = '';
-		if (Block.indent === 0) {
-			str = var_string(this);
-		}
-
-		for (var i = 0, len = this.nodes.length; i < len; i++) {
-			str += line_indent +
-				this.nodes[i].toString() + (this.nodes[i].needsSemicolon ? ';' : '') +
-				'\n';
-		}
-
-		str = '\n' + str;
-
-		Block.indent--;
-		return str;
-	},
-
 	lines: function() {
 		Block.indent++;
 
@@ -1343,15 +1321,12 @@ $.extend(Var.prototype, {
 		this.names.push(name);
 		return this;
 	},
-	// no output
-	toString: function() {
-		return '';
-	},
 	children: function() {
-		return this.term;
+		return [];
 	},
 	lines: function() {
-		return new Lines([]);
+		return Lines.join(Lines.mapNodes(this.names), ',')
+			.prefix('var ');
 	}
 });
 

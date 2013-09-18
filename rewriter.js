@@ -34,11 +34,6 @@ function startsFactor(tok) {
 	);
 }
 
-
-function markCpsParams(tokens, i) {
-	return 0;
-}
-
 // FIXME: This solves a problem I had writing the grammar.
 // It could probably be solved in the grammar, since it's
 // not an ambiguity, but I don't want to do it right now
@@ -69,8 +64,6 @@ function markFunctionParams(tokens) {
 			}
 		} else if ('\\' === tag) {
 			param_list = true;
-		} else if ('<-' === tag) {
-			i += markCpsParams(tokens, i);
 		}
 
 		// mark function calls
