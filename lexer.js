@@ -21,14 +21,14 @@ JS_KEYWORDS = [
 	'do', 'try', 'catch', 'finally'
 ];
 
-PAPUA_KEYWORDS = ['import'];
+PAPUA_KEYWORDS = ['with'];
 
 // The list of keywords that are reserved by JavaScript, but not used, or are
 // used by CoffeeScript internally. We throw an error when these are encountered,
 // to avoid having a JavaScript error at runtime.
 RESERVED = [
-  'function', 'void', 'with', 'const', 'enum',
-  'export', 'native',
+  'function', 'void', 'const', 'enum',
+  'export', 'native', 'import',
   'implements', 'interface', 'package', 'private', 'protected',
   'public', 'static', 'yield', 'class', 'extends', 'super'
 ];
@@ -244,8 +244,8 @@ Lexer.prototype = {
       return id.length;
 		}
 
-		if (id === 'import') {
-      this.token('IMPORT', id);
+		if (id === 'with') {
+      this.token('WITH', id);
 			this.importing = true;
 			return id.length;
 		}

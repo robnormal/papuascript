@@ -1,9 +1,13 @@
-import (require './lib/orm2.js') as orm
+with (require './lib/orm2.js') as orm
   [ condition
   , toInt
   ]
-import (console) [ log ]
-import (require './web.coffee') as web [ wordToUri ]
+with (console)
+  [ log
+  ]
+with (require './web.coffee') as web
+  [ wordToUri
+  ]
 
 Error.stackTraceLimit = Infinity
 

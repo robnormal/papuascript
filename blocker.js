@@ -202,7 +202,8 @@ $.extend(Blocker.prototype, {
 	fixFor: function() {
 		this.mustConsume(['FOR'], 'Logic error in fixFor');
 
-		if ('OWN' === this.tag()) {
+		// Permit "for own in x", though anyone who does this is a d-bag
+		if ('OWN' === this.tag() && 'IDENTIFIER' === this.nextTag()) {
 			this.next();
 			this.fixForIn();
 		} else if ('IDENTIFIER' === this.tag() && 'IN' === this.nextTag()) {
@@ -289,8 +290,12 @@ $.extend(Blocker.prototype, {
 		while ('OUTDENT' !== this.tag()) {
 			// account for comma-separated cases
 			do {
-				this.mustConsume(['CASE'], 'Expected CASE');
-				this.expression(true);
+				if ('CASE' !== this.tag() && 'DEFAULT' !== this.tag()) {
+					this.error('Expected CASE or DEFAULT');
+				} else {
+					this.next();
+					this.expression(true);
+				}
 			} while (this.consume([',']));
 
 			this.block();

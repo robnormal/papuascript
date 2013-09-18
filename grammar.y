@@ -19,7 +19,6 @@ var N = require('./nodes.js');
 %token INSTANCEOF
 %token IDENTIFIER
 %token IF
-%token IMPORT
 %token INDENT
 %token INDEX_END
 %token INDEX_START
@@ -45,6 +44,7 @@ var N = require('./nodes.js');
 %token FN_LIT_PARAM
 %token WS
 %token SPACEDOT
+%token WITH
 
 /* Precedence
 /* ----------
@@ -94,9 +94,9 @@ Root
 	;
 
 Import
-	: IMPORT Parenthetical WS Array Eol
+	: WITH Parenthetical WS Array Eol
 		{ $$ = new N.Import($2, $4, null); }
-	| IMPORT Parenthetical AS Identifier WS Array Eol
+	| WITH Parenthetical AS Identifier WS Array Eol
 		{ $$ = new N.Import($2, $6, $4); }
 	;
 
@@ -454,8 +454,8 @@ ForHead
 Switch
 	: SWITCH Expression INDENT Cases OUTDENT
     { $$ = new N.Switch($2, $4, null); }
-	| SWITCH Expression INDENT Cases DEFAULT ':' Block OUTDENT
-    { $$ = new N.Switch($2, $4, $7); }
+	| SWITCH Expression INDENT Cases DEFAULT Block OUTDENT
+    { $$ = new N.Switch($2, $4, $6); }
 	;
 
 Cases
@@ -467,15 +467,15 @@ Cases
 
 /* An individual **Case** clause, with action. */
 Case
-	: CASE ExpressionList ':' Block
-		{ $$ = new N.Case($2, $4); }
+	: CASE ExpressionList Block
+		{ $$ = new N.Case($2, $3); }
 	;
 
 ExpressionList
 	: Expression
 		{ $$ = [$1]; }
 	| ExpressionList ',' Expression
-		{ $$ = $1.concat($2); }
+		{ $$ = $1.concat($3); }
 	;
 
 Binary
@@ -498,11 +498,6 @@ Parenthetical
 	: '(' Expression ')'
 		{ $$ = new N.Parenthetical($2); }
 	| '(' Code ')'
-		{ $$ = new N.Parenthetical($2); }
-	;
-
-PoundClause
-	: '#' Expression
 		{ $$ = new N.Parenthetical($2); }
 	;
 
