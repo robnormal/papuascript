@@ -232,8 +232,20 @@ module.exports = {
 		var expected = mkTokens(
 			'IDENTIFIER = ( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) TERMINATOR'
 		);
-		// showTags(expected);
 		assert.ok(tags_equal(toks, expected), 'Adds OUTDENT to end of inline function');
+	},
+
+	'Handles function indents properly': function(b, assert) {
+		var toks = getTokens(
+			'\\foo ->\n' +
+			'  if a\n' +
+			'    bar');
+
+		try {
+			B.resolveBlocks(toks);
+		} catch(e) {
+			assert.ok(false);
+		}
 	},
 
 	'INDENT, OUTDENT, and TERMINATOR are removed from inside lines': function(b, assert) {

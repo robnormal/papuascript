@@ -9,13 +9,15 @@ function error(msg, token) {
 
 function appendTag(tokens, i, tag) {
 	tokens.splice(i + 1, 0,
-		[tag, '', H.here(tokens[i][2].first_line, tokens[i][2].first_column)]
+		[tag, '', H.loc(tokens[i])]
 	);
 }
 
 function insertTag(tokens, i, tag) {
+	var locPos = tokens[i] ? i : (tokens[i-1] ? i-1 : i+1);
+
 	tokens.splice(i, 0,
-		[tag, '', H.here(tokens[i][2].first_line, tokens[i][2].first_column)]
+		[tag, '', H.loc(tokens[locPos])]
 	);
 }
 

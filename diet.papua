@@ -1,2 +1,3 @@
-a
-  \foods -> foods
+\foo ->
+  if a
+    bar

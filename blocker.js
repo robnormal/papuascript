@@ -401,7 +401,6 @@ $.extend(Blocker.prototype, {
 		if (! isTop) {
 			this.mustConsume(['INDENT'], 'Bad block');
 
-
 			if (this.indent.text === '') {
 				throw new Error('Empty indent level after indent');
 			}
@@ -666,6 +665,7 @@ $.extend(Blocker.prototype, {
 
 		this.replaceText(outdent2);
 		this.insertTagAndText('OUTDENT', outdent1);
+		this.pos--; // don't consume second OUTDENT
 	},
 
 	markFunctionParams: function() {
