@@ -1,7 +1,7 @@
-var L = require('../lexer.js');
-var R = require('../rewriter.js');
-var B = require('../blocker.js');
-var H = require('../helpers.js');
+var L = require('../lib/lexer.js');
+var R = require('../lib/rewriter.js');
+var B = require('../lib/blocker.js');
+var H = require('../lib/helpers.js');
 var $ = require('underscore');
 var ID = 'IDENTIFIER', NUM = 'NUMBER', BR = 'TERMINATOR';
 var log = console.log;

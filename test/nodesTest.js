@@ -1,5 +1,5 @@
-var H = require('../helpers.js');
-var N = require('../nodes.js');
+var H = require('../lib/helpers.js');
+var N = require('../lib/nodes.js');
 
 function doesntThrow(assert, f, err) {
 	try {

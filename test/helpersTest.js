@@ -1,4 +1,4 @@
-var H = require('../helpers.js');
+var H = require('../lib/helpers.js');
 var ID = 'IDENTIFIER', NUM = 'NUMBER', BR = 'TERMINATOR';
 
 function doesntThrow(assert, f, err) {

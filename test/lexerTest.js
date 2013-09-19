@@ -1,4 +1,4 @@
-var lex = require('../lexer.js');
+var lex = require('../lib/lexer.js');
 var $ = require('underscore');
 var log = console.log;
 
