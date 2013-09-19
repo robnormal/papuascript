@@ -148,9 +148,6 @@ var mergeIndentation = function(tokens) {
 };
 
 Lexer.prototype = {
-	options: {
-		ranges: false
-	},
 	setInput: function(s) {
 		this.text = s;
 		this.fixed_tokens = R.rewrite(this.tokenize(this.text));
@@ -160,14 +157,16 @@ Lexer.prototype = {
 
 	lex: function() {
 		if (this.lex_index < this.lex_len) {
-			var token = this.fixed_tokens[this.lex_index];
-			this.lex_index++;
-			this.yylineno = token[2].first_line;
-			this._pos = token[2].first_column;
-			this._tok = token;
-			this.yytext = token[1];
+			this._tok     = this.fixed_tokens[this.lex_index];
 
-			return token[0];
+			this.yylineno = this._tok[2].first_line;
+			this._pos     = this._tok[2].first_column;
+			this.match    = this._tok[1];
+			this.yytext   = this.match;
+
+			this.lex_index++;
+
+			return this._tok[0];
 		}
 	},
 
@@ -175,8 +174,8 @@ Lexer.prototype = {
 		return this.lex_index;
 	},
 
-	showPosition: function() {
-		return this.yytext + ' <- at ' + this._pos;
+	position: function() {
+		return this._pos;
 	},
 
 	tokenize: function(s) {
