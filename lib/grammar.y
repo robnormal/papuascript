@@ -152,6 +152,8 @@ Statement
 
 Expression
 	: Term
+	| '-' Term
+    { $$ = new N.Negation($2); }
 	| Op
 	/* | Code   -- unnecessary, since Code is always contained in parens */
 	;
@@ -170,12 +172,12 @@ Ternary
 	;
 
 Term
-	: Atom
+	: Factor
 	| Invocation
 	| If
 	| IfCase
 	| Switch
-	| Unary Atom
+	| Unary Factor
 		{ $$ = $1.setTerm($2); }
 	| Unary Invocation
 		{ $$ = $1.setTerm($2); }
@@ -188,7 +190,7 @@ Term
 Link
 	: SPACEDOT Identifier
     { $$ = $2; }
-	| SPACEDOT MethodCall
+	| Link WS Factor
     { $$ = $2; }
 	;
 
@@ -204,7 +206,7 @@ Unary
 		{ $$ = new N.Unary(yytext); }
 	;
 
-Atom 
+Factor 
 	: Literal
 	| Callable
 	| Object
@@ -227,19 +229,12 @@ Assignable
 	;
 
 Invocation
-	: Callable WS Atom
+	: Callable WS Factor
 		{ $$ = new N.FuncCall([$1, $3]); }
-	| Invocation WS Atom
+	| Invocation WS Factor
 		{ $$ = $1.appendFactor($3); }
-	| Atom '`' Assignable '`'  /* reverse invocation, i.e., 2 `plus` 2 */
+	| Factor '`' Assignable '`'  /* reverse invocation, i.e., 2 `plus` 2 */
 		{ $$ = new N.FuncCall([$3, $1]); }
-	;
-
-MethodCall
-	: Identifier WS Atom
-		{ $$ = new N.FuncCall([$1, $3]); }
-	| MethodCall WS Atom
-		{ $$ = $1.appendFactor($3); }
 	;
 
 /* An indented block of expressions. Note that the [Rewriter](rewriter.html)
