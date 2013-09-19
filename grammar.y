@@ -310,7 +310,7 @@ AssignList
 	: Assignment
 		{ $$ = new N.AssignList([$1]); }
 	| AssignList ',' Assignment
-		{ $$ = $1.add($2); }
+		{ $$ = $1.add($3); }
 	;
 
 Object

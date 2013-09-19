@@ -313,7 +313,7 @@ check_updated_vars = function(node, inner_scope, outer_scope) {
 			} else if (updating) {
 				H.throwSyntaxError('Cannot update variable that is not in outer scope: ' + v);
 			} else if (! defining && ! inner) {
-				H.throwSyntaxError('Undefined variable: ' + v);
+				H.throwSyntaxError('Undefined variable: ' + v + ' on line ' + node.assignee.line);
 			} else {
 				updated = [];
 			}
