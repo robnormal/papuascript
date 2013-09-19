@@ -238,22 +238,24 @@ Lexer.prototype = {
     // Preserve length of id for location data
     var idLength = id.length;
 
-		// check for "for own"
+		// special strings
     if (id === 'own' && this.prevTag() === 'FOR') {
       this.token('OWN', id);
       return id.length;
-		}
 
-		if (id === 'with') {
+		} else if (id === 'with') {
       this.token('WITH', id);
 			this.importing = true;
 			return id.length;
-		}
 
 		// "as" is only special in an import statement
-		if (id === 'as' && this.importing) {
+		} else if (id === 'as' && this.importing) {
       this.token('AS', id);
 			this.importing = false;
+			return id.length;
+
+		} else if (id === 'undefined') {
+      this.token('UNDEFINED', id);
 			return id.length;
 		}
 

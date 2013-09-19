@@ -532,7 +532,7 @@ $.extend(Undefined.prototype, {
 		return [];
 	},
 	lines: function() {
-		return new Lines([line(this.value, this.line)]);
+		return new Lines([line(this.toString(), this.line)]);
 	}
 });
 
@@ -747,7 +747,7 @@ $.extend(Obj.prototype, {
 			ls;
 
 		if (! this.props.length) {
-			return new Lines([new LineString('{}', this.lineno, false)]);
+			return new Lines([line('{}', this.lineno)]);
 		} else {
 			for (var i = 0, len = this.props.length; i < len; i++) {
 				liness.push(
