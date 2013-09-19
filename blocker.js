@@ -48,6 +48,9 @@ var
 	},
 	atComma = function atComma(that) {
 		return that.tag() === ',';
+	},
+	atCommaOrSemicolon = function atComma(that) {
+		return that.tag() === ',' || that.tag() === ';';
 	};
 
 function Blocker(tokens) {
@@ -495,11 +498,11 @@ $.extend(Blocker.prototype, {
 			case ')':
 			case ']':
 			case '}':
-			case ';':
 			case void 0:
 				return;
 
 			case 'TERMINATOR':
+			case ';':
 				if (this.indent.greaterStartThan(startDent)) {
 					this.removeToken();
 				} else {
@@ -575,7 +578,7 @@ $.extend(Blocker.prototype, {
 	},
 
 	expressionList: function() {
-		this.expression(true, void 0, atComma);
+		this.expression(true, void 0, atCommaOrSemicolon);
 		this.consume([',']);
 	},
 

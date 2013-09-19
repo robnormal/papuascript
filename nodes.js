@@ -363,9 +363,13 @@ $.extend(Arr.prototype, {
 	},
 
 	lines: function() {
-		return Lines.join(Lines.mapNodes(this.xs), ',')
-			.prefix('[')
-			.suffix(']');
+		if (this.xs.length === 0) {
+			return new Lines([new LineString('[]', this.line, false)]);
+		} else {
+			return Lines.join(Lines.mapNodes(this.xs), ',')
+				.prefix('[')
+				.suffix(']');
+		}
 	}
 });
 
@@ -1401,6 +1405,31 @@ $.extend(Parenthetical.prototype, {
 	}
 });
 
+var Ternary = function Ternary(cond, a, b) {
+	this.cond = cond;
+	this.a = a;
+	this.b = b;
+};
+
+$.extend(Ternary.prototype, {
+	is_expression: true,
+	needsSemicolon: true,
+
+	children: function() {
+		return [this.cond, this.a, this.b];
+	},
+	lines: function() {
+		return this.cond.lines()
+			.prefix('(')
+			.suffix('?')
+			.append(this.a.lines())
+			.suffix(':')
+			.append(this.b.lines())
+			.suffix(')');
+	}
+});
+
+
 var Cps = function Cps(expr, args, code) {
 	var fnCall;
 
@@ -1450,6 +1479,7 @@ module.exports = {
 	Case: Case,
 	Import: Import,
 	Parenthetical: Parenthetical,
+	Ternary: Ternary,
 	Cps: Cps,
 
 	// for testing

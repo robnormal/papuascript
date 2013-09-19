@@ -14,7 +14,7 @@ var JS_KEYWORDS, PAPUA_KEYWORDS, RESERVED, STRICT_PROSCRIBED, JS_FORBIDDEN,
 
 // Keywords that CoffeeScript shares in common with JavaScript.
 JS_KEYWORDS = [
-  'true', 'false', 'null', 'this','var',
+  'true', 'false', 'null', 'var',
 	'let', 'new', 'delete', 'typeof', 'in', 'instanceof',
   'return', 'throw', 'break', 'continue', 'debugger',
   'if', 'else', 'switch', 'case', 'default', 'for', 'while',
@@ -66,8 +66,8 @@ COMPOUND_ASSIGN = [
 
 LOGIC   = ['&&', '||', '&', '|', '^'];
 SHIFT   = ['<<', '>>>', '>>'];
-PAPUA_OPS = ['->', '<-'];
-COMPARE = ['==', '!=', '<', '>', '<=', '>='];
+PAPUA_OPS = ['->', '<-', '??'];
+COMPARE = ['==', '!=', '<=', '>=', '<', '>'];
 MATH    = ['*', '/', '%'];
 UNARY_ASSIGN = ['++', '--'];
 

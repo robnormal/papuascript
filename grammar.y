@@ -37,7 +37,6 @@ var N = require('./nodes.js');
 %token STRING
 %token SWITCH
 %token TERMINATOR
-%token THIS
 %token THROW
 %token TRY
 %token UNDEFINED
@@ -69,7 +68,7 @@ var N = require('./nodes.js');
 %left      "LOGIC"
 %left      "SPACEDOT"
 %nonassoc  "INDENT" "OUTDENT"
-%right     "=" ":" "COMPOUND_ASSIGN" "RETURN" "THROW"
+%right     "=" "?" ":" "COMPOUND_ASSIGN" "RETURN" "THROW"
 %right     "CASE"
 %right     "IF" "ELSE" "FOR" "WHILE"
 %right     "#"
@@ -160,6 +159,14 @@ Expression
 Op
 	: Expression Binary Term
     { $$ = new N.Operation($2, $1, $3); }
+	| Ternary
+	;
+
+Ternary
+	: Expression '?' Expression ':' Expression
+		{ $$ = new N.Ternary($1, $3, $5); }
+	| "??" Expression ':' Expression ':' Expression
+		{ $$ = new N.Ternary($2, $4, $6); }
 	;
 
 Term
@@ -382,8 +389,6 @@ Accessor
 ThisProperty
 	: '@' Identifier
 		{ $$ = new N.Value(new N.Identifier('this'), [new N.Access($2)]); }
-	| THIS Accessor
-		{ $$ = new N.Value(new N.Identifier('this'), [$2]); }
 	;
 
 /* The array literal. */
