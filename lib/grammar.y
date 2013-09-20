@@ -448,6 +448,19 @@ IdIn
     { $$ = [$1, $3] }
 	;
 
+ForAssign
+	: ';'
+    { $$ = null; }
+	| AssignList ';'
+	;
+
+ForExpression
+	: ';'
+    { $$ = null; }
+	| Expression ';'
+	;
+
+
 ForHead
 	: FOR IdIn Expression
     { $$ = new N.For({ in: true, id: $2, obj: $3}); }
@@ -458,8 +471,10 @@ ForHead
 	| FOR INDEX IdIn Expression
     { $$ = new N.For({ index: true, id: $3, obj: $4 }); }
 
-	| FOR AssignList ';' Expression ';' AssignList
-    { $$ = new N.For({ init: $2, check: $4, step: $6}); }
+	| FOR ForAssign ForExpression AssignList
+    { $$ = new N.For({ init: $2, check: $3, step: $4}); }
+	| FOR ForAssign ForExpression
+    { $$ = new N.For({ init: $2, check: $3 }); }
 	;
 
 Switch
