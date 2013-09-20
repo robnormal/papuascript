@@ -44,6 +44,7 @@ var N = require('./nodes.js');
 %token WS
 %token SPACEDOT
 %token WITH
+%token WORDS
 
 /* Precedence
 /* ----------
@@ -349,6 +350,8 @@ Return
 Code
 	: FnLitParams "->" BlockLike
 		{ $$ = new N.Code($1, $3); }
+	| '@' Identifier WS FnLitParams "->" BlockLike
+		{ $$ = new N.Code($4, $6, $2); }
 	;
 
 Cps
@@ -380,18 +383,14 @@ Accessor
 		{ $$ = new N.Index(new N.Literal($2, yylineno)); }
 	;
 
-/* A reference to a property on *this*. */
-ThisProperty
-	: '@' Identifier
-		{ $$ = new N.Value(new N.Identifier('this'), [new N.Access($2)]); }
-	;
-
 /* The array literal. */
 Array
 	: '[' ']'
     { $$ = new N.Arr([], yylineno); }
 	| '[' Arguments ']'
     { $$ = new N.Arr($2, yylineno); }
+	| WORDS
+    { $$ = N.words($1, yylineno); }
 	;
 
 Arguments
@@ -442,11 +441,23 @@ For
     { $$ = $1.setBlock($2); }
 	;
 
+IdIn
+	: Identifier IN
+    { $$ = [$1] }
+	| Identifier ':' Identifier IN
+    { $$ = [$1, $3] }
+	;
+
 ForHead
-	: FOR Identifier IN Expression
-    { $$ = new N.For({ in: true, id: $2, obj: $4}); }
-	| FOR OWN Identifier IN Expression
-    { $$ = new N.For({ in: true, own: true, id: $3, obj: $5}); }
+	: FOR IdIn Expression
+    { $$ = new N.For({ in: true, id: $2, obj: $3}); }
+
+	| FOR OWN IdIn Expression
+    { $$ = new N.For({ in: true, own: true, id: $3, obj: $4}); }
+
+	| FOR INDEX IdIn Expression
+    { $$ = new N.For({ index: true, id: $3, obj: $4 }); }
+
 	| FOR AssignList ';' Expression ';' AssignList
     { $$ = new N.For({ init: $2, check: $4, step: $6}); }
 	;
