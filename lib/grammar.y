@@ -190,9 +190,9 @@ Term
 
 Link
 	: SPACEDOT Identifier
-    { $$ = $2; }
+    { $$ = [$2, []]; }
 	| Link WS Factor
-    { $$ = $2; }
+    { $1[1].push($3); $$ = $1; }
 	;
 
 Chain
