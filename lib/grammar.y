@@ -157,18 +157,20 @@ Expression
     { $$ = new N.Negation($2); }
 	| Op
 	/* | Code   -- unnecessary, since Code is always contained in parens */
-	;
-
-Op
-	: Expression Binary Term
-    { $$ = new N.Operation($2, $1, $3); }
 	| Ternary
 	;
 
+Op
+	: Term Binary Term
+    { $$ = N.BinaryOp($2, $1, $3); }
+	| Op Binary Term
+    { $$ = N.BinaryOp($2, $1, $3); }
+	;
+
 Ternary
-	: Expression '?' Expression ':' Expression
+	: Op '?' Op ':' Op
 		{ $$ = new N.Ternary($1, $3, $5); }
-	| "??" Expression ':' Expression ':' Expression
+	| "??" Op ':' Op ':' Op
 		{ $$ = new N.Ternary($2, $4, $6); }
 	;
 
@@ -224,8 +226,7 @@ Callable
 /* Variables and properties that can be assigned to. */
 Assignable
 	: Identifier
-	| ThisProperty
-	| Callable Accessor
+	| Factor Accessor
 		{ $$ = new N.Value($1).add($2); }
 	;
 
@@ -515,6 +516,7 @@ Binary
 	| INSTANCEOF
 	| IN
 	;
+
 
 /* Parenthetical expressions. Note that the **Parenthetical** is a **Value**
 /* not an **Expression**, so if you need to use an expression in a place
