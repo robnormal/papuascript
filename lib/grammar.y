@@ -162,9 +162,9 @@ Expression
 
 Op
 	: Term Binary Term
-    { $$ = N.BinaryOp($2, $1, $3); }
+    { $$ = new N.Operation($2, $1, $3); }
 	| Op Binary Term
-    { $$ = N.BinaryOp($2, $1, $3); }
+    { $$ = new N.Operation($2, $1, $3); }
 	;
 
 Ternary
