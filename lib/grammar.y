@@ -79,13 +79,13 @@ var N = require('./nodes.js');
 %%
 
 /* The **Root** is the top-level node in the syntax tree. Since we parse bottom-up
-   all parsing must end here. */
+	 all parsing must end here. */
 Root
 	: /* empty */
 		{ $$ = new N.Block([]); }
-  | LineList
+	| LineList
 		{ return $1; }
-  | Block Eol
+	| Block Eol
 		{ return $1; }
 	| ImportList LineList
 		{ return $1.merge($2);; }
@@ -104,7 +104,7 @@ ImportList
 	: Import
 		{ $$ = new N.Block([$1]); }
 	| Import ImportList
-    { $2.push($1); $$ = $2; }
+		{ $2.push($1); $$ = $2; }
 	;
 
 BlockLike
@@ -122,10 +122,10 @@ Eol
 
 /* Any list of statements and expressions, separated by line breaks */
 LineList
-  : Line
-    { $$ = N.Block.wrap([$1]); }
+	: Line
+		{ $$ = N.Block.wrap([$1]); }
 	| LineList Eol Line
-    { $1.push($3); $$ = $1; }
+		{ $1.push($3); $$ = $1; }
 	| LineList Eol
 	;
 
@@ -139,7 +139,7 @@ Line
 Statement
 	: Return
 	| STATEMENT
-    { $$ = new N.Literal($1, yylineno); }
+		{ $$ = new N.Literal($1, yylineno); }
 	| While
 	| For
 	| AssignList
@@ -153,7 +153,7 @@ Statement
 Expression
 	: Term
 	| '-' Term
-    { $$ = new N.Negation($2); }
+		{ $$ = new N.Negation($2); }
 	| Op
 	/* | Code   -- unnecessary, since Code is always contained in parens */
 	| Ternary
@@ -162,9 +162,9 @@ Expression
 
 Op
 	: Term Binary Term
-    { $$ = new N.Operation($2, $1, $3); }
+		{ $$ = new N.Operation($2, $1, $3); }
 	| Op Binary Term
-    { $$ = new N.Operation($2, $1, $3); }
+		{ $$ = new N.Operation($2, $1, $3); }
 	;
 
 Ternary
@@ -192,16 +192,16 @@ Term
 
 Link
 	: SPACEDOT Identifier
-    { $$ = [$2, []]; }
+		{ $$ = [$2, []]; }
 	| Link WS Factor
-    { $1[1].push($3); $$ = $1; }
+		{ $1[1].push($3); $$ = $1; }
 	;
 
 Chain
 	: Link
-    { $$ = [$1]; }
+		{ $$ = [$1]; }
 	| Chain Link
-    { $1.push($2); $$ = $1; }
+		{ $1.push($2); $$ = $1; }
 	;
 
 Unary
@@ -244,62 +244,64 @@ will convert some postfix forms into blocks for us, by adjusting the
 token stream. */
 Block
 	: INDENT OUTDENT
-  	{ $$ = new N.Block([]); }
+		{ $$ = new N.Block([]); }
 	| INDENT LineList OUTDENT
-  	{ $$ = $2; }
+		{ $$ = $2; }
 	;
 
 /* Alphanumerics are separated from the other **Literal** matchers because
 they can also serve as keys in object literals. */
 AlphaNumeric
 	: NUMBER
-    { $$ = new N.Literal(yytext, yylineno); }
+		{ $$ = new N.Literal(yytext, yylineno); }
 	| INTEGER
-    { $$ = new N.Literal(yytext, yylineno); }
+		{ $$ = new N.Literal(yytext, yylineno); }
 	| STRING
-    { $$ = new N.Literal(yytext, yylineno); }
+		{ $$ = new N.Literal(yytext, yylineno); }
 	;
 
 /* All of our immediate values. Generally these can be passed straight
 /* through and printed to JavaScript. */
 Literal
 	: AlphaNumeric
-    { $$ = new N.Literal(yytext, yylineno); }
+		{ $$ = new N.Literal(yytext, yylineno); }
 	| REGEX
-    { $$ = new N.Literal(yytext, yylineno); }
+		{ $$ = new N.Literal(yytext, yylineno); }
 	| DEBUGGER
-    { $$ = new N.Literal(yytext, yylineno); }
+		{ $$ = new N.Literal(yytext, yylineno); }
 	| UNDEFINED
-    { $$ = new N.Undefined(yylineno); }
+		{ $$ = new N.Undefined(yylineno); }
 	| NULL
-    { $$ = new N.Null(yylineno); }
+		{ $$ = new N.Null(yylineno); }
 	| BOOL
-    { $$ = new N.Bool($1, yylineno); }
+		{ $$ = new N.Bool($1, yylineno); }
 	;
 
 /* Assignment of a variable, property, or index to a value.
 /* increment and decrement are forms of assignment */
 Assignment
 	: Assignable '=' Expression
-    { $$ = N.Assign.create($1, $2, $3); }
+		{ $$ = N.Assign.create($1, $2, $3); }
+	| Array '=' Expression
+		{ $$ = N.Assign.create($1, $2, $3); } 
 	| UNARY_ASSIGN Assignable
-    { $$ = N.Assign.create($2, $1); }
+		{ $$ = N.Assign.create($2, $1); }
 	| Assignable UNARY_ASSIGN
-    { $$ = N.Assign.create($1, $2); }
+		{ $$ = N.Assign.create($1, $2); }
 	| Assignable COMPOUND_ASSIGN Expression
-    { $$ = N.Assign.create($1, $2, $3); }
+		{ $$ = N.Assign.create($1, $2, $3); }
 	;
 
 Identifier
 	: IDENTIFIER
-    { $$ = new N.Identifier(yytext, yylineno); }
+		{ $$ = new N.Identifier(yytext, yylineno); }
 	;
 
 Var
 	: VAR Identifier
-    { $$ = new N.Var([$2], yylineno); }
+		{ $$ = new N.Var([$2], yylineno); }
 	| Var ',' Identifier
-    { $$ = $1.add($3, yylineno); }
+		{ $$ = $1.add($3, yylineno); }
 	;
 
 /* Comma-separated assignments */
@@ -329,7 +331,7 @@ ObjectPropList
 /* definition of a property in an object literal */
 ObjectPropDef
 	: ObjProp ':' Expression
-    { $$ = [$1, $3]; }
+		{ $$ = [$1, $3]; }
 	;
 
 ObjProp
@@ -340,9 +342,9 @@ ObjProp
 /* A return statement from a function body. */
 Return
 	: RETURN Expression
-    { $$ = new N.Return($2); }
+		{ $$ = new N.Return($2); }
 	| RETURN
-    { $$ = new N.Return(); }
+		{ $$ = new N.Return(); }
 	;
 
 /* The **Code** node is the function literal. It's defined by an indented block
@@ -364,7 +366,7 @@ CpsParams
 	: CPS Identifier FN_LIT_PARAM
 		{ $$ = [$2]; }
 	| CpsParams Identifier FN_LIT_PARAM
-    { $1.push($2); $$ = $1; }
+		{ $1.push($2); $$ = $1; }
 	;
 
 FnLitParams
@@ -377,7 +379,7 @@ FnLitParams
 /* Indexing into an object or array using bracket notation. */
 Accessor
 	: '.' Identifier
-    { $$ = new N.Access($2); }
+		{ $$ = new N.Access($2); }
 	| '[' Expression ']'
 		{ $$ = new N.Index($2); }
 	| '.' INTEGER
@@ -387,38 +389,38 @@ Accessor
 /* The array literal. */
 Array
 	: '[' ']'
-    { $$ = new N.Arr([], yylineno); }
+		{ $$ = new N.Arr([], yylineno); }
 	| '[' Arguments ']'
-    { $$ = new N.Arr($2, yylineno); }
+		{ $$ = new N.Arr($2, yylineno); }
 	| WORDS
-    { $$ = N.words($1, yylineno); }
+		{ $$ = N.words($1, yylineno); }
 	;
 
 Arguments
 	: Expression
 		{ $$ = [$1]; }
-  | Arguments ',' Expression
+	| Arguments ',' Expression
 		{ $$ = $1.concat($3); }
 	;
 
 /* The variants of *try/catch/finally* exception handling blocks. */
 Try
 	: TRY Block
-    { $$ = new N.Try($2); }
+		{ $$ = new N.Try($2); }
 	| TRY Block Catch
-    { $$ = new N.Try($2, $3[0], $3[1]); }
+		{ $$ = new N.Try($2, $3[0], $3[1]); }
 	| TRY Block FINALLY Block
-    { $$ = new N.Try($2, null, null, $4); }
+		{ $$ = new N.Try($2, null, null, $4); }
 	| TRY Block Catch FINALLY Block
-    { $$ = new N.Try($2, $3[0], $3[1], $5); }
+		{ $$ = new N.Try($2, $3[0], $3[1], $5); }
 	;
 
 /* A catch clause names its error and runs a block of code. */
 Catch
 	: CATCH Identifier Block
-    { $$ = [$2, $3]; }
+		{ $$ = [$2, $3]; }
 	| CATCH Block
-    { $$ = [null, $2]; }
+		{ $$ = [null, $2]; }
 	;
 
 /* Throw an exception object. */
@@ -439,50 +441,50 @@ While
 /* or postfix, with a single expression. */
 For
 	: ForHead Block
-    { $$ = $1.setBlock($2); }
+		{ $$ = $1.setBlock($2); }
 	;
 
 IdIn
 	: Identifier IN
-    { $$ = [$1] }
+		{ $$ = [$1] }
 	| Identifier ':' Identifier IN
-    { $$ = [$1, $3] }
+		{ $$ = [$1, $3] }
 	;
 
 ForAssign
 	: ';'
-    { $$ = null; }
+		{ $$ = null; }
 	| AssignList ';'
 	;
 
 ForExpression
 	: ';'
-    { $$ = null; }
+		{ $$ = null; }
 	| Expression ';'
 	;
 
 
 ForHead
 	: FOR IdIn Expression
-    { $$ = new N.For({ in: true, id: $2, obj: $3}); }
+		{ $$ = new N.For({ in: true, id: $2, obj: $3}); }
 
 	| FOR OWN IdIn Expression
-    { $$ = new N.For({ in: true, own: true, id: $3, obj: $4}); }
+		{ $$ = new N.For({ in: true, own: true, id: $3, obj: $4}); }
 
 	| FOR INDEX IdIn Expression
-    { $$ = new N.For({ index: true, id: $3, obj: $4 }); }
+		{ $$ = new N.For({ index: true, id: $3, obj: $4 }); }
 
 	| FOR ForAssign ForExpression AssignList
-    { $$ = new N.For({ init: $2, check: $3, step: $4}); }
+		{ $$ = new N.For({ init: $2, check: $3, step: $4}); }
 	| FOR ForAssign ForExpression
-    { $$ = new N.For({ init: $2, check: $3 }); }
+		{ $$ = new N.For({ init: $2, check: $3 }); }
 	;
 
 Switch
 	: SWITCH Expression INDENT Cases OUTDENT
-    { $$ = new N.Switch($2, $4, null); }
+		{ $$ = new N.Switch($2, $4, null); }
 	| SWITCH Expression INDENT Cases DEFAULT Block OUTDENT
-    { $$ = new N.Switch($2, $4, $6); }
+		{ $$ = new N.Switch($2, $4, $6); }
 	;
 
 Cases
@@ -544,24 +546,24 @@ IfBlock
 If
 	: IfBlock
 	| IfBlock ELSE Block
-    { $$ = $1.addElse($3); }
+		{ $$ = $1.addElse($3); }
 	;
 
 /* The full complement of *if* expressions, including postfix one-liner
 /* *if* and *unless*. */
 IfCase
 	: IF CASE INDENT IfCaseList OUTDENT
-    { $$ = N.If.fromList($4); }
+		{ $$ = N.If.fromList($4); }
 	/* | IfCase IfCaseCase
-    { $$ = $1.addElse($2); }
+		{ $$ = $1.addElse($2); }
 */
 	;
 
 IfCaseList
 	: IfCaseSingle
-    { $$ = [$1]; }
+		{ $$ = [$1]; }
 	| IfCaseList IfCaseSingle
-    { $1.push($2); $$ = $1; }
+		{ $1.push($2); $$ = $1; }
 	;
 
 IfCaseSingle
