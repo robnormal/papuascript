@@ -196,7 +196,9 @@ Term
 
 Link
 	: SPACEDOT Identifier
-		{ $$ = [$2, []]; }
+		{ $$ = [$2, [], false]; }
+	| SPACEDOT Identifier '(' ')'
+		{ $$ = [$2, [], true]; }
 	| Link WS Factor
 		{ $1[1].push($3); $$ = $1; }
 	;
