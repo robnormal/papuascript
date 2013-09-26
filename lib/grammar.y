@@ -133,7 +133,6 @@ LineList
 Line
 	: Expression
 	| Statement
-	| Cps
 	;
 
 /* Pure statements which cannot be expressions. */
@@ -158,6 +157,7 @@ Expression
 	| Op
 	/* | Code   -- unnecessary, since Code is always contained in parens */
 	| Ternary
+	| Cps
 	;
 
 Op
@@ -357,7 +357,7 @@ Code
 
 Cps
 	: CpsParams "<-" Expression Eol LineList CPSSTOP
-		{ $$ = new N.Block([ N.Cps($3, $1, new N.Code($1, $5)) ]); }
+		{ $$ = new N.Block([ N.Cps($3, new N.Code($1, $5)) ]); }
 	;
 
 CpsParams

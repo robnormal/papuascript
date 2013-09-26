@@ -101,7 +101,7 @@ deleteIngredient = \post food ->
 addIngredient = \post food ->
   food `addIngredient`  post.ingName (toInt # post.grams || 0)
     .rescue \ ->
-        web.error403 ('No ingredient called "' + post.ingName + '" was found.')
+        web.error403 # 'No ingredient called "' + post.ingName + '" was found.'
 
 updateIngredient = \post food ->
   cond =
@@ -166,7 +166,7 @@ createPlan = \post ->
         { id: orm.literal 'last_insert_rowid()' }
 
     runQuery insertQuery {}
-      .then (db.getOrFail getQuery)
+      .then # db.getOrFail getQuery
   else
     failure 'Invalid form submission.'
 
