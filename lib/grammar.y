@@ -151,13 +151,17 @@ Statement
 	;
 
 Expression
-	: Term
+	: OpOrTerm
 	| '-' Term
 		{ $$ = new N.Negation($2); }
-	| Op
 	/* | Code   -- unnecessary, since Code is always contained in parens */
 	| Ternary
 	| Cps
+	;
+
+OpOrTerm
+	: Term
+	| Op
 	;
 
 Op
@@ -168,9 +172,9 @@ Op
 	;
 
 Ternary
-	: Op '?' Op ':' Op
+	: OpOrTerm '?' OpOrTerm ':' OpOrTerm
 		{ $$ = new N.Ternary($1, $3, $5); }
-	| "??" Op ':' Op ':' Op
+	| "??" OpOrTerm ':' OpOrTerm ':' OpOrTerm
 		{ $$ = new N.Ternary($2, $4, $6); }
 	;
 
@@ -285,9 +289,9 @@ Assignment
 	| Array '=' Expression
 		{ $$ = N.Assign.create($1, $2, $3); } 
 	| UNARY_ASSIGN Assignable
-		{ $$ = N.Assign.create($2, $1); }
+		{ $$ = N.Assign.createUnary($2, $1); }
 	| Assignable UNARY_ASSIGN
-		{ $$ = N.Assign.create($1, $2); }
+		{ $$ = N.Assign.createUnary($1, $2); }
 	| Assignable COMPOUND_ASSIGN Expression
 		{ $$ = N.Assign.create($1, $2, $3); }
 	;
