@@ -359,6 +359,8 @@ Return
 Code
 	: FnLitParams "->" BlockLike
 		{ $$ = new N.Code($1, $3); }
+	| "->" BlockLike
+		{ $$ = new N.Code([], $2); }
 	| '@' Identifier WS FnLitParams "->" BlockLike
 		{ $$ = new N.Code($4, $6, $2); }
 	;
