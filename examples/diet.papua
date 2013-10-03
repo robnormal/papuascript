@@ -241,6 +241,7 @@ actions = {
   ,
 
   food: \match ->
+    a := b
     post <- web.getPost.pipe
 
     changes = if case
