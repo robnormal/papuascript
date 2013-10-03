@@ -71,7 +71,7 @@ function test_rewrite(text) {
 function test_parse(text) {
 	var res = parser.parse(text);
 
-	res.checkScope([]);
+	res.checkScope();
 
 	console.log(res.lines().toString());
 }

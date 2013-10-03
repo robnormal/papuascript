@@ -11,7 +11,7 @@ parser.yy.parseError = function(msg, info) {
 
 var text = fs.readFileSync(process.argv[2], 'utf-8');
 var res = parser.parse(text);
-res.checkScope([]);
+res.checkScope();
 
 var file = process.argv[2] + '.js';
 fs.writeFileSync(file, res.lines().toString());
