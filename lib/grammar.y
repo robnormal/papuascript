@@ -94,10 +94,17 @@ Root
 	;
 
 Import
-	: WITH Parenthetical WS Array Eol
-		{ $$ = new N.Import($2, $4, null); }
-	| WITH Parenthetical AS Identifier WS Array Eol
-		{ $$ = new N.Import($2, $6, $4); }
+	: With Eol
+		{ $1.members = new N.Arr([]); $$ = $1; }
+	| With WS Array Eol
+		{ $1.members = $3; $$ = $1; }
+	;
+
+With
+	: WITH Parenthetical
+		{ $$ = new N.Import($2, null, null); }
+	| WITH Parenthetical AS Identifier
+		{ $$ = new N.Import($2, null, $4); }
 	;
 
 ImportList
