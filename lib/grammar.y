@@ -103,8 +103,8 @@ Import
 ImportList
 	: Import
 		{ $$ = new N.Block([$1]); }
-	| Import ImportList
-		{ $2.push($1); $$ = $2; }
+	| ImportList Import
+		{ $1.push($2); $$ = $1; }
 	;
 
 BlockLike
