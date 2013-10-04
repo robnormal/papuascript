@@ -1,0 +1,47 @@
+with (require 'underscore') as $
+  [ compose
+  , partial
+  ]
+with (console) [ log ]
+
+hello = -> log 'Hello, world!'
+
+add2 = \x -> x + 2
+
+fmap = \f xs ->
+  if xs.fmap
+    xs.fmap f
+  else
+    ys = []
+    for own k:x in xs
+      ys[k] = f x
+    ys
+
+add2All = fmap `partial` add2
+
+flip = \f -> \ ->
+  f.apply this
+    [ arguments.1
+    , arguments.0
+    , Array.prototype.slice arguments 2
+    ]
+
+fmap2 = flip $.map
+
+hello()
+log # fmap add2 [1,2,3]
+log # add2All [1,2,3]
+log %{Hello world!}
+log # fmap2 add2 [1,2,3]
+
+
+foo =
+  { bar: 3
+  , cob: 2,
+  doe: 1
+  }
+
+a = ?? foo : 2 : 3
+
+x := 3
+

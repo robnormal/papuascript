@@ -1,0 +1,543 @@
+with (require './curry.js') as _
+  [ partial
+  , isArray
+  , extend
+  , compose
+  , each
+  , reduce
+  , map
+  , set
+  ]
+
+with (require './restriction.js') [ CheckError ]
+with (require 'util') as util [ inherits ]
+
+M    = require './Maybe.js'
+E    = require './Either.js'
+  
+__slice = Array.prototype.slice
+
+var debug, debugging
+
+
+
+// debug flag stuff
+(->
+    on = false
+    debug := \bool ->
+      on = bool
+
+      // must activate debugging on curry, or we can't debug nodam
+      if on
+        _.debug true
+
+    debugging := -> on
+  )()
+
+typedFunction = \fun_bool f msg ->
+  \ ->
+    value = f.apply this arguments
+    if fun_bool value
+      value
+    else
+      if msg instanceof Function
+        throw new CheckError # msg value
+      else
+        throw new CheckError # msg || ('Bad return value: ' + value)
+
+isInstanceof = \constructor ->
+  \x -> x instanceof constructor
+
+arrayOf = \constructor ->
+  \xs ->
+    isArray xs && _.all xs (isInstanceof constructor)
+
+applier = \f ->
+  \args -> f.apply null args
+
+Monad = @Monad \ -> throw new CheckError 'Monad is an abstract class'
+
+Monad.prototype `extend`
+  { pipe: \mf -> this.doBind (this.typed mf)
+
+  // useful when you have a "multivariable" monad, i.e.,
+  // when you have a list of distinct values inside the
+  // monad that you want to break apart for your function,
+  // instead of having to do it explicitly inside the function
+  , pipeArray: \f -> this.pipe (applier f)
+
+  , then: \m -> this.pipe (\ -> m)
+
+  , mmap: \f ->
+      this.pipe # (this.constructor.result || Monad.result) `compose` f
+
+  , map: ->
+      throw new Error 'Monad has no method "map". Perhaps you meant "mmap"?'
+
+  /**
+   * Convenience method for when you are passing a value that
+   * is fmappable
+   */
+  , mmapFmap: \f ->
+      u <- this.mmap
+      _.fmap f u
+
+  , pipeMapM: \f ->
+      that = this
+      us <- this.pipe
+      that.constructor.mapM us f
+  
+  , pipeElse: \f m ->
+    this.pipe \m_u ->
+      ?? m_u.isNothing() : m : f m_u.fromJust()
+
+  , pipeMaybe: \m f -> this.pipeElse f m
+
+  // these are mostly internal
+  // for "monad map"
+  , typed: \f ->
+      if ! debugging()
+        return f
+
+      that = this;
+
+      if (debugging())
+        pipeStack = (new Error()).stack
+
+      g = typedFunction (isInstanceof this.constructor) f \value ->
+          'pipe() must return an instance of ' + that.constructor.name +
+            ', received ' + util.inspect value + #
+            ?? debugging() : '\npiper: ' + pipeStack + '\n/piper' : ''
+
+      _.markWrapper$ g f
+      g.pipeStack = pipeStack
+
+      g
+  }
+
+monadicClassFunctions =
+  { sequence: \ms ->
+      that = this
+
+      k = \m1 m ->
+        xs <- m1.pipe
+        x <- m.pipe
+        that.result (xs.concat x)
+
+      ms `reduce` k (this.result [])
+
+  , sequence_: \ms ->
+      if !ms.length
+        this.result()
+      else
+        m = ms[0]
+
+        for i = 1, len = ms.length; i < len; i++
+          m = m.then ms[i]
+
+        m
+ , mapM: \xs f ->
+      ms = xs `map` f
+
+      if ms == undefined
+        throw new CheckError 'First argument to mapM must be mappable'
+
+      this.sequence ms
+  }
+
+monad$ = \construct methods ->
+  if ! methods.doBind
+    throw new CheckError 'Missing required Monad method doBind'
+  else if ! methods.result
+    throw new CheckError 'Missing required Monad method result'
+
+  construct `extend` monadicClassFunctions
+  construct.prototype `extend` Monad.prototype
+
+  construct.result = methods.result
+  construct.prototype.doBind = methods.doBind
+
+// works for any monad
+liftM = \f ->
+  \monad ->
+    if monad.pipe && monad.constructor.result
+      inside <- monad.pipe
+      monad.constructor.result (f inside)
+    else 
+      throw 'argument to lifted function must be a Monad'
+
+/*
+ * mcompose = (f1M, f2M) -> (x) -> f1M(x).pipe(f2M)
+ */
+mcompose = \f1M f2M ->
+  \x -> f1M x .pipe f2M
+
+pipeline = \fs ->
+  len = (fs && fs.length) || 0
+
+  if ! len
+    throw new Error 'Cannot create empty pipeline'
+  else if len == 1
+    fs[0]
+  else
+    mcompose fs[0] # pipeline (fs.slice 1)
+
+/* Make Maybe into a monad, so we can chain functions
+ * without checking for "nothing" every time
+ */
+monad$ M.Maybe
+  { doBind: \f ->
+      ?? this.isNothing() : this : f this.fromJust()
+  , result: M.just
+  }
+
+/** (Either(e, x) -> y) -> Object -> AsyncPass **/
+AsyncPass = @AsyncPass \success state ->
+  this.success = success
+  this.state = state
+
+AsyncPass.prototype.succeed = \x -> this.success x this.state
+AsyncPass.prototype.setSuccess = \callback ->
+  this `set` 'success' callback
+
+AsyncPass.prototype.setState = \s -> this `set` 'state' s
+
+
+
+/** (AsyncPass ->* a) -> Async **/
+Async = @Async \callback ->
+  this.x = callback
+
+monad$ Async
+  { doBind: \f ->
+      that = this
+
+      new Async \mstuff ->
+        that.x # mstuff.setSuccess \arg ss ->
+          if arg.isRight()
+            f arg.fromRight() .x (mstuff.setState ss)
+          else
+            // just go on - call with same left argument
+            mstuff.success arg ss
+
+  , result: \x ->
+      new Async \apass ->
+        apass.success (E.right x) apass.state
+  }
+
+Async.prototype `extend`
+  // uses setTimeout to pipe function in new thread
+  { pipe_: \f ->
+      g = this.typed f
+      that = this
+
+      new Async \mstuff ->
+        next = ->
+          that.x # mstuff.setSuccess \arg ss ->
+            if arg.isRight()
+              g arg.fromRight() .x (mstuff.setState ss)
+            else
+              // just go on - call with same left argument
+              mstuff.success arg ss
+
+        setTimeout next 0
+  , then_: \m -> this.pipe_ (\-> m)
+
+  , loopWhile: \cond f ->
+      x <- this.pipe
+      f x .pipe_ \y -> ?? cond y : recur y : Async.result y
+
+  , loop: \f ->
+      x <- this.pipe
+      f x .pipe_ recur
+
+  , forever: -> this.loop (\-> this)
+
+  // start the chain of asynchronous actions
+  , run: \success failure s ->
+      callback = \e_x ss ->
+        if e_x.isRight()
+          success e_x.fromRight() ss
+        else
+          failure e_x.fromLeft() ss
+
+      this.x # new AsyncPass callback s
+
+      // no return value, since all values are "returned" to callbacks
+      undefined
+
+  , runIt: \s -> this.run _.inert _.inert s
+
+  , rescue: \f ->
+      that = this
+
+      new Async \mstuff ->
+        that.x # mstuff.setSuccess \arg ss ->
+          if arg.isRight()
+            mstuff.success arg ss
+          else
+            f arg.fromLeft() .x (mstuff.setState ss)
+
+  , rescueOnly: \type f ->
+      that = this
+
+      new Async \mstuff ->
+        that.x # mstuff.setSuccess \arg ss ->
+          left = arg.isLeft() && arg.fromLeft();
+
+          if left instanceof type
+            f left .x (mstuff.setState ss)
+          else
+            mstuff.success arg ss
+
+    /** State Monad functions **/
+  , get: \key ->
+      that = this
+
+      new Async \mstuff ->
+        that.x # mstuff.setSuccess \_ ss ->
+          mstuff.success (E.right ss[key]) ss
+
+  , set: \key val ->
+      that = this
+
+      new Async \apass ->
+        that.x # apass.setSuccess \o ss ->
+          if o.isRight()
+            apass.success (E.right val) (ss `set` key val)
+          else
+            apass.success o ss
+  }
+
+Async.setFor = \key val m ->
+  Async.get key .pipe \old ->
+    Async.set key val .then m .set key old
+
+AsyncFailure = @AsyncFailure \err ->
+  this.err = err
+
+AsyncFailure `inherits` Async
+
+AsyncFailure.prototype `extend`
+  { run: \r f s -> f this.err s
+
+  // not necessary, but more efficient
+  , pipe: \f -> this
+  , doBind: \f -> this
+  , rescue: \f -> Async.result this.err .pipe f
+  , x: \apass -> apass.success (E.left this.err) apass.state
+  }
+
+Async.failure = \err -> new AsyncFailure err
+Async.get = \key -> Async.result().get key
+Async.set = \key val -> Async.result().set key val
+
+Async.prototype.listen = \obj evName f ->
+  that = this
+  new Async \mstuff ->
+    that.x # mstuff.setSuccess \arg ss ->
+      if arg.isRight()
+        // create separate thread here
+        obj.on evName \ev ->
+          f ev .x mstuff
+
+      mstuff.success arg ss
+
+Async.listen = \obj evName f ->
+  Async.result().listen obj evName f
+
+
+arrayOfAsync = arrayOf Async
+
+Async.combine = \monads ->
+  if ! arrayOfAsync monads
+    throw new Error 'Async.combine() requires an array of Async objects'
+
+  new Async \apass ->
+    $has_finished = _.repeat monads.length false
+    $results = []
+
+    finish = \succeeded index result ->
+        $has_finished[index] = true
+        $results[index] = (?? succeeded : E.right : E.left) result
+
+        if _.and $has_finished
+          apass.success (E.right $results) apass.state
+
+    monads `each` \m index ->
+      m.run
+        (finish `partial` true index)
+        (finish `partial` false index)
+        apass.state
+
+Async.combineStrict = \monads ->
+  eithers <- Async.combine monads
+  if _.some eithers E.isLeft
+    Async.error (E.lefts eithers)
+  else
+    Async.result (E.rights eithers)
+
+/*** helper functions for monadize ***/
+
+/* for displaying helpful info in stack traces
+ * info: {
+ *   callback: name of function
+ *   library: name of library
+ *   owner: name of object whose method is called, if any
+ *   arguments: arguments of original monad function
+ *   stack: if debugging(), stack trace produced when monad was formed
+ * }
+ */
+describeMonad = \f args options ->
+  { callback: options.name || (options.method && f)
+  , library: options.library
+  , owner: ?? options.method : args[0] : undefined
+  , arguments: args
+  , stack: new Error().stack
+  }
+
+/**
+ * Returns a callback for receiving the output of standard
+ * node IO functions that pass errors as the first argument
+ */
+errFunc = \mstuff options args that ->
+  \err u ->
+
+    if options.maybe
+      u = M.toMaybe u
+
+    if err && debugging()
+      err.args = args
+      err.stack = (new Error()).stack
+
+    mstuff.success
+      (?? err : E.left err : E.right u)
+      mstuff.state
+
+IOWrapper = @IOWrapper \io_obj ->
+  this.io = io_obj
+
+/**
+ * Turns a standard node IO funciton into a monadic one.
+ *
+ * options: {
+ *   method: bool  -- if function is a method, the owner object must be
+ *                    passed as first argument to the monadic function, and
+ *                    the second will be an array of arguments for the method
+ *                    (this is more convenient for library devel)
+ *   errors: bool  -- whether the function being converted passes an error
+ *                    as the first argument to its callback
+ *   maybe: bool   -- If the first passed value (after error, if any) is
+ *                    undefined, pass Nothing; else, Just(value)
+ *   callback:
+ */
+monadize = \f options ->
+  \ ->
+    if options.arity && arguments.length < options.arity
+      throw new Error #
+        'Expected ' + options.arity + ' arguments, only got ' + arguments.length
+
+    that = this
+    args = __slice.call arguments
+    callback = options.callback || (?? options.errors : errFunc : noErrFunc)
+
+    if options.method
+      asyncFunc = \mstuff ->
+        that.io[f].apply that.io # args.concat (callback mstuff options args that)
+    else
+      asyncFunc = \mstuff ->
+        f.apply undefined # args.concat (callback mstuff options args undefined)
+
+    if debugging()
+        new Async \mstuff ->
+          try
+            asyncFunc mstuff
+          catch err
+            err.monad = describeMonad f args options
+
+            // throw informed error
+            throw err
+    else
+        new Async asyncFunc
+
+
+convertLib = \lib errorlessFuncs errorHandlingFuncs options ->
+  libM = {}
+  lib_name = options && options.library
+
+  errorlessFuncs `each` \f ->
+    libM[f] = monadize lib[f] { name: f, library: lib_name }
+
+  errorHandlingFuncs `each` \f ->
+    libM[f] = monadize lib[f] { errors: true, name: f, library: lib_name }
+  
+  libM
+
+/*** Monadic IO functions ***/
+logM = liftM console.log
+
+fs = ->
+  mfs = convertLib fs []
+    [ 'rename', 'truncate', 'chown', 'fchown', 'lchown'
+    , 'chmod', 'fchmod', 'lchmod', 'stat', 'lstat'
+    , 'fstat', 'link', 'symlink', 'readlink', 'realpath'
+    , 'unlink', 'rmdir', 'mkdir', 'readdir', 'close'
+    , 'open', 'utimes', 'futimes', 'fsync', 'write'
+    , 'read', 'readFile', 'writeFile', 'appendFile'
+    , 'exists'
+    ] { library: 'fs' }
+
+  // copy synchronouos funcitons
+  mfs.createReadStream = fs.createReadStream
+  mfs.createWriteStream = fs.createWriteStream
+
+  mfs
+
+http = ->
+  myhttp = require 'http'
+
+  { createServer: myhttp.createServer
+    // createServer: toAsync(myhttp.createServer, 1),
+    // request: toAsync(myhttp.request),
+    // get: toAsync(myhttp.get),
+    // usage: nodam.listen(server, host, port)
+    // listen: methodToAsync('listen', { library: 'http', name: 'listen' }),
+    // setTimeout: methodToAsync('setTimeout',
+    // { library: 'http', name: 'setTimeout' })
+    }
+
+
+module.exports =
+  { Monad: Monad
+
+  , liftM: liftM
+  , mcompose: mcompose
+  , pipeline: pipeline
+
+  , Async: Async
+  , AsyncFailure: AsyncFailure
+  , result: Async.result
+  , failure: Async.failure
+  , combine: Async.combine
+  , combineStrict: Async.combineStrict
+  , get: Async.get
+  , set: Async.set
+  , setFor: Async.setFor
+
+  , monad$: monad$
+  , IOWrapper: IOWrapper
+  , monadize: monadize
+
+  , debug: debug
+  , debugging: debugging
+
+  , logM: logM
+  , http: http
+  , fs: fs
+  , Maybe: M
+  , Either: E
+  , restriction: R
+  , sqlite: -> require './sqlite.js'
+  , _: _
+  }
+
