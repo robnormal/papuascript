@@ -277,7 +277,6 @@ AlphaNumeric
 /* through and printed to JavaScript. */
 Literal
 	: AlphaNumeric
-		{ $$ = new N.Literal(yytext, yylineno); }
 	| REGEX
 		{ $$ = new N.Literal(yytext, yylineno); }
 	| DEBUGGER
