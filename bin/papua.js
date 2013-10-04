@@ -4,6 +4,7 @@ var L = require('../lib/lexer.js');
 var P = require('../lib/grammar.js');
 var R = require('../lib/rewriter.js');
 var B = require('../lib/blocker.js');
+var N = require('../lib/nodeTypes.js');
 var $ = require('underscore');
 var log = console.log;
 
@@ -70,6 +71,8 @@ function test_rewrite(text) {
 
 function test_parse(text) {
 	var res = parser.parse(text);
+
+	// console.log(N.showTree(res, ''));
 
 	res.checkScope();
 

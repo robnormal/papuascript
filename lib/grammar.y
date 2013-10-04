@@ -293,9 +293,11 @@ Literal
 /* Assignment of a variable, property, or index to a value.
 /* increment and decrement are forms of assignment */
 Assignment
-	: Assignable '=' Expression
+	: Assignable ASSIGN Expression
 		{ $$ = N.Assign.create($1, $2, $3); }
-	| Array '=' Expression
+	| Invocation ASSIGN BlockLike
+		{ $$ = N.Assign.create($1, $2, $3); }
+	| Array ASSIGN Expression
 		{ $$ = N.Assign.create($1, $2, $3); } 
 	| UNARY_ASSIGN Assignable
 		{ $$ = N.Assign.createUnary($2, $1); }
