@@ -9,7 +9,7 @@ endif
 
 let b:did_ftplugin = 1
 
-setlocal formatoptions-=t formatoptions+=croql
+setlocal formatoptions=cql
 setlocal comments=://
 setlocal commentstring=//\ %s
 setlocal omnifunc=javascriptcomplete#CompleteJS

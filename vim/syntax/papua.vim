@@ -1,205 +1,193 @@
-" Language:    papuaScript
-" Maintainer:  Mick Koch <kchmck@gmail.com>
-" URL:         http://github.com/kchmck/vim-papua-script
-" License:     WTFPL
+" Vim syntax file
+" Language:        PapuaScript
+" Maintainer:        Claudio Fleiner <claudio@fleiner.com>
+" Updaters:        Scott Shattuck (ss) <ss@technicalpursuit.com>
+" URL:                http://www.fleiner.com/vim/syntax/papuascript.vim
+" Changes:        (ss) added keywords, reserved words, and other identifiers
+"                (ss) repaired several quoting and grouping glitches
+"                (ss) fixed regex parsing issue with multiple qualifiers [gi]
+"                (ss) additional factoring of keywords, globals, and members
+" Last Change:        2012 Oct 05
+"                 2013 Jun 12: adjusted papuaScriptRegexpString (Kevin Locke)
 
-" Bail if our syntax is already loaded.
-if exists('b:current_syntax') && b:current_syntax == 'papua'
+" For version 5.x: Clear all syntax items
+" For version 6.x: Quit when a syntax file was already loaded
+" tuning parameters:
+" unlet papuaScript_fold
+
+if !exists("main_syntax")
+  if version < 600
+    syntax clear
+  elseif exists("b:current_syntax")
+    finish
+  endif
+  let main_syntax = 'papuascript'
+elseif exists("b:current_syntax") && b:current_syntax == "papuascript"
   finish
 endif
-
-" Highlight long strings.
-syn sync minlines=100
 
 " papuaScript identifiers can have dollar signs.
 setlocal isident+=$
 
-" These are `matches` instead of `keywords` because vim's highlighting
-" priority for keywords is higher than matches. This causes keywords to be
-" highlighted inside matches, even if a match says it shouldn't contain them --
-" like with papuaAssign and papuaDot.
-syn match papuaStatement /\<\%(break\|continue\|throw\)\>/ display
-hi def link papuaStatement Statement
+" let s:cpo_save = &cpo
+" set cpo&vim
 
-syn match papuaRepeat /\<\%(for\|while\)\>/ display
-hi def link papuaRepeat Repeat
+syn keyword papuaScriptCommentTodo      TODO FIXME XXX TBD contained
+syn match   papuaScriptLineComment      +//.*+ contains=@Spell,papuaScriptCommentTodo
+syn region  papuaScriptComment               start="/\*"  end="\*/" contains=@Spell,papuaScriptComment,papuaScriptCommentTodo
+" syn match   papuaScriptSpecial               "\\\d\d\d\|\\."
+syn region  papuaScriptString               start=+"+  skip=+\\\\\|\\"+  end=+"+  contains=papuaScriptSpecial
+syn region  papuaScriptString               start=+'+  skip=+\\\\\|\\'+  end=+'+  contains=papuaScriptSpecial
+syn region  papuaScriptString               start=/%{/ skip=/\\\\\|\\}/  end=/}/  contains=papuaScriptSpecial,papuaExtendedOp
 
-syn match papuaConditional /\<\%(if\|else\|switch\|case\)\>/
-\                           display
-hi def link papuaConditional Conditional
+syn match papuaScriptMemberAssign /\(\([,{]\|^\)\s*\)\@<=\w\+\s*:\(\s*\w\+\s\+in\)\@!/ contains=papuaExtendedOp display
 
-syn match papuaException /\<\%(try\|catch\|finally\)\>/ display
-hi def link papuaException Exception
+syn match papuaScriptUpdate /^\s*\w\+\(.*:=\)\@=/
 
-" The `own` keyword is only a keyword after `for`.
-syn match coffeeKeyword /\<for\s\+own\>/ contained containedin=coffeeRepeat
-\                       display
-hi def link coffeeKeyword Keyword
+" syn region  papuaTernary             start=/??/ skip=/(.*)/  end=/:/
 
-syn match papuaKeyword /\<\%(new\|let\|in\|do\|var\)\>/
-\                       display
-" The `own` keyword is only a keyword after `for`.
-syn match papuaKeyword /\<for\s\+own\>/ contained containedin=papuaRepeat
-\                       display
-syn match papuaKeyword /\<for\s\+index\>/ contained containedin=papuaRepeat
-\                       display
-syn match papuaKeyword /\<for\s\+keys\>/ contained containedin=papuaRepeat
-\                       display
-hi def link papuaKeyword Keyword
+syn match   papuaScriptSpecialCharacter "'\\.'"
+syn match   papuaScriptNumber               "-\=\<\d\+L\=\>\|0[xX][0-9a-fA-F]\+\>"
 
-syn match papuaOperator /\<\%(instanceof\|typeof\|delete\)\>/ display
-hi def link papuaOperator Operator
+syn match papuaForMod /\v<(own|index|keys)>/ contained
 
-" The first case matches symbol operators only if they have an operand before.
-syn match papuaExtendedOp /\%(\S\s*\)\@<=[+\-*/%#&|\^=!<>?]\{-1,}\|[-=]>\|&&\|||\|--\|++\|:\|\\/
-\                          display
-hi def link papuaExtendedOp papuaOperator
+syn match papuaWithAs /\((.\+)\)\@<=\s\+as/
 
-" This is separate from `papuaExtendedOp` to help differentiate commas from
-" dots.
-syn match papuaSpecialOp /[,;]/ display
-hi def link papuaSpecialOp SpecialChar
-
-syn match papuaBoolean /\<\%(true\|false\)\>/ display
-hi def link papuaBoolean Boolean
-
-syn match papuaGlobal /\<\%(null\|undefined\)\>/ display
-hi def link papuaGlobal Type
-
-" A special variable
-syn match papuaSpecialVar /\<\%(this\|prototype\|arguments\)\>/ display
-hi def link papuaSpecialVar Special
-
-" An @-variable
-syn match papuaSpecialIdent /@\%(\I\i*\)\?/ display
-hi def link papuaSpecialIdent Identifier
-
-" A class-like name that starts with a capital letter
-syn match papuaObject /\<\u\w*\>/ display
-hi def link papuaObject Structure
+syn keyword papuaScriptConditional        if else switch
+syn keyword papuaScriptRepeat                while do in
+syn keyword papuaScriptFor                for  nextgroup=papuaForMod skipwhite
+syn keyword papuaScriptBranch                break continue
+syn keyword papuaScriptOperator                var new delete instanceof typeof
+syn keyword papuaScriptType                Array Boolean Date Function Number Object String RegExp
+syn keyword papuaScriptStatement        return 
+syn keyword papuaScriptImport                with nextgroup=papuaWithAs skipwhite
+syn keyword papuaScriptBoolean                true false
+syn keyword papuaScriptNull                null undefined
+syn keyword papuaScriptIdentifier        arguments this let 
+syn keyword papuaScriptLabel                case default
+syn keyword papuaScriptException        try catch finally throw
+syn keyword papuaScriptMessage                alert confirm prompt status
+syn keyword papuaScriptGlobal                self window top parent
+syn keyword papuaScriptMember                document event location prototype
+" syn keyword papuaScriptDeprecated        escape unescape
+syn keyword papuaScriptReserved                abstract boolean byte char class const debugger double enum export extends final float goto implements import int interface long native package private protected public short static super synchronized throws transient volatile 
 
 " A constant-like name in SCREAMING_CAPS
 syn match papuaConstant /\<\u[A-Z0-9_]\+\>/ display
-hi def link papuaConstant Constant
 
-" A variable name
-syn cluster papuaIdentifier contains=papuaSpecialVar,papuaSpecialIdent,
-\                                     papuaObject,papuaConstant
+syn match papuaExtendedOp /[+\-*#&|\^=!<>?]\|&&\|||\|\.\|--\|++\|:\|?\|\\/ display
+syn match papuaExtendedOp /%[^{]\@=/
+syn match papuaExtendedOp +/[/*]\@!+
+" syn region  papuaScriptRegexpString     start=+/[^/*]+me=e-1 skip=+\\\\\|\\/+ end=+/[gim]\{0,2\}\s*$+ end=+/[gim]\{0,2\}\s*[;.,)\]}]+me=e-1 oneline contains=papuaExtendedOp
+" syn region  papuaScriptRegexpString   start=+/\(\*\|/\)\@!+ skip=+\\\\\|\\/+ end=+/[gim]\{,3}+ oneline
+syn match  papuaScriptRegexpString   /\v\/(\*|\/|\s)@!\S*\/[gim]{,3}/
 
-" A non-interpolated string
-syn cluster papuaBasicString contains=@Spell,papuaEscape
 
-" Regular strings
-syn region papuaString start=/"/ skip=/\\\\\|\\"/ end=/"/
-\                       contains=@papuaBasicString
-syn region papuaString start=/'/ skip=/\\\\\|\\'/ end=/'/
-\                       contains=@papuaBasicString
-hi def link papuaString String
+syn keyword papuaScriptFunction                "\\" nextgroup=papuaFuncArgs skipwhite
+" syn region papuaFuncArg start=/\\/ end=/->/ matchgroup=papuaFuncArgs contains=@papuaExtendedOp
+syn match papuaFuncArgs /\v\\\@=(\w+\s+)*-\>/ contains=papuaExtendedOp display
+syn match papuaFuncArgs /\(^\s*\S\+\)\@<=\(\s\+\w\+\)\+\(\s*:\?=\($\|[^=]\)\)\@=/
 
-" A integer, including a leading plus or minus
-syn match papuaNumber /\i\@<![-+]\?\d\+\%([eE][+-]\?\d\+\)\?/ display
-" A hex, binary, or octal number
-syn match papuaNumber /\<0[xX]\x\+\>/ display
-syn match papuaNumber /\<0[bB][01]\+\>/ display
-syn match papuaNumber /\<0[oO][0-7]\+\>/ display
-hi def link papuaNumber Number
+syn match papuaSpecialOp /[,;(){}[\]]/ display
 
-" Ignore reserved words in dot accesses.
-" syn match papuaDotAccess /\.\@<!\.\s*\I\i*/he=s+1 contains=@papuaIdentifier
-" syn match papuaDotAccess /\.\@<!\.\s*\I\i*/he=s+1 contains=@papuaIdentifier
+" syn region  papuaScriptString               start=/%{/ skip=/\\\\\|\\}/  end=/}/        contains=papuaScriptSpecial,papuaExtendedOp
 
-syn match papuaNumericAccess /\([^A-Za-z_]\d\+\|\s|^\)\@<!\.\d\+/ display
-hi def link papuaNumericAccess Identifier
 
-" hi def link papuaDotAccess papuaExtendedOp
-" A floating-point number, including a leading plus or minus
-syn match papuaFloat /\i\@<![-+]\?\d*\.\@<!\.\d\+\%([eE][+-]\?\d\+\)\?/
-\                     display
-hi def link papuaFloat Float
-
-" A normal object assignment
-syn match papuaObjAssign /@\?\I\i*\s*\ze::\@!/ contains=@papuaIdentifier display
-hi def link papuaObjAssign Identifier
-
-syn keyword papuaTodo TODO FIXME XXX contained
-hi def link papuaTodo Todo
-
-syn match papuaComment /\/\/.*/ contains=@Spell,papuaTodo
-hi def link papuaComment Comment
-
-syn region papuaBlockComment start=/\/\*/ end=/\*\// contains=papuaBlockComment
-\                             contains=@Spell,papuaTodo
-hi def link papuaBlockComment papuaComment
+" dot-notation for numeric indices
+" syn match papuaNumericAccess /\([^A-Za-z_]\d\+\|\s|^\)\@<!\.\d\+/ contains=papuaExtendedOp display
 
 " Operator-fied function
-syn region papuaOpFunc 
-\                      start=/`/ skip=/\\\\\|\\`/ end=/`/
-\                      contains=@papuaOperator
-hi def link papuaOpFunc papuaOperator
+syn region papuaOpFunc start=/`/ end=/`/
+
+" Updated variables; not needed unless you want object literal members to have
+" be highlighted deifferently
+" syn match papuaUpdated /\w\+\(\(\.\w\+\)*\)\@=\s*:=/ contains=papuaExtendedOp
 
 " do-notation
-syn match papuaDoLikeNotation /<-\w*/ contains=@papuaExtendedOp display
-hi def link papuaDoLikeNotation papuaExtendedOp
-
-" A string escape sequence
-syn match papuaEscape /\\\d\d\d\|\\x\x\{2\}\|\\u\x\{4\}\|\\./ contained display
-hi def link papuaEscape SpecialChar
-
-" An error for trailing whitespace, as long as the line isn't just whitespace
-if !exists("papua_no_trailing_space_error")
-  syn match papuaSpaceError /\S\@<=\s\+$/ display
-  hi def link papuaSpaceError Error
-endif
-
-" An error for trailing semicolons, for help transitioning from JavaScript
-if !exists("papua_no_trailing_semicolon_error")
-  syn match papuaSemicolonError /;$/ display
-  hi def link papuaSemicolonError Error
-endif
+" syn match papuaCpsNotation /<-\w*/ contains=@papuaExtendedOp display
+" hi def link papuaCpsNotation papuaExtendedOp
 
 syn match papuaMethodChain /\s\.\s*\w\+/ display
-hi def link papuaMethodChain papuaOperator
 
-syn match papuaFuncArg /\\\s*\(\w\+\s\+\)*->/ contains=papuaExtendedOp display
-hi def link papuaFuncArg Special
+syn match papuaImportKeywords /\<with\>\|\<as\>/ contains=papuaExtendedOp contained display
+syn match papuaImport /\vwith\s+\(.*\)(\s+as\s+\w+)?/ contains=papuaImportKeywords,papuaParens display
 
-syn match papuaImportKeywords /import\|as/ contains=papuaExtendedOp contained display
-hi def link papuaImportKeywords Special
-syn match papuaImport /\vimport\s+\(.*\)(\s+as\s+\w+)?/ contains=papuaImportKeywords,papuaParens display
+syn sync fromstart
+syn sync maxlines=100
 
-" This is required for interpolations to work.
-syn region papuaCurlies matchgroup=papuaCurly start=/{/ end=/}/
-\                        contains=@papuaAll
-syn region papuaBrackets matchgroup=papuaBracket start=/\[/ end=/\]/
-\                         contains=@papuaAll
-syn region papuaParens matchgroup=papuaParen start=/(/ end=/)/
-\                       contains=@papuaAll
-
-syn region  papuaRegex   start=+/[^/*]+me=e-1 skip=+\\\\\|\\/+ end=+/[gi]\{0,2\}\s*$+ end=+/[gi]\{0,2\}\s*[;.,)\]}]+me=e-1 oneline
-hi def link papuaRegex String
-
-" These are highlighted the same as commas since they tend to go together.
-hi def link papuaBlock papuaSpecialOp
-hi def link papuaBracket papuaBlock
-hi def link papuaCurly papuaBlock
-hi def link papuaParen papuaBlock
-
-" This is used instead of TOP to keep things papua-specific for good
-" embedding. `contained` groups aren't included.
-syn cluster papuaAll contains=papuaStatement,papuaRepeat,papuaConditional,
-\                              papuaException,papuaKeyword,papuaOperator,
-\                              papuaExtendedOp,papuaSpecialOp,papuaBoolean,
-\                              papuaGlobal,papuaSpecialVar,papuaSpecialIdent,
-\                              papuaObject,papuaConstant,papuaString,
-\                              papuaNumber,papuaFloat,papuaReservedError,
-\                              papuaObjAssign,papuaComment,papuaBlockComment,
-\                              papuaOpFunc,papuaRegex,papuaHeregex,
-\                              papuaHeredoc,papuaSpaceError,
-\                              papuaSemicolonError,papuaDotAccess,papuaMethodChain,
-\                              papuaProtoAccess,papuaCurlies,papuaBrackets,
-\                              papuaParens,papuaFuncArg,papuaImport,papuaImportKeywords,papuaDoLikeNotation 
-
-if !exists('b:current_syntax')
-  let b:current_syntax = 'papua'
+if main_syntax == "papuascript"
+  syn sync ccomment papuaScriptComment
 endif
+
+" Define the default highlighting.
+" For version 5.7 and earlier: only when not done already
+" For version 5.8 and later: only when an item doesn't have highlighting yet
+if version >= 508 || !exists("did_papuascript_syn_inits")
+  if version < 508
+    let did_papuascript_syn_inits = 1
+    command -nargs=+ HiLink hi link <args>
+  else
+    command -nargs=+ HiLink hi def link <args>
+  endif
+
+  HiLink papuaScriptComment            Comment
+  HiLink papuaScriptLineComment        Comment
+  HiLink papuaScriptCommentTodo        Todo
+  HiLink papuaScriptSpecial            Special
+  HiLink papuaScriptString             String
+  HiLink papuaScriptCharacter          Character
+  HiLink papuaScriptSpecialCharacter   papuaScriptSpecial
+  HiLink papuaScriptNumber             Number
+  HiLink papuaScriptConditional        Conditional
+  HiLink papuaScriptRepeat             Repeat
+  HiLink papuaScriptFor                Repeat
+  HiLink papuaScriptBranch             Conditional
+  HiLink papuaScriptOperator           Operator
+  HiLink papuaScriptType               Type
+  HiLink papuaScriptStatement          Statement
+  HiLink papuaScriptImport             Statement
+  HiLink papuaScriptError              Error
+  HiLink papuaScrParenError            papuaScriptError
+  HiLink papuaScriptNull               Constant
+  HiLink papuaScriptBoolean            Constant
+  HiLink papuaScriptRegexpString       String
+
+  HiLink papuaScriptIdentifier         Special
+  HiLink papuaScriptLabel              Label
+  HiLink papuaScriptException          Exception
+  HiLink papuaScriptMessage            Keyword
+  HiLink papuaScriptGlobal             Keyword
+  HiLink papuaScriptMember             Keyword
+  HiLink papuaScriptDeprecated         Exception
+  HiLink papuaScriptReserved           Keyword
+  HiLink papuaScriptDebug              Debug
+  HiLink papuaScriptConstant           Label
+
+  HiLink papuaConstant                 Constant
+  HiLink papuaExtendedOp               papuaOperator
+  HiLink papuaOperator                 Operator
+  HiLink papuaFuncArgs                 Special
+  HiLink papuaSpecialOp                SpecialChar
+  HiLink papuaScriptMemberAssign       Identifier
+  HiLink papuaNumericAccess            Identifier
+  HiLink papuaOpFunc                   papuaOperator
+  HiLink papuaUpdated                  Identifier
+  HiLink papuaMethodChain              Identifier
+  HiLink papuaImportKeywords           Special
+
+  HiLink papuaScriptUpdate Identifier
+  HiLink papuaForMod Keyword
+  HiLink papuaWithAs Keyword
+
+  delcommand HiLink
+endif
+
+let b:current_syntax = "papuascript"
+if main_syntax == 'papuascript'
+  unlet main_syntax
+endif
+" let &cpo = s:cpo_save
+" unlet s:cpo_save
+
+" vim: ts=8
 
