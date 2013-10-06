@@ -87,16 +87,18 @@ Root
 		{ return $1; }
 	| Block Eol
 		{ return $1; }
+/*
 	| ImportList LineList
 		{ return $1.merge($2);; }
 	| ImportList Block Eol
 		{ return $1.merge($2);; }
+*/
 	;
 
 Import
-	: With Eol
+	: With 
 		{ $1.members = new N.Arr([]); $$ = $1; }
-	| With WS Array Eol
+	| With WS Array 
 		{ $1.members = $3; $$ = $1; }
 	;
 
@@ -105,13 +107,6 @@ With
 		{ $$ = new N.Import($2, null, null); }
 	| WITH Parenthetical AS Identifier
 		{ $$ = new N.Import($2, null, $4); }
-	;
-
-ImportList
-	: Import
-		{ $$ = new N.Block([$1]); }
-	| ImportList Import
-		{ $1.push($2); $$ = $1; }
 	;
 
 BlockLike
@@ -152,6 +147,7 @@ Statement
 	| AssignList
 	| Throw
 	| Var
+	| Import
 
 	/* RR - try blocks could be expressions, but for now, we'll say not */
 	| Try

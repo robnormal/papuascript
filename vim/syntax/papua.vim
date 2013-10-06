@@ -1,19 +1,6 @@
 " Vim syntax file
 " Language:        PapuaScript
-" Maintainer:        Claudio Fleiner <claudio@fleiner.com>
-" Updaters:        Scott Shattuck (ss) <ss@technicalpursuit.com>
-" URL:                http://www.fleiner.com/vim/syntax/papuascript.vim
-" Changes:        (ss) added keywords, reserved words, and other identifiers
-"                (ss) repaired several quoting and grouping glitches
-"                (ss) fixed regex parsing issue with multiple qualifiers [gi]
-"                (ss) additional factoring of keywords, globals, and members
-" Last Change:        2012 Oct 05
-"                 2013 Jun 12: adjusted papuaScriptRegexpString (Kevin Locke)
-
-" For version 5.x: Clear all syntax items
-" For version 6.x: Quit when a syntax file was already loaded
-" tuning parameters:
-" unlet papuaScript_fold
+" Maintainer:        Rob Rosenbaum <rob@robrosenbaum.com>
 
 if !exists("main_syntax")
   if version < 600
@@ -168,7 +155,7 @@ if version >= 508 || !exists("did_papuascript_syn_inits")
   HiLink papuaOperator                 Operator
   HiLink papuaFuncArgs                 Special
   HiLink papuaSpecialOp                SpecialChar
-  HiLink papuaScriptMemberAssign       Identifier
+  HiLink papuaScriptMemberAssign       Constant
   HiLink papuaNumericAccess            Identifier
   HiLink papuaOpFunc                   papuaOperator
   HiLink papuaUpdated                  Identifier
