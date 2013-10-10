@@ -87,12 +87,6 @@ Root
 		{ return $1; }
 	| Block Eol
 		{ return $1; }
-/*
-	| ImportList LineList
-		{ return $1.merge($2);; }
-	| ImportList Block Eol
-		{ return $1.merge($2);; }
-*/
 	;
 
 Import
@@ -443,9 +437,13 @@ Throw
 
 While
 	: "WHILE" Expression Block
-		{ $$ = new N.While($2, $3, false); }
+		{ $$ = new N.While($2, $3, false, null); }
+	| "WHILE" AssignList ';' Expression Block
+		{ $$ = new N.While($4, $5, false, $2); }
 	| "DO" Block "WHILE" Expression 
-		{ $$ = new N.While($4, $2, true); }
+		{ $$ = new N.While($4, $2, true, null); }
+	| "DO" Block "WHILE" AssignList ';' Expression 
+		{ $$ = new N.While($6, $2, true, $4); }
 	;
 
 /* Array, object, and range comprehensions, at the most generic level.
