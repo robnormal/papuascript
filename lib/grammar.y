@@ -183,16 +183,16 @@ OpOrTerm
 Op
 	: OpNoTernary
 	| Term Binary Ternary
-		{ $$ = new N.Operation($2, $1, $3); }
+		{ $$ = N.Operation.create($2, $1, $3); }
 	| OpNoTernary Binary Ternary
-		{ $$ = new N.Operation($2, $1, $3); }
+		{ $$ = N.Operation.create($2, $1, $3); }
 	;
 
 OpNoTernary
 	: Term Binary Term
-		{ $$ = new N.Operation($2, $1, $3); }
+		{ $$ = N.Operation.create($2, $1, $3); }
 	| OpNoTernary Binary Term
-		{ $$ = new N.Operation($2, $1, $3); }
+		{ $$ = N.Operation.create($2, $1, $3); }
 	;
 
 Ternary
@@ -202,6 +202,7 @@ Ternary
 
 Term
 	: Factor
+	| '@'
 	| Invocation
 	| If
 	| IfCase
@@ -288,11 +289,13 @@ FactorList
 Invocation
 	/* FactorOrSlot FactorList breaks. I don't know why. */
 	: Factor FactorList
-		{ $$ = new N.FuncCall([$1].concat($2)); }
+		{ $$ = N.FuncCall.create([$1].concat($2)); }
+	| '@' FactorList
+		{ $$ = N.FuncCall.create([$1].concat($2)); }
 	| ReverseInvocation
-		{ $$ = new N.FuncCall($1); }
+		{ $$ = N.FuncCall.create($1); }
 	| ReverseInvocation FactorList
-		{ $$ = new N.FuncCall($1.concat($2)); }
+		{ $$ = N.FuncCall.create($1.concat($2)); }
 	;
 
 ReverseInvocation
