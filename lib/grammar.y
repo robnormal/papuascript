@@ -91,16 +91,34 @@ Root
 
 Import
 	: With 
-		{ $1.members = new N.Arr([]); $$ = $1; }
-	| With WS Array 
+	| With WS ImportArray 
 		{ $1.members = $3; $$ = $1; }
+	;
+
+ImportItem
+	: Identifier
+		{ $$ = [$1, $1]; }
+	| Identifier ASSIGN Identifier
+		{ $$ = [$1, $3]; }
+	;
+
+ImportArray
+	: '[' ImportList ']'
+		{ $$ = $2; }
+	;
+
+ImportList
+	: ImportItem
+		{ $$ = [$1]; }
+	| ImportList ',' ImportItem
+		{ $$ = $1.concat([$3]); }
 	;
 
 With
 	: WITH Parenthetical
-		{ $$ = new N.Import($2, null, null); }
+		{ $$ = new N.Import($2, [], null); }
 	| WITH Parenthetical AS Identifier
-		{ $$ = new N.Import($2, null, $4); }
+		{ $$ = new N.Import($2, [], $4); }
 	;
 
 BlockLike

@@ -1,6 +1,6 @@
 with (require 'underscore') as $
   [ compose
-  , partial
+  , curry = partial
   ]
 with (console) [ log ]
 
@@ -17,7 +17,7 @@ fmap = \f xs ->
       ys[k] = f x
     ys
 
-add2All = fmap `partial` add2
+add2All = fmap `curry` add2
 
 flip = \f -> \ ->
   f.apply this
