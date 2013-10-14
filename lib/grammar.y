@@ -179,17 +179,24 @@ OpOrTerm
 	| Op
 	;
 
+/* Allow Ternary after Op, but not before one */
 Op
+	: OpNoTernary
+	| Term Binary Ternary
+		{ $$ = new N.Operation($2, $1, $3); }
+	| OpNoTernary Binary Ternary
+		{ $$ = new N.Operation($2, $1, $3); }
+	;
+
+OpNoTernary
 	: Term Binary Term
 		{ $$ = new N.Operation($2, $1, $3); }
-	| Op Binary Term
+	| OpNoTernary Binary Term
 		{ $$ = new N.Operation($2, $1, $3); }
 	;
 
 Ternary
-	: OpOrTerm '?' OpOrTerm ':' OpOrTerm
-		{ $$ = new N.Ternary($1, $3, $5); }
-	| "??" OpOrTerm ':' OpOrTerm ':' OpOrTerm
+	: "??" OpOrTerm ':' OpOrTerm ':' OpOrTerm
 		{ $$ = new N.Ternary($2, $4, $6); }
 	;
 
