@@ -206,10 +206,6 @@ Term
 	| If
 	| IfCase
 	| Switch
-	| Unary Factor
-		{ $$ = $1.setTerm($2); }
-	| Unary Invocation
-		{ $$ = $1.setTerm($2); }
 	| Assignable Chain
 		{ $$ = N.FuncCall.fromChain($1, $2); }
 	| Invocation Chain
@@ -234,10 +230,10 @@ Chain
 
 Unary
 	: UNARY
-		{ $$ = new N.Unary(yytext); }
+		{ $$ = yytext; }
 	;
 
-Factor 
+Accessible 
 	: Literal
 	| Callable
 	| Object
@@ -254,17 +250,56 @@ Callable
 /* Variables and properties that can be assigned to. */
 Assignable
 	: Identifier
-	| Factor Accessor
+	| Accessible Accessor
 		{ $$ = new N.Value($1).add($2); }
 	;
 
+Factor
+	: FactorSansSuffix
+	| FactorSansSuffix UnaryList
+		{ $$ = N.Unary.fromList([], $2, $1); }
+	;
+
+FactorSansSuffix
+	: Accessible
+	| UnaryList Accessible
+		{ $$ = N.Unary.fromList($1, [], $2); }
+	;
+
+UnaryList
+	: Unary
+		{ $$ = [$1]; }
+	| UnaryList Unary
+		{ $$ = $1.concat([$2]); }
+	;
+
+FactorOrSlot
+	: Factor
+	| '@'
+	;
+
+FactorList
+	: WS FactorOrSlot
+		{ $$ = [$2]; }
+	| FactorList WS FactorOrSlot
+		{ $$ = $1.concat([$3]); }
+	;
+
 Invocation
-	: Callable WS Factor
-		{ $$ = new N.FuncCall([$1, $3]); }
-	| Invocation WS Factor
-		{ $$ = $1.appendFactor($3); }
+	/* FactorOrSlot FactorList breaks. I don't know why. */
+	: Factor FactorList
+		{ $$ = new N.FuncCall([$1].concat($2)); }
+	| ReverseInvocation
+		{ $$ = new N.FuncCall($1); }
+	| ReverseInvocation FactorList
+		{ $$ = new N.FuncCall($1.concat($2)); }
+	;
+
+ReverseInvocation
+	: '@' '`' Assignable '`'  /* reverse invocation, i.e., 2 `plus` 2 */
+		{ $$ = [$3, $1]; }
 	| Factor '`' Assignable '`'  /* reverse invocation, i.e., 2 `plus` 2 */
-		{ $$ = new N.FuncCall([$3, $1]); }
+		{ $$ = [$3, $1]; }
 	;
 
 /* An indented block of expressions. Note that the [Rewriter](rewriter.html)
