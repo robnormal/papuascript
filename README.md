@@ -73,58 +73,7 @@ for i = 0; i < 5; i++
 
 # Syntactic sugars
 
-| Sugared                  | Unsugared                    |
-|--------------------------|------------------------------|
-|`foo # bar spam`          |`foo (bar spam)`              |
-|`foo bar .spam eggs`      |`(foo bar).spam eggs`         |
-|``beta `alpha` gamma``    |`alpha beta gamma`            |
-|`toInt x = parseInt x 10` |`toInt = \x -> parseInt x 10` |
-
-Sugared:
-```
-makeBreakfast = \eggs ->
-   spam <- foo bar
-   spam eggs
-```
-
-Unsugared:
-```
-makeBreakfast = \eggs ->
-   foo bar \spam ->
-      spam eggs
-```
-
-Sugared:
-```
-bigBreakfast =
-   spam <- foo bar
-   spam 12
-```
-
-Unugared:
-```
-bigBreakfast =
-   foo bar \spam ->
-       spam 12
-```
-
-Sugared:
-```
-bigMeal =
-   time <- timeOfDay
-   meal = mealAt time
-   food <- foodFor meal
-   make food
-```
-
-Unugared:
-```
-bigMeal =
-   timeOfDay \time ->
-      meal = mealAt time
-      foodFor meal \food ->
-         make food
-```
+See doc/SyntacticSugar.md
 
 # TODO: explain syntax
 
@@ -186,7 +135,11 @@ dinner = corned
 
 ## Assignments are not expressions
 
+`a = b = c` will generate a syntax error.
+
 ## if, switch, and try are expressions
+
+These constructs do return a value.
 
 ## Function literals
 ### Declaration
@@ -194,9 +147,19 @@ dinner = corned
 
 ## Variable scope and :=
 
+`a = 4` assigns 4 to a local variable `a`. It is equivalent to
+the JavaScript `var a = 4`. To alter the value of a variable from
+an outer scope, you must use `b := 4`. Note that function
+arguments and `this` refer to variables outside the current
+scope.
+
 ## The CPS arrow
 
 ## The pound sign
 
 ## Switch cases
+
+Cases do not fall through, so there is no need to use the `break`
+statement there. To associate multiple cases with a single block,
+separate them with commas: `case 1, case 2`
 
