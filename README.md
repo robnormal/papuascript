@@ -29,16 +29,21 @@ Haskell. A lot.
 
 # Some translations
 
-| JavaScript                   | PapuaScript                  |
-|------------------------------|------------------------------|
-|`foo(bar, spam)`              |`foo bar spam`                |
-|`var foo = bar`               |`foo = bar`                   |
-|`a === b`                     |`a == b`                      |
-|`a == b`                      |no equivalent                 |
-|`a = b = c`                   |`a = c, b = c`                |
-|`while (row = getRow()) {`    |`while row = getRow(); row`   |
-|`a ? b : c`                   |`?? a : b : c`                |
-
+| JavaScript               | PapuaScript                            |
+|--------------------------|----------------------------------------|
+|`foo(bar, spam)`          |`foo bar spam`                          |
+|`foo()`                   |same                                    |
+|`var foo = bar`           |`foo = bar`                             |
+|`a === b`                 |`a == b`                                |
+|`a == b`                  |no equivalent                           |
+|`a = b = c`               |`a = c, b = c`                          |
+|`while (row = getRow()) {`|`while row = getRow(); row`             |
+|`a ? b : c`               |`?? a : b : c`                          |
+|`void 0`                  |`undefined`                             |
+|`a[2]`                    |`a[2]` or `a.2`                         |
+|`// comment`              |same                                    |
+|`/* comment */`           |same (but can be nested)                |
+|`var x, y`                |same - sets scope w/o assigning a value |
 
 JavaScript:
 
@@ -121,10 +126,58 @@ bigMeal =
          make food
 ```
 
-
 # TODO: explain syntax
 
 ## Whitespace
+
+An _indented block_ begins with a line that is more indented than
+the line above it; the indented block ends with (but does not
+include) the first line _less indented than the block_.
+
+```
+if x
+    y = x     // begin indented block A
+    if x > z
+        foo   // indented block B
+
+    z = y.bar // end indented block A
+
+spam()
+```
+
+The line above an indented block is the **parent line**. The
+indented block is interpreted as either a continuation of the
+parent line or as a proper **block** belonging to the parent
+line, according to the following rules:
+
+* An indented block is a **block** if:
+    a. Its parent line ends in `->`
+    b. Its parent line begins with a block-forming keyword. These
+       keywords are:
+        - if
+        - else
+        - for
+        - while
+        - do
+        - switch
+        - case
+        - default
+        - try
+        - catch
+        - finally
+* Otherwise, the block is a continuation of the parent line.
+
+```
+while foo == bar
+    // this is a block
+    doStuff()   
+    doOtherStuff()
+    bar = newBar()
+
+dinner = corned
+    beef +
+    cabbage  // this is a single statement
+```
 
 ## Function calls
 ### order of precedence
