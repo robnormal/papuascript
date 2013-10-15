@@ -17,7 +17,7 @@
     "url": "https://bitbucket.org/robnormal/papuascript"
   },
   "bin": { "papua": "./bin/papua" },
-  "version": "0.1",
+  "version": "0.1.0",
   "dependencies": {
     "underscore": "*"
   },
