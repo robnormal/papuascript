@@ -10,6 +10,7 @@ PapuaScript takes / steals many ideas from Haskell. It looks like
 Haskell. A lot.
 
 # Features
+
 * Line-for-line translation to JavaScript, for easy debugging.
 * No new reserved words.
 * Greatly reduces the need for punctuation without introducing
@@ -27,113 +28,102 @@ Haskell. A lot.
   a feature. Seriously.
 
 # Some translations
-+------------------------------+------------------------------+
+
 | JavaScript                   | PapuaScript                  |
-+==============================+==============================+
+|------------------------------|------------------------------|
 |`foo(bar, spam)`              |`foo bar spam`                |
-+------------------------------+------------------------------+
-|`foo(bar(spam))`              |`foo (bar spam)`              |
-+------------------------------+------------------------------+
-|`a(b) + c`                    |`a b + c`                     |
-+------------------------------+------------------------------+
-|`a(b + c)`                    |`a (b + c)`                   |
-+------------------------------+------------------------------+
 |`var foo = bar`               |`foo = bar`                   |
-+------------------------------+------------------------------+
 |`a === b`                     |`a == b`                      |
-+------------------------------+------------------------------+
 |`a == b`                      |no equivalent                 |
-+------------------------------+------------------------------+
 |`a = b = c`                   |`a = c, b = c`                |
-+------------------------------+------------------------------+
-|```                           |                              |
-|function(x, y) {              |`\x y -> x + y`               |
-|   return x + y;              |                              |
-|}                             |                              |
-|```                           |                              |
-+------------------------------+------------------------------+
+|`while (row = getRow()) {`    |`while row = getRow(); row`   |
 |`a ? b : c`                   |`?? a : b : c`                |
-+------------------------------+------------------------------+
-|```                           |```                           |
-|for (var i = 0; i < 5; i++) { |for i = 0; i < 5; i++         |
-|   blah(i);                   |   blah I                     |
-|}                             |                              |
-|```                           |```                           |
-+------------------------------+------------------------------+
-|```                           |```                           |
-|while (row = getRow()) {      |while row = getRow(); row     |
-|```                           |```                           |
-+------------------------------+------------------------------+
 
 
-# Syntactic Sugars
+JavaScript:
 
-+--------------------------+------------------------------+
+```javascript
+var add = function(x, y) {
+   return x + y;
+};
+```
+
+PapuaScript:
+
+`\x y -> x + y`
+
+JavaScript:
+
+```
+for (var i = 0; i < 5; i++) {
+   blah(i);
+}
+```
+
+PapuaScript:
+```
+for i = 0; i < 5; i++
+   blah i
+```
+
+# Syntactic sugars
+
 | Sugared                  | Unsugared                    |
-+==========================+==============================+
+|--------------------------|------------------------------|
 |`foo # bar spam`          |`foo (bar spam)`              |
-+--------------------------+------------------------------+
 |`foo bar .spam eggs`      |`(foo bar).spam eggs`         |
-+--------------------------+------------------------------+
 |``beta `alpha` gamma``    |`alpha beta gamma`            |
-+--------------------------+------------------------------+
 |`toInt x = parseInt x 10` |`toInt = \x -> parseInt x 10` |
-+--------------------------+------------------------------+
-|```                       |```                           |
-|makeBreakfast = \eggs ->  |makeBreakfast = \eggs ->      |
-|   spam <- foo bar        |   foo bar \spam ->           |
-|   spam eggs              |      spam eggs               |
-|```                       |```                           |
-+--------------------------+------------------------------+
-|```                       |```                           |
-|bigBreakfast =            |bigBreakfast =                |
-|   spam <- foo bar        |   foo bar \spam ->           |
-|   spam 12                |      spam 12                 |
-|```                       |```                           |
-+--------------------------+------------------------------+
-|```                       |```                           |
-|bigMeal =                 |bigMeal =                     |
-|   time <- timeOfDay      |   timeOfDay \time ->         |
-|   meal = mealAt time     |      meal = mealAt time      |
-|   food <- foodFor meal   |      foodFor meal \food ->   |
-|   make food              |         make food            |
-|```                       |```                           |
-+--------------------------+------------------------------+
-|`(foo @ bar @)`           |`\a b -> foo a bar b`         |
-+--------------------------+------------------------------+
-|`(@ + 3)`                 |`\a -> a + 3`                 |
-+--------------------------+------------------------------+
 
-: Pure, line-for-line rewrites.
+Sugared:
+```
+makeBreakfast = \eggs ->
+   spam <- foo bar
+   spam eggs
+```
 
-+--------------------------+------------------------------+
-| Sugared                  | Unsugared                    |
-+==========================+==============================+
-|`with (foo bar) [a, b]`   |`_obj = foo bar, a = _obj.a, b = _obj.b`|
-+--------------------------+------------------------------+
-|`for own k in y`          |```                           |
-|                          |for k in y                    |
-|                          |   if y.hasOwnProperty k      |
-|                          |```                           |
-+--------------------------+------------------------------+
-|`for k:x in y`            |```                           |
-|                          |for k in y                    |
-|                          |   x = y[k]                   |
-|                          |```                           |
-+--------------------------+------------------------------+
-|`for k in foo bar`        |```                           |
-|                          |_var = foo bar                |
-|                          |for k in _var                 |
-|                          |```                           |
-+--------------------------+------------------------------+
-|`for index i in y`        |`for i = 0, _len = y.length; i < _len; i++` |
-+--------------------------+------------------------------+
+Unsugared:
+```
+makeBreakfast = \eggs ->
+   foo bar \spam ->
+      spam eggs
+```
 
-: These "sugars" are more like macros. Variables created are
-guaranteed not to collide with existing variables.
+Sugared:
+```
+bigBreakfast =
+   spam <- foo bar
+   spam 12
+```
+
+Unugared:
+```
+bigBreakfast =
+   foo bar \spam ->
+       spam 12
+```
+
+Sugared:
+```
+bigMeal =
+   time <- timeOfDay
+   meal = mealAt time
+   food <- foodFor meal
+   make food
+```
+
+Unugared:
+```
+bigMeal =
+   timeOfDay \time ->
+      meal = mealAt time
+      foodFor meal \food ->
+         make food
+```
 
 
-# TODO: Explanation of language
+# TODO: explain syntax
+
 ## Whitespace
 
 ## Function calls
