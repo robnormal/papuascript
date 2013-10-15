@@ -1,0 +1,29 @@
+{
+  "name": "papua-script",
+  "description": "A JavaScript-y JavaScript alternative.",
+  "homepage": "https://bitbucket.org/robnormal/papuascript",
+  "keywords": [
+    "javascript",
+    "language",
+    "papuascript",
+    "compiler"
+  ],
+  "author": {
+    "name": "Rob Rosenbaum",
+    "email": "rob@robrosenbaum.com"
+  },
+  "repository": {
+    "type": "mercurial",
+    "url": "https://bitbucket.org/robnormal/papuascript"
+  },
+  "bin": { "papua": "./bin/papua" },
+  "version": "0.1",
+  "dependencies": {
+    "underscore": "*"
+  },
+  "devDependencies": {
+    "jison": "*"
+  },
+  "license": "MIT",
+  "readmeFilename": "README.md"
+}
