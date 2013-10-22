@@ -1,0 +1,47 @@
+var papua = require('../lib/papua-lib.js');
+var $ = require('underscore');
+var log = console.log;
+
+function doesntThrow(assert, f, err) {
+	try {
+		f();
+	} catch (e) {
+		assert.doesNotThrow(function () {
+			throw e;
+		}, err, e.toString());
+	}
+}
+
+function eq(x, y) {
+	for (var i in x) { if (x.hasOwnProperty(i)) {
+		if (x[i] !== y[i]) return false;
+	}}
+	for (var j in y) { if (y.hasOwnProperty(j)) {
+		if (x[j] !== y[j]) return false;
+	}}
+
+	return true;
+}
+
+module.exports = {
+	'Test files': function(b, assert) {
+		var o = papua.test(__dirname + '/files/assign.papua');
+
+		assert.eql(1, o.i);
+		assert.eql(4, o.j);
+
+		o = papua.test(__dirname + '/files/function.papua');
+
+		assert.eql(3, o.a);
+		assert.eql(1, o.b);
+		assert.eql(6, o.c);
+
+		o = papua.test(__dirname + '/files/for.papua');
+
+		assert.eql(9, o.a);
+		assert.eql('x', o.b);
+		assert.eql(1, o.c);
+		assert.eql(2, o.d);
+		assert.eql(3, o.e);
+	}
+};

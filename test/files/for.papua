@@ -1,0 +1,20 @@
+->
+  for i = 0; i < 10; i++
+    a = i
+
+  for k:v in { x: 1 }
+    b = k
+    c = v
+
+  for index k:v in [1, 2, 3]
+    d = k
+    e = v
+
+  { a: a
+  , b: b
+  , c: c
+  , d: d
+  , e: e
+  }
+
+
