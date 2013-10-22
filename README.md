@@ -3,8 +3,9 @@
 I wanted a better syntax for JavaScript, but alternatives like
 coffee-script are basically separate languages. That's not what
 I wanted, so I made PapuaScript. PapuaScript retains all the
-basic elements of JavaScript, with a few simple additions to aid
-in function-oriented programming.
+basic elements of JavaScript, with a few differences intended to
+help keep track of side effects, and generally make
+function-oriented programming a little easier.
 
 PapuaScript takes / steals many ideas from Haskell. It looks like
 Haskell. A lot.
@@ -15,11 +16,15 @@ Haskell. A lot.
 * No new reserved words.
 * Greatly reduces the need for punctuation without introducing
   ambiguity.
-* Concise function definition.
-* Simple significant whitespace rules.
+* Very concise function definition.
+* Significant whitespace, with simple rules.
+* TODO: Allow significant whitespace to be suspended, a la
+  Haskell's `{}` syntax
 * The `:=` operator is used for assigning values to variables
   defined in an outer scope, helping you keep track of side
   effects.
+* Statements whose purpose is side effects - assignments and
+  loops, for instance - have no return value.
 * Nested functions can be made more readable using `<-`. This
   allows you to make code written in continuation-passing style
   look more like standard imperative code. This is similar to the
@@ -29,21 +34,21 @@ Haskell. A lot.
 
 # Some translations
 
-| JavaScript               | PapuaScript                            |
-|--------------------------|----------------------------------------|
-|`foo(bar, spam)`          |`foo bar spam`                          |
-|`foo()`                   |same                                    |
-|`var foo = bar`           |`foo = bar`                             |
-|`a === b`                 |`a == b`                                |
-|`a == b`                  |no equivalent                           |
-|`a = b = c`               |`a = c, b = c`                          |
-|`while (row = getRow()) {`|`while row = getRow(); row`             |
-|`a ? b : c`               |`?? a : b : c`                          |
-|`void 0`                  |`undefined`                             |
-|`a[2]`                    |`a[2]` or `a.2`                         |
-|`// comment`              |same                                    |
-|`/* comment */`           |same (but can be nested)                |
-|`var x, y`                |same - sets scope w/o assigning a value |
+| JavaScript                | PapuaScript                            |
+|---------------------------|----------------------------------------|
+|`foo(bar, spam)`           |`foo bar spam`                          |
+|`foo()`                    |same                                    |
+|`var foo = bar`            |`foo = bar`                             |
+|`a === b`                  |`a == b`                                |
+|`a == b`                   |no equivalent                           |
+|`a = b = c`                |`a = c, b = c`                          |
+|`while (row = getRow()) {` |`while row = getRow(); row`             |
+|`a ? b : c`                |`?? a : b : c`                          |
+|`void 0`                   |`undefined`                             |
+|`a[2]`                     |`a.2` or `a[2]`                         |
+|`// comment`               |same                                    |
+|`/* comment */`            |same (but can be nested)                |
+|`var x, y`                 |same - sets scope w/o assigning a value |
 
 JavaScript:
 
@@ -129,7 +134,14 @@ dinner = corned
 ```
 
 ## Function calls
-### order of precedence
+### Precedence
+
+Function calls have higher precedence then operators.
+
+| PapuaScript             | JavaScript                 |
+|-------------------------|----------------------------|
+|`a b c + foo bar * spam` |`a(b, c) + foo(bar) * spam` |
+|`a b (foo + bar) c`      |`a(b, foo + bar, c)`        |
 
 ## The dot
 
