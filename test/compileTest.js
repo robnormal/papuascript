@@ -25,18 +25,18 @@ function eq(x, y) {
 
 module.exports = {
 	'Test files': function(b, assert) {
-		var o = papua.test(__dirname + '/files/assign.papua');
+		var o = papua.test('assign.papua');
 
 		assert.eql(1, o.i);
 		assert.eql(4, o.j);
 
-		o = papua.test(__dirname + '/files/function.papua');
+		o = papua.test('function.papua');
 
 		assert.eql(3, o.a);
 		assert.eql(1, o.b);
 		assert.eql(6, o.c);
 
-		o = papua.test(__dirname + '/files/for.papua');
+		o = papua.test('for.papua');
 
 		assert.eql(9, o.a);
 		assert.eql('x', o.b);
@@ -46,7 +46,7 @@ module.exports = {
 	},
 
 	'Objects': function(b, assert) {
-		var o = papua.test(__dirname + '/files/object.papua');
+		var o = papua.test('object.papua');
 
 		assert.ok(o.a instanceof Function);
 		assert.eql(5, o.a());
