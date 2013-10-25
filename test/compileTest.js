@@ -43,5 +43,14 @@ module.exports = {
 		assert.eql(1, o.c);
 		assert.eql(2, o.d);
 		assert.eql(3, o.e);
+	},
+
+	'Objects': function(b, assert) {
+		var o = papua.test(__dirname + '/files/object.papua');
+
+		assert.ok(o.a instanceof Function);
+		assert.eql(5, o.a());
+		assert.eql(2, o.b);
+		assert.eql(3, o.c);
 	}
 };
