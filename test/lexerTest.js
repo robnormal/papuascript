@@ -1,6 +1,7 @@
 var lex = require('../lib/lexer.js');
 var $ = require('underscore');
 var log = console.log;
+var fs = require('fs');
 
 function doesntThrow(assert, f, err) {
 	try {
@@ -32,7 +33,11 @@ function eq(x, y) {
 	return true;
 }
 
-var ID = 'IDENTIFIER', NUM = 'NUMBER', INT = 'INTEGER', BR = 'TERMINATOR';
+function getFile(pathFromTestFilesDir) {
+	return fs.readFileSync(__dirname + '/files/' + pathFromTestFilesDir, 'utf-8');
+}
+
+var ID = 'IDENTIFIER', NUM = 'NUMBER', BR = 'TERMINATOR', ASGN = 'ASSIGN';
 
 module.exports = {
 	'Tokenizes operators as literal text': function(b, assert) {
@@ -118,7 +123,7 @@ module.exports = {
 			text1 = 'x = 4',
 			tags1 = tags(getTokens(text1));
 
-		assert.equal(true, eq(tags1, [ID, '=', INT, BR]));
+		assert.eql([ID, ASGN, NUM, BR], tags1);
 	},
 
 	'Outdents final indent': function(b, assert) {
@@ -127,22 +132,26 @@ module.exports = {
 			'  3';
 
 		var tags1 = tags(getTokens(text1));
-		assert.ok(eq(tags1, [ID, '=', ID, 'INDENT', INT, 'OUTDENT', BR]));
+		assert.eql([ID, ASGN, ID, 'INDENT', NUM, 'OUTDENT', BR], tags1);
 	},
 
 	'Comments do not affect lexing': function(b, assert) {
-		var text3 =
-			'\\foo ->\n' +
-			'  bar\n' +
-			'\n' +
-			'\n' +
-			'/* comment */\n' +
-			'spam';
+		var text1 = getFile('lexer/comments.papua');
 
-		var tags3 = tags(getTokens(text3));
+		var tags1 = tags(getTokens(text1));
 		assert.eql(
 			['\\', ID, '->', 'INDENT', ID, 'OUTDENT', ID, BR],
-			tags3);
+			tags1
+		);
+
+		// line comments
+		var text2 = getFile('lexer/comments2.papua');
+		var tags2 = tags(getTokens(text2));
+
+		assert.eql(
+			[ID, ASGN, ID, 'INDENT', ID, BR, ID, 'OUTDENT', BR],
+			tags2
+		);
 	},
 
 	'Block comments can be nested': function(b, assert) {
