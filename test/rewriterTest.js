@@ -24,14 +24,6 @@ function getTags(tokens) {
 	return $.map(tokens, function(x) { return x[0]; });
 }
 
-function showTags(tokens) {
-	for (var i = 0; i < tokens.length; i++) {
-		console.log(tokens[i][0] === ID ?
-			tokens[i][1] : tokens[i][0]
-		);
-	}
-}
-
 function tags_equal(xs, ys) {
 	var len = xs.length;
 	if (len !== ys.length) {

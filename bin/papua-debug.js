@@ -4,6 +4,7 @@ var L = require('../lib/lexer.js');
 var P = require('../lib/grammar.js');
 var R = require('../lib/rewriter.js');
 var B = require('../lib/blocker.js');
+var H = require('../lib/helpers.js');
 var N = require('../lib/nodeTypes.js');
 var $ = require('underscore');
 var log = console.log;
@@ -33,38 +34,17 @@ function getTags(tokens) {
 	return $.map(tokens, function(x) { return x[0]; });
 }
 
-function showTags(toks) {
-	var text;
-
-	for (var i = 0; i < toks.length; i++) {
-		switch(toks[i][0]) {
-		case 'IDENTIFIER':
-			text = toks[i][1];
-			break;
-		case 'INDENT':
-		case 'OUTDENT':
-			text = toks[i][0] + ' - "' + toks[i][1] + '"';
-			break;
-		default:
-			text = toks[i][0];
-		}
-
-		console.log(i, ':', text);
-	}
-}
-
-
 var text = require('fs').readFileSync(process.argv[2], 'utf-8');
 
 function test_lex(text) {
-	showTags(
+	H.showTags(
 		parser.lexer.tokenize(text));
 }
 
 function test_rewrite(text) {
 	var toks = parser.lexer.tokenize(text);
 
-	showTags(
+	H.showTags(
 		R.rewrite(toks)
 	);
 }
@@ -79,7 +59,7 @@ function test_parse(text) {
 	console.log(res.lines().toString());
 }
 
-// test_lex(text);
+test_lex(text);
 test_rewrite(text);
 test_parse(text);
 
