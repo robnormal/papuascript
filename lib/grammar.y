@@ -82,11 +82,25 @@ var N = require('./nodes.js');
 	 all parsing must end here. */
 Root
 	: /* empty */
-		{ $$ = new N.Block([]); }
-	| LineList
-		{ return $1; }
+		{ $$ = new N.Script(null, null); }
+	| Body
+		{ return new N.Script($1, null); }
+	| Export Eol Body
+		{ return new N.Script($3, $1); }
+	;
+
+Body
+	: LineList
+		{ $$ = $1; }
 	| Block Eol
-		{ return $1; }
+		{ $$ = $1; }
+	;
+
+Export
+	: EXPORT Identifier
+		{ $$ = [$2]; }
+	| Export ',' Identifier
+		{ $$ = $1.concat([$3]); }
 	;
 
 Import
