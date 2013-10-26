@@ -63,48 +63,6 @@ function mkTokens(str) {
 }
 
 module.exports = {
-	'Converts CPS arrow to continuation-passing function call': function(b, assert) {
-		/*
-		var text1 =
-			'while top\n' +
-			'  indented\n' +
-			'  foo <- bar\n' +
-			'  bar_line1\n' +
-			'  bar_line2\n' +
-			'next thing';
-		var raw = getTokens(text1);
-		var toks = R.rewriteCpsArrow(raw);
-
-		assert.equal('INDENT', toks[2][0], 'while block is indented');
-		assert.equal(BR, toks[4][0], 'Does not touch Preceding newline');
-		assert.equal('bar', toks[5][1], 'token after arrow is placed first');
-		assert.equal('\\', toks[6][0], 'adds function literal as argument');
-		assert.equal('foo', toks[7][1], 'adds preceding token as argument to function literal');
-		assert.equal('->', toks[8][0]);
-		assert.equal('INDENT', toks[9][0], 'indents CPSed function');
-		assert.equal(true,
-			'OUTDENT' === toks[13][0] && 'OUTDENT' === toks[14][0],
-			'outdents at next outdent'
-		);
-	 */
-	},
-
-	'CPS arrow integrates with blocks properly': function(b, assert) {
-		/*
-		var text1 =
-			'bar <- foo\n' +
-			'while a\n' +
-			'  bar';
-
-		var raw = getTokens(text1);
-		var toks = R.rewriteCpsArrow(raw);
-		assert.equal('bar', toks[8][1]);
-		assert.equal('OUTDENT', toks[9][0]);
-		assert.equal('OUTDENT', toks[10][0]);
-		assert.equal('TERMINATOR', toks[11][0]);
-	 */
-	},
-
 	'Adds WS between function call arguments': function(b, assert) {
 		var text = 'foo.bar spam potatoes';
 		var toks = R.markFunctionParams(getTokens(text));
@@ -269,59 +227,6 @@ module.exports = {
 		assert.ok(tags_equal(toks, expected), 'Treats object literals as part of a line');
 	},
 
-	'"#" parenthesizes the rest of the expression': function(b, assert) {
-		/*
-		var toks;
-
-		toks = mkTokens(
-			'IDENTIFIER NUMBER # IDENTIFIER MATH NUMBER TERMINATOR IDENTIFIER'
-		);
-		var expected = mkTokens(
-			'IDENTIFIER NUMBER ( IDENTIFIER MATH NUMBER ) TERMINATOR IDENTIFIER'
-		);
-		R.convertPoundSign(toks);
-		assert.ok(tags_equal(toks, expected), 'parens include rest of line');
-
-		toks = mkTokens(
-			'IDENTIFIER ( NUMBER # IDENTIFIER MATH NUMBER ) NUMBER'
-		);
-		expected = mkTokens(
-			'IDENTIFIER ( NUMBER ( IDENTIFIER MATH NUMBER ) ) NUMBER'
-		);
-		R.convertPoundSign(toks);
-		assert.ok(tags_equal(toks, expected), 'parens only extend to enclosing paren or container');
-
-		toks = mkTokens(
-			'IDENTIFIER NUMBER # IDENTIFIER MATH NUMBER'
-		);
-		expected = mkTokens(
-			'IDENTIFIER NUMBER ( IDENTIFIER MATH NUMBER )'
-		);
-		R.convertPoundSign(toks);
-		assert.ok(tags_equal(toks, expected), 'parens include to EOF if no break or closing container');
-	 */
-	},
-
-	'# and <- work when used together': function(b, assert) {
-		/*
-		var toks1 = getTokens('foo <- bar # eggs spam\nfoo');
-		var toks2 = getTokens('foo <- bar (eggs spam)\nfoo');
-
-		var rewrite = $.compose(
-			R.parenthesizeFunctions, R.markFunctionParams, R.rewriteCpsArrow, B.resolveBlocks, R.convertPoundSign
-		);
-
-		var partial = $.compose(
-			R.markFunctionParams, R.rewriteCpsArrow, R.convertPoundSign
-		);
-
-		partial(toks1);
-		partial(toks2);
-
-		assert.eql(getTags(toks2), getTags(toks1));
-		*/
-	},
-
 	'dot preceded by whitespace becomes SPACEDOT': function(b, assert) {
 		var toks = getTokens('foo .bar 10');
 		R.markFunctionParams(toks);
@@ -351,19 +256,14 @@ module.exports = {
 
 	'Commas don\'t cause infinite loop': function(b, assert) {
 		var o = papua.test('rewriter/commas.papua');
+
+		assert.equal(1, o.x);
 	},
 
-	'Function literals can be parenthesized': function(b, assert) {
-		/*
-		var toks = mkTokens(
-			'( \\ -> IDENTIFIER ) IDENTIFIER'
-		);
-		var expected = mkTokens(
-			'( \\ -> INDENT IDENTIFIER OUTDENT ) IDENTIFIER TERMINATOR'
-		);
-		R.rewrite(toks);
-		assert.ok(tags_equal(toks, expected), 'OUTDENT placed before closing paren');
-		*/
+	'Semicolons at the end of a line are ignored': function(b, assert) {
+		var o = papua.test('rewriter/semicolon.papua');
+
+		assert.equal(3, o.x);
 	}
 
 };

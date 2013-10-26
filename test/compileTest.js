@@ -43,6 +43,7 @@ module.exports = {
 		assert.eql(1, o.c);
 		assert.eql(2, o.d);
 		assert.eql(3, o.e);
+		assert.eql(9, o.f);
 	},
 
 	'Objects': function(b, assert) {

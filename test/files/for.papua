@@ -12,11 +12,15 @@
     d = k
     e = v
 
+  for ; x < 10; x++
+    f = x
+
   { a: a
   , b: b
   , c: c
   , d: d
   , e: e
+  , f: f
   }
 
 
