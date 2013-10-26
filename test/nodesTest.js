@@ -27,7 +27,7 @@ module.exports = {
 			b = new N.Block([func]);
 
 		// Code uses vars_defined(this.block)
-		assert.eql(['x'], N.vars_defined(func.block));
-		assert.eql([], N.vars_defined(b));
+		assert.eql(['x'], func.block.varsDefined());
+		assert.eql([], b.varsDefined());
 	}
 };
