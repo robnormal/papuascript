@@ -31,7 +31,7 @@ syn region  papuaScriptString               start=/%{/ skip=/\\\\\|\\}/  end=/}/
 syn match papuaScriptMemberAssign /\(\([,{]\|^\)\s*\)\@<=\w\+\s*:\s\+\(\w\+\s\+in\)\@!/ contains=papuaExtendedOp display
 
 syn match papuaIdentifierString /\W\@<=:\w\+/
-syn match papuaScriptUpdate /^\s*\w\+\(.*:=\)\@=/
+syn match papuaScriptUpdate /\v^\s*(\w|\$)+(.*:\=)@=/
 
 " syn region  papuaTernary             start=/??/ skip=/(.*)/  end=/:/
 
