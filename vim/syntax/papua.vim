@@ -28,7 +28,8 @@ syn region  papuaScriptString               start=+'+  skip=+\\\\\|\\'+  end=+'+
 syn region  papuaScriptString               start=/%{/ skip=/\\\\\|\\}/  end=/}/  contains=papuaScriptSpecial,papuaExtendedOp
 
 
-syn match papuaScriptMemberAssign /\(\([,{]\|^\)\s*\)\@<=\w\+\s*:\s\+\(\w\+\s\+in\)\@!/ contains=papuaExtendedOp display
+" syn match papuaScriptMemberAssign /\(\([,{]\|^\)\s*\)\@<=\(\w\|\$\)\+\s*:\s\+\(\w\+\s\+in\)\@!/ contains=papuaExtendedOp display
+syn match papuaScriptMemberAssign /\v(([,{]|^)\s*)@<=(\w|\$)+\s*:\s+(\w+\s+in)@!/ contains=papuaExtendedOp display
 
 syn match papuaIdentifierString /\W\@<=:\w\+/
 syn match papuaScriptUpdate /\v^\s*(\w|\$)+(.*:\=)@=/
