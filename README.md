@@ -13,12 +13,14 @@ Haskell. A lot.
 # Features
 
 * Line-for-line translation to JavaScript, for easy debugging.
-* No new reserved words.
+* Two-way translatable - every JavaScript program has
+  a PapuaScript translation.
+* No new reserved words (per above)
 * Greatly reduces the need for punctuation without introducing
   ambiguity.
 * Very concise function definition.
 * Significant whitespace, with simple rules.
-* TODO: Allow significant whitespace to be suspended, a la
+* TODO: Allows significant whitespace to be suspended, a la
   Haskell's `{}` syntax
 * The `:=` operator is used for assigning values to variables
   defined in an outer scope, helping you keep track of side
