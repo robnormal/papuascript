@@ -216,7 +216,6 @@ Ternary
 
 Term
 	: Factor
-	| '@'
 	| Invocation
 	| If
 	| IfCase
@@ -253,6 +252,7 @@ Accessible
 	| Callable
 	| Object
 	| Array
+	| '@'
 	;
 
 Callable
@@ -290,7 +290,6 @@ UnaryList
 
 FactorOrSlot
 	: Factor
-	| '@'
 	;
 
 FactorList
@@ -304,19 +303,6 @@ Invocation
 	/* FactorOrSlot FactorList breaks. I don't know why. */
 	: Factor FactorList
 		{ $$ = N.FuncCall.create([$1].concat($2)); }
-	| '@' FactorList
-		{ $$ = N.FuncCall.create([$1].concat($2)); }
-	| ReverseInvocation
-		{ $$ = N.FuncCall.create($1); }
-	| ReverseInvocation FactorList
-		{ $$ = N.FuncCall.create($1.concat($2)); }
-	;
-
-ReverseInvocation
-	: '@' '`' Assignable '`'  /* reverse invocation, i.e., 2 `plus` 2 */
-		{ $$ = [$3, $1]; }
-	| Factor '`' Assignable '`'  /* reverse invocation, i.e., 2 `plus` 2 */
-		{ $$ = [$3, $1]; }
 	;
 
 /* An indented block of expressions. Note that the [Rewriter](rewriter.html)
@@ -597,6 +583,8 @@ ExpressionList
 Binary
 	: '+'
 	| '-'
+	| '`' Assignable '`'  /* reverse invocation, i.e., 2 `plus` 2 */
+		{ $$ = new N.FuncCall([$2]); }
 	| MATH
 	| SHIFT
 	| COMPARE
