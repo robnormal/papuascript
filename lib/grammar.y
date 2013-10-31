@@ -105,27 +105,8 @@ Export
 
 Import
 	: With 
-	| With WS ImportArray 
+	| With WS Array 
 		{ $1.members = $3; $$ = $1; }
-	;
-
-ImportItem
-	: Identifier
-		{ $$ = [$1, $1]; }
-	| Identifier ASSIGN Identifier
-		{ $$ = [$1, $3]; }
-	;
-
-ImportArray
-	: '[' ImportList ']'
-		{ $$ = $2; }
-	;
-
-ImportList
-	: ImportItem
-		{ $$ = [$1]; }
-	| ImportList ',' ImportItem
-		{ $$ = $1.concat([$3]); }
 	;
 
 With
