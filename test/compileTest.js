@@ -53,5 +53,10 @@ module.exports = {
 		assert.eql(5, o.a());
 		assert.eql(2, o.b);
 		assert.eql(3, o.c);
+	},
+
+	'Infix functions': function(b, assert) {
+		var o = papua.test('infix.papua');
+		assert.eql(12, o.a);
 	}
 };

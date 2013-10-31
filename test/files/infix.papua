@@ -1,0 +1,6 @@
+->
+  _ x f = f x
+  times2 = (@ * 2)
+  
+  { a: 3 `_` times2 `_` times2 }
+  
