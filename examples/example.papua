@@ -1,8 +1,12 @@
 with (require 'underscore') as $
   [ compose
-  , curry = partial
   ]
-with (console) [ log ]
+
+with (console)
+  [ log
+  ]
+
+curry = $.partial
 
 hello = -> log 'Hello, world!'
 
