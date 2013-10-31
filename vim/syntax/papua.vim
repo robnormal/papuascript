@@ -29,7 +29,7 @@ syn region  papuaScriptString               start=/%{/ skip=/\\\\\|\\}/  end=/}/
 
 
 " syn match papuaScriptMemberAssign /\(\([,{]\|^\)\s*\)\@<=\(\w\|\$\)\+\s*:\s\+\(\w\+\s\+in\)\@!/ contains=papuaExtendedOp display
-syn match papuaScriptMemberAssign /\v(([,{]|^)\s*)@<=(\w|\$)+\s*:\s+(\w+\s+in)@!/ contains=papuaExtendedOp display
+syn match papuaScriptMemberAssign /\v(([,{]|^)\s*)@<=(\w|\$)+\s*:($|\s+(\w+\s+in)@!)/ contains=papuaExtendedOp display
 
 syn match papuaIdentifierString /\W\@<=:\w\+/
 syn match papuaScriptUpdate /\v^\s*(\w|\$)+(.*:\=)@=/
@@ -65,19 +65,24 @@ syn keyword papuaScriptReserved                abstract boolean byte char class 
 " A constant-like name in SCREAMING_CAPS
 syn match papuaConstant /\<\u[A-Z0-9_]\+\>/ display
 
-syn match papuaExtendedOp /[+\-*#&|\^=!<>?@]\|&&\|||\|\.\|--\|++\|\\\|:\w\@!/ display
+syn match papuaExtendedOp /[+\-*#&|\^=!<>?]\|&&\|||\|\.\|--\|++\|\\\|:\w\@!/ display
 syn match papuaExtendedOp /%[^{]\@=/
 syn match papuaExtendedOp +/[/*]\@!+
 " syn region  papuaScriptRegexpString     start=+/[^/*]+me=e-1 skip=+\\\\\|\\/+ end=+/[gim]\{0,2\}\s*$+ end=+/[gim]\{0,2\}\s*[;.,)\]}]+me=e-1 oneline contains=papuaExtendedOp
 " syn region  papuaScriptRegexpString   start=+/\(\*\|/\)\@!+ skip=+\\\\\|\\/+ end=+/[gim]\{,3}+ oneline
 syn match  papuaScriptRegexpString   /\v\/(\*|\/|\s)@!\S*\/[gim]{,3}/
 
+syn match papuaParamPlaceholder  /@/
 
 syn keyword papuaScriptFunction                "\\" nextgroup=papuaFuncArgs skipwhite
 " syn region papuaFuncArg start=/\\/ end=/->/ matchgroup=papuaFuncArgs contains=@papuaExtendedOp
 syn match papuaFuncArgs /\v\\\@=(\w+\s+)*-\>/ contains=papuaExtendedOp
 syn match papuaFunctionName /@\w\+\s\+/ contains=papuaExtendedOp
 syn match papuaFuncArgs /\(^\s*\S\+\)\@<=\(\s\+\w\+\)\+\(\s*:\?=\($\|[^=]\)\)\@=/
+
+" variables before <- are function variables
+syn match papuaCpsArgs /\(\w\|\s\|\$\)\+\(<-\)\@=/ contains=@papuaExtendedOp display
+
 
 syn match papuaSpecialOp /[,;(){}[\]]/ display
 
@@ -158,6 +163,8 @@ if version >= 508 || !exists("did_papuascript_syn_inits")
   HiLink papuaExtendedOp               papuaOperator
   HiLink papuaOperator                 Operator
   HiLink papuaFuncArgs                 Special
+  HiLink papuaCpsArgs                  Special
+ 
   HiLink papuaSpecialOp                SpecialChar
   HiLink papuaScriptMemberAssign       Constant
   HiLink papuaNumericAccess            Identifier
@@ -166,6 +173,8 @@ if version >= 508 || !exists("did_papuascript_syn_inits")
   HiLink papuaUpdated                  Identifier
   HiLink papuaMethodChain              Identifier
   HiLink papuaImportKeywords           Special
+
+  HiLink papuaParamPlaceholder         Special
 
   HiLink papuaIdentifierString         Constant
   HiLink papuaScriptUpdate             Identifier
