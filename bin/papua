@@ -6,5 +6,9 @@ var
 	destination = source + '.js';
 
 papua.compileFile(source, destination);
-require('child_process').spawn('node', [destination], { stdio: 'inherit' });
+require('child_process').spawn(
+	'node',
+	[destination].concat(process.argv.slice(3)),
+	{ stdio: 'inherit' }
+);
 
