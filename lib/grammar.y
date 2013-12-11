@@ -176,8 +176,7 @@ Atom
 	;
 
 Parenable
-	: Binaried
-	| Ternary
+	: Ternaried
 	;
 
 Paren
@@ -225,7 +224,11 @@ NullaryCalled
 
 Called
 	: NullaryCalled
-	| Called NullaryCalled
+	| Invoked
+	;
+
+Invoked
+	: Called NullaryCalled
 		{ $$ = N.FuncCall.addFactor($1, $2); }
 	;
 
@@ -260,16 +263,14 @@ Binaried
 	;
 
 Valued
-	: Binaried
-	| Ternary
+	: Ternaried
 	| If
 	| Switch
 	| Try
 	;
 
 Lineable
-	: Binaried
-	| Ternary
+	: Ternaried
 	| Var
 	| AssignList
 	| Return
@@ -302,6 +303,7 @@ IBlock
 LBlock
 	: IBlock
 	| Line
+		{ $$ = new N.Block([$1]); }
 	;
 
 Params
@@ -339,8 +341,9 @@ Cps
 		{ $$ = new N.Block([ N.Cps($3, new N.Code($1, $4)) ]); }
 	;
 
-Ternary
-	: TERSTART Binaried COLON Binaried COLON Binaried
+Ternaried
+	: Binaried
+	| TERSTART Binaried COLON Binaried COLON Binaried
 		{ $$ = new N.Ternary($2, $4, $6); }
 	;
 
@@ -381,7 +384,7 @@ LineAssignment
 		{ $$ = N.Assign.createUnary($2, $1); }
 	| Indexed UNARY_ASSIGN
 		{ $$ = N.Assign.createUnary($1, $2); }
-	| Indexed Assign Binaried
+	| Indexed Assign Ternaried
 		{ $$ = N.Assign.create($1, $2, $3); }
 	;
 
@@ -391,9 +394,17 @@ BlockAssignment
 		{ $$ = N.Assign.create($1, $2, $3); }
 	;
 
+FuncAssignment
+	: Invoked ASSIGN Valued
+		{ $$ = N.Code.fromFuncAssignment($1, $3); }
+	| Invoked ASSIGN IBlock
+		{ $$ = N.Code.fromFuncAssignment($1, $3); }
+	;
+
 Assignment
 	: LineAssignment
 	| BlockAssignment
+	| FuncAssignment
 	;
 
 /* Comma-separated assignments */

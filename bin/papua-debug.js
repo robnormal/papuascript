@@ -12,7 +12,7 @@ var parser = P.parser;
 parser.lexer = new L.Lexer();
 parser.yy.parseError = function(msg, info) {
 	log(info);
-  // throw new SyntaxError(msg + ' at column ' + (this.lexer.position() + 1));
+  throw new SyntaxError(msg + ' at column ' + (this.lexer.position() + 1));
 	// log(msg);
 	/*
   var str = 'Parse error on line ' + (info.line + 1) +
