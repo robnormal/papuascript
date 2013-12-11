@@ -171,6 +171,12 @@ module.exports = {
 			'***';
 		var tags1 = tags(getTokens(text1));
 		assert.eql([ID, ID, BR], tags1);
-	}
+	},
+
+	'dot preceded by whitespace becomes SPACEDOT': function(b, assert) {
+		var toks = getTokens('foo .bar 10');
+		assert.equal(toks[1][0], 'SPACEDOT', 'replaces dot with SPACEDOT');
+		assert.equal(toks[2][1], 'bar', 'removes dot');
+	},
 
 };

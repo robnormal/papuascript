@@ -2,7 +2,6 @@
 
 var L = require('../lib/lexer.js');
 var P = require('../lib/grammar.js');
-var R = require('../lib/rewriter.js');
 var B = require('../lib/blocker.js');
 var H = require('../lib/helpers.js');
 var N = require('../lib/nodeTypes.js');

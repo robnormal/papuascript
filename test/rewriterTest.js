@@ -1,6 +1,5 @@
 var
 	L = require('../lib/lexer.js'),
-	R = require('../lib/rewriter.js'),
 	B = require('../lib/blocker.js'),
 	H = require('../lib/helpers.js'),
 	papua = require('../lib/papua-lib.js'),
@@ -63,29 +62,6 @@ function mkTokens(str) {
 }
 
 module.exports = {
-	'Adds WS between function call arguments': function(b, assert) {
-		var text = 'foo.bar spam potatoes';
-		var toks = R.markFunctionParams(getTokens(text));
-
-		assert.equal('WS', toks[3][0], 'WS added after function name');
-		assert.equal('WS', toks[5][0], 'WS added after arguments');
-		assert.equal('TERMINATOR', toks[7][0], 'no WS after last argument');
-
-		var text = 'map \\ f xs ->\n  f xs';
-		var toks = R.markFunctionParams(getTokens(text));
-
-		assert.equal('WS', toks[1][0], 'WS added before argument that is a function literal');
-		assert.equal('WS', toks[10][0], 'WS added to arguments within function literal');
-	},
-
-	'Adds markers to literal function parameters': function(b, assert) {
-		var text = 'foo \\bar spam -> return 3';
-		var toks = R.markFunctionParams(getTokens(text));
-
-		assert.equal('FN_LIT_PARAM', toks[4][0], 'FN_LIT_PARAM added after parameters in function');
-		assert.equal('FN_LIT_PARAM', toks[6][0], 'all parameters marked');
-	},
-
 	'Encloses functions in parentheses': function(b, assert) {
 		var nl_text = 'a = \\b ->\n  c';
 		var nl_toks = B.resolveBlocks(getTokens(nl_text));
@@ -136,7 +112,7 @@ module.exports = {
 			'  \\foods -> foods'
 		);
 
-		R.rewrite(toks);
+		B.resolveBlocks(toks);
 		var exp = 'IDENTIFIER WS ( \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER TERMINATOR';
 		var expected = getTags(mkTokens(exp));
 
@@ -173,14 +149,14 @@ module.exports = {
 			'    x\n' +
 			'  ) y'
 		);
-		R.rewrite(toks);
+		B.resolveBlocks(toks);
 		var expected = mkTokens(
 			'( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) WS IDENTIFIER TERMINATOR'
 		);
 		assert.ok(tags_equal(toks, expected), 'indents block, but not expression');
 
 		var toks = getTokens('x = \\ -> b');
-		R.rewrite(toks);
+		B.resolveBlocks(toks);
 		var expected = mkTokens(
 			'IDENTIFIER ASSIGN ( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) TERMINATOR'
 		);
@@ -227,13 +203,6 @@ module.exports = {
 		assert.ok(tags_equal(toks, expected), 'Treats object literals as part of a line');
 	},
 
-	'dot preceded by whitespace becomes SPACEDOT': function(b, assert) {
-		var toks = getTokens('foo .bar 10');
-		R.markFunctionParams(toks);
-		assert.equal(toks[1][0], 'SPACEDOT', 'replaces dot with SPACEDOT');
-		assert.equal(toks[2][1], 'bar', 'removes dot');
-	},
-
 	'Blocks get TERMINATORs after them when they are lines in a block': function(b, assert) {
 		var toks = getTokens(
 			'while x\n' +
@@ -241,7 +210,7 @@ module.exports = {
 			'x'
 		);
 
-		R.rewrite(toks);
+		B.resolveBlocks(toks);
 		assert.equal('TERMINATOR', toks[6][0]);
 
 		var toks = getTokens(
@@ -250,7 +219,7 @@ module.exports = {
 			'x'
 		);
 
-		R.rewrite(toks);
+		B.resolveBlocks(toks);
 		assert.equal('TERMINATOR', toks[6][0]);
 	},
 
