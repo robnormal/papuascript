@@ -44,8 +44,9 @@ function test_lex(text) {
 function test_rewrite(text) {
 	var toks = parser.lexer.tokenize(text);
 
-	H.showTags(
-		R.rewrite(toks)
+	// H.showTags(
+	console.log(
+		B.resolveBlocks(toks)
 	);
 }
 
@@ -61,7 +62,7 @@ function test_parse(text) {
 
 test_lex(text);
 test_rewrite(text);
-test_parse(text);
+// test_parse(text);
 
 /*
 var tok;
