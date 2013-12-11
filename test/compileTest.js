@@ -24,18 +24,22 @@ function eq(x, y) {
 }
 
 module.exports = {
-	'Test files': function(b, assert) {
+	'assign.papua': function(b, assert) {
 		var o = papua.test('assign.papua');
 
 		assert.eql(1, o.i);
 		assert.eql(4, o.j);
+	},
 
+	'function.papua': function(b, assert) {
 		o = papua.test('function.papua');
 
 		assert.eql(3, o.a);
 		assert.eql(1, o.b);
 		assert.eql(6, o.c);
+	},
 
+	'for.papua': function(b, assert) {
 		o = papua.test('for.papua');
 
 		assert.eql(9, o.a);

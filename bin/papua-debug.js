@@ -11,7 +11,8 @@ var log = console.log;
 var parser = P.parser;
 parser.lexer = new L.Lexer();
 parser.yy.parseError = function(msg, info) {
-  throw new SyntaxError(msg + ' at column ' + (this.lexer.position() + 1));
+	log(info);
+  // throw new SyntaxError(msg + ' at column ' + (this.lexer.position() + 1));
 	// log(msg);
 	/*
   var str = 'Parse error on line ' + (info.line + 1) +
@@ -43,8 +44,7 @@ function test_lex(text) {
 function test_rewrite(text) {
 	var toks = parser.lexer.tokenize(text);
 
-	// H.showTags(
-	console.log(
+	H.showTags(
 		B.resolveBlocks(toks)
 	);
 }
@@ -59,9 +59,9 @@ function test_parse(text) {
 	console.log(res.lines().toString());
 }
 
-test_lex(text);
+// test_lex(text);
 test_rewrite(text);
-// test_parse(text);
+test_parse(text);
 
 /*
 var tok;

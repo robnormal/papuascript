@@ -113,7 +113,7 @@ RBRACE: '}';
 LBRACKET: '[';
 RBRACKET: ']';
 HASH: '#';
-BSLASH: '\\';
+BSLASH: '\';
 ARROW: '->';
 CPSARROW: '<-';
 TERSTART: '??';
@@ -198,8 +198,8 @@ Array
 Commaed
 	: Parenable
 		{ $$ = [$1]; }
-	| Parenable COMMA Commaed
-		{ $$ = $3.concat($1); }
+	| Commaed COMMA Parenable
+		{ $$ = $1.concat($3); }
 	;
 
 Index
@@ -217,14 +217,6 @@ Indexed
 		{ $$ = new N.Value($1).add($2); }
 	;
 
-LUnaried
-	: Indexed
-	;
-
-Unaried /* callable things */
-	: LUnaried
-	;
-
 NullaryCalled
 	: Indexed
 	| Indexed CALL_NULLARY
@@ -233,18 +225,18 @@ NullaryCalled
 
 Called
 	: NullaryCalled
-	| NullaryCalled Called
-		{ $$ = N.FuncCall.addFactor($2, $1); }
+	| Called NullaryCalled
+		{ $$ = N.FuncCall.addFactor($1, $2); }
 	;
 
 SDotted
 	: Called
-	| Called SPACEDOT SDotted
+	| SDotted SPACEDOT Called
 		{ $$ = N.Index.spaceDot($1, $3); }
 	;
 
 Infixed
-	: BACKTICK Unaried BACKTICK  /* reverse invocation, i.e., 2 `plus` 2 */
+	: BACKTICK Indexed BACKTICK  /* reverse invocation, i.e., 2 `plus` 2 */
 		{ $$ = new N.FuncCall([$2]); }
 	;
 
@@ -263,7 +255,7 @@ Binary
 
 Binaried
 	: SDotted
-	| SDotted Binary Binaried
+	| Binaried Binary SDotted
 		{ $$ = N.Operation.create($2, $1, $3); }
 	;
 
@@ -298,8 +290,8 @@ Line
 Block
 	: Line
 		{ $$ = new N.Block([$1]); }
-	| Line Block
-		{ $$ = $2.addLine($1); }
+	| Block Line
+		{ $$ = $1.push($2); }
 	;
 
 IBlock
@@ -315,8 +307,8 @@ LBlock
 Params
 	: /* empty */
 		{ $$ = []; }
-	| Id Params
-		{ $$ = $2.concat([$1]); }
+	| Params Id
+		{ $$ = $1.concat([$2]); }
 	;
 
 FuncBody
@@ -366,7 +358,7 @@ ObjectPropDef
 ObjectPropList
 	: ObjectPropDef
 		{ $$ = [$1]; }
-	| ObjectPropDef COMMA ObjectPropList
+	| ObjectPropList COMMA ObjectPropDef
 		{ $$ = $1.concat([$3]); }
 	;
 
@@ -408,7 +400,7 @@ Assignment
 AssignList
 	: Assignment
 		{ $$ = new N.AssignList([$1]); }
-	| LineAssignment COMMA AssignList
+	| AssignList COMMA LineAssignment
 		{ $$ = $1.add($3); }
 	;
 
@@ -463,7 +455,7 @@ DefaultIfCase
 IfCases
 	: SingleIfCase
 		{ $$ = [$1]; }
-	| SingleIfCase IfCases
+	| IfCases SingleIfCase
 		{ $1.push($2); $$ = $1; }
 	;
 
@@ -483,8 +475,8 @@ IfCase
 Valueds
 	: Valued
 		{ $$ = [$1]; }
-	| Valued COMMA Valueds
-		{ $3.push($1); $$ = $3; }
+	| Valueds COMMA Valued
+		{ $1.push($3); $$ = $1; }
 	;
 
 /* An individual **Case** clause, with action. */
@@ -502,7 +494,7 @@ DefaultCase
 Cases
 	: Case
 		{ $$ = [$1]; }
-	| Case Cases
+	| Cases Case
 		{ $$ = $1.concat([$2]); }
 	;
 
