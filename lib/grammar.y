@@ -321,7 +321,7 @@ FuncBody
 	: ARROW IBlock
 		{ $$ = $2; }
 	| ARROW Lineable
-		{ $$ = $2; }
+		{ $$ = new N.Block([$2]); }
 	;
 
 Func
