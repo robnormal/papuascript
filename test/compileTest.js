@@ -52,6 +52,11 @@ module.exports = {
 		assert.eql(9, o.f);
 	},
 
+	'cps.papua': function(b, assert) {
+		o = papua.test('cps.papua');
+		assert.eql('Hi, me! How ya doin?', o.a);
+	},
+
 	'Objects': function(b, assert) {
 		var o = papua.test('object.papua');
 

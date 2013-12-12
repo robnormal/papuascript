@@ -290,6 +290,7 @@ Statement
 	| While
 	| For
 	| Try
+	| Cps
 	;
 
 Block
@@ -310,11 +311,17 @@ LBlock
 		{ $$ = new N.Block([$1]); }
 	;
 
+NonemptyParams
+	: Id
+		{ $$ = [$1]; }
+	| NonemptyParams Id
+		{ $$ = $1.concat([$2]); }
+	;
+
 Params
 	: /* empty */
 		{ $$ = []; }
-	| Params Id
-		{ $$ = $1.concat([$2]); }
+	| NonemptyParams
 	;
 
 FuncBody
@@ -343,8 +350,8 @@ NamedFunc
 	;
 
 Cps
-	: Params CPSARROW Line Block
-		{ $$ = new N.Block([ N.Cps($3, new N.Code($1, $4)) ]); }
+	: CPS NonemptyParams CPSARROW Line
+		{ $$ = new N.Cps($4, $2); }
 	;
 
 Ternaried
