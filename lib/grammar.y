@@ -280,6 +280,10 @@ Lineable
 Line
 	: EOL
 	| Lineable EOL
+	;
+
+Statement
+	: Line
 	| If
 	| IfCase
 	| Switch
@@ -289,9 +293,9 @@ Line
 	;
 
 Block
-	: Line
+	: Statement
 		{ $$ = new N.Block([$1]); }
-	| Block Line
+	| Block Statement
 		{ $$ = ($2 instanceof N.PNode) ? $1.push($2) : $1; }
 	;
 
@@ -314,7 +318,9 @@ Params
 	;
 
 FuncBody
-	: ARROW LBlock
+	: ARROW IBlock
+		{ $$ = $2; }
+	| ARROW Lineable
 		{ $$ = $2; }
 	;
 

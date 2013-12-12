@@ -113,7 +113,7 @@ module.exports = {
 		);
 
 		B.resolveBlocks(toks);
-		var exp = 'IDENTIFIER WS ( \\ IDENTIFIER FN_LIT_PARAM -> INDENT IDENTIFIER TERMINATOR';
+		var exp = 'IDENTIFIER ( \\ IDENTIFIER -> IDENTIFIER ) TERMINATOR';
 		var expected = getTags(mkTokens(exp));
 
 		assert.eql(
@@ -151,16 +151,16 @@ module.exports = {
 		);
 		B.resolveBlocks(toks);
 		var expected = mkTokens(
-			'( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) WS IDENTIFIER TERMINATOR'
+			'( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) IDENTIFIER TERMINATOR'
 		);
-		assert.ok(tags_equal(toks, expected), 'indents block, but not expression');
+		assert.eql(getTags(expected), getTags(toks), 'indents block, but not expression');
 
 		var toks = getTokens('x = \\ -> b');
 		B.resolveBlocks(toks);
 		var expected = mkTokens(
-			'IDENTIFIER ASSIGN ( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) TERMINATOR'
+			'IDENTIFIER ASSIGN ( \\ -> IDENTIFIER ) TERMINATOR'
 		);
-		assert.ok(tags_equal(toks, expected), 'Adds OUTDENT to end of inline function');
+		assert.eql(getTags(expected), getTags(toks));
 	},
 
 	'Handles function indents properly': function(b, assert) {
@@ -182,14 +182,14 @@ module.exports = {
 		var expected = mkTokens(
 			'IDENTIFIER ASSIGN IDENTIFIER IDENTIFIER TERMINATOR'
 		);
-		assert.ok(tags_equal(toks, expected), 'INDENT, OUTDENT, and TERMINATOR are removed from inside lines');
+		assert.eql(getTags(expected), getTags(toks), 'INDENT, OUTDENT, and TERMINATOR are removed from inside lines');
 
 		var toks = getTokens('x = \n\t[ a\n\t, b] c');
 		B.resolveBlocks(toks);
 		var expected = mkTokens(
 			'IDENTIFIER ASSIGN [ IDENTIFIER , IDENTIFIER ] IDENTIFIER TERMINATOR'
 		);
-		assert.ok(tags_equal(toks, expected), 'Treats TERMINATORs inside parens correctly');
+		assert.ok(getTags(expected), getTags(toks), 'Treats TERMINATORs inside parens correctly');
 	},
 
 	'Newlines are OK in object literals (this matters in case we use {} for anything else)': function(b, assert) {
