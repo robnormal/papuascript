@@ -182,7 +182,7 @@ Parenable
 Paren
 	: LPAREN Parenable RPAREN
 		{ $$ = new N.Parenthetical($2); }
-	| ParenedFunc
+	| NamedFunc
 	;
 
 Array
@@ -331,15 +331,15 @@ Func
 		{ $$ = new N.Code($2, $3); }
 	;
 
-NamedFunc
-	: Func
-	| FN_NAME Func
-		{ $$ = $2.setName($1); }
+ParenedFunc
+	: LPAREN Func RPAREN
+		{ $$ = $2; }
 	;
 
-ParenedFunc
-	: LPAREN NamedFunc RPAREN
-		{ $$ = $2; }
+NamedFunc
+	: ParenedFunc
+	| FN_NAME ParenedFunc
+		{ $$ = $2.setName($1); }
 	;
 
 Cps
