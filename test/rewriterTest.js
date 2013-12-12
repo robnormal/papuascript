@@ -233,6 +233,18 @@ module.exports = {
 		var o = papua.test('rewriter/semicolon.papua');
 
 		assert.equal(3, o.x);
+	},
+
+	'adds CPS and CPSEND to Cps blocks': function(b, assert) {
+		var toks = getTokens(
+			'x <- a\n' +
+			'x\n'
+		);
+		B.resolveBlocks(toks);
+		var expected = mkTokens(
+			'CPS IDENTIFIER <- IDENTIFIER TERMINATOR IDENTIFIER TERMINATOR CPSEND TERMINATOR'
+		);
+		assert.eql(getTags(toks), getTags(expected));
 	}
 
 };

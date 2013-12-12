@@ -10,6 +10,7 @@ var N = require('./nodes.js');
 %token COMPARE
 %token COMPOUND_ASSIGN
 %token CPS
+%token CPSEND
 %token DEBUGGER
 %token DEFAULT
 %token ELSE
@@ -262,11 +263,16 @@ Binaried
 		{ $$ = N.Operation.create($2, $1, $3); }
 	;
 
-Valued
-	: Ternaried
-	| If
+BlockValued
+	: If
 	| Switch
 	| Try
+	| Cps
+	;
+
+Valued
+	: Ternaried
+	| BlockValued
 	;
 
 Lineable
@@ -350,8 +356,8 @@ NamedFunc
 	;
 
 Cps
-	: CPS NonemptyParams CPSARROW Line
-		{ $$ = new N.Cps($4, $2); }
+	: CPS NonemptyParams CPSARROW Line Block CPSEND
+		{ $$ = new N.Cps($4, $2, $5); }
 	;
 
 Ternaried
@@ -403,7 +409,7 @@ LineAssignment
 
 /* don't allow block BlockAssignment in AssignList, except at end */
 BlockAssignment
-	: Indexed ASSIGN IBlock
+	: Indexed ASSIGN BlockValued
 		{ $$ = N.Assign.create($1, $2, $3); }
 	;
 
