@@ -292,7 +292,7 @@ Block
 	: Line
 		{ $$ = new N.Block([$1]); }
 	| Block Line
-		{ $$ = $1.push($2); }
+		{ $$ = ($2 instanceof N.PNode) ? $1.push($2) : $1; }
 	;
 
 IBlock
@@ -580,7 +580,7 @@ IdIn
 
 InIterator
 	: IdIn
-		{ $$ = { in: true, id: $2 }; }
+		{ $$ = { in: true, id: $1 }; }
 	| OWN IdIn
 		{ $$ = { in: true, own: true, id: $2 }; }
 	| INDEX IdIn
