@@ -1,0 +1,16 @@
+->
+  greetMe = \y -> y 'Hi, me!'
+
+  f = \ ->
+    x <- greetMe
+    x + ' How ya doin?'
+
+  g =
+    x <- greetMe
+    'Never mind'
+
+  { a: f()
+  , b: g
+  }
+
+

@@ -32,7 +32,7 @@ module.exports = {
 	},
 
 	'function.papua': function(b, assert) {
-		o = papua.test('function.papua');
+		var o = papua.test('function.papua');
 
 		assert.eql(3, o.a);
 		assert.eql(1, o.b);
@@ -42,7 +42,7 @@ module.exports = {
 	},
 
 	'for.papua': function(b, assert) {
-		o = papua.test('for.papua');
+		var o = papua.test('for.papua');
 
 		assert.eql(9, o.a);
 		assert.eql('x', o.b);
@@ -53,7 +53,7 @@ module.exports = {
 	},
 
 	'cps.papua': function(b, assert) {
-		o = papua.test('cps.papua');
+		var o = papua.test('cps.papua');
 		assert.eql('Hi, me! How ya doin?', o.a);
 		assert.eql('Never mind', o.b);
 	},
@@ -65,10 +65,5 @@ module.exports = {
 		assert.eql(5, o.a());
 		assert.eql(2, o.b);
 		assert.eql(3, o.c);
-	},
-
-	'Infix functions': function(b, assert) {
-		var o = papua.test('infix.papua');
-		assert.eql(12, o.a);
 	}
 };
