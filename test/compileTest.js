@@ -99,4 +99,9 @@ module.exports = {
 		var o = papua.test('index.papua');
 		assert.eql(7, o.a);
 	},
+
+	'unary.papua': function(b, assert) {
+		var o = papua.test('unary.papua');
+		assert.eql(true, o.x);
+	},
 };

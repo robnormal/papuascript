@@ -227,7 +227,7 @@ Invoked
 
 Unaried
 	: Called
-	| UNARY Called
+	| UNARY Unaried
 		{ $$ = new N.Unary($1, $2, true); }
 	;
 
