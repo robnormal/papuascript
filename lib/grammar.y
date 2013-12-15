@@ -141,6 +141,17 @@ BINARY
 	| IN
 	;
 
+/* Alphanumerics are separated from the other **Tmnl** matchers because
+they can also serve as keys in object literals. */
+AlphaNumeric
+	: NUMBER
+		{ $$ = new N.Literal(yytext, yylineno); }
+	| INTEGER
+		{ $$ = new N.Literal(yytext, yylineno); }
+	| STRING
+		{ $$ = new N.Literal(yytext, yylineno); }
+	;
+
 Tmnl
 	: Id
 	| REGEX
@@ -156,18 +167,6 @@ Tmnl
 	| AlphaNumeric
 	;
 
-
-/* Alphanumerics are separated from the other **Tmnl** matchers because
-they can also serve as keys in object literals. */
-AlphaNumeric
-	: NUMBER
-		{ $$ = new N.Literal(yytext, yylineno); }
-	| INTEGER
-		{ $$ = new N.Literal(yytext, yylineno); }
-	| STRING
-		{ $$ = new N.Literal(yytext, yylineno); }
-	;
-
 Atom
 	: Tmnl
 	| Paren
@@ -181,6 +180,13 @@ Paren
 	| NamedFunc
 	;
 
+Commaed
+	: Ternaried
+		{ $$ = [$1]; }
+	| Commaed COMMA Ternaried
+		{ $$ = $1.concat($3); }
+	;
+
 Array
 	: FREE_LBRACKET RBRACKET
 		{ $$ = new N.Arr([], yylineno); }
@@ -188,13 +194,6 @@ Array
 		{ $$ = new N.Arr($2, yylineno); }
 	| WORDS
 		{ $$ = N.words($1, yylineno); }
-	;
-
-Commaed
-	: Ternaried
-		{ $$ = [$1]; }
-	| Commaed COMMA Ternaried
-		{ $$ = $1.concat($3); }
 	;
 
 Index

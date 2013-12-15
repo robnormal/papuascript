@@ -62,12 +62,18 @@ module.exports = {
 		assert.eql('Never mind', o.b);
 	},
 
-	'Objects': function(b, assert) {
+	'object.papua': function(b, assert) {
 		var o = papua.test('object.papua');
 
 		assert.ok(o.a instanceof Function);
 		assert.eql(5, o.a());
 		assert.eql(2, o.b);
 		assert.eql(3, o.c);
+	},
+
+	'ternary.papua': function(b, assert) {
+		var o = papua.test('ternary.papua');
+		assert.eql('foo', o.x);
+		assert.eql('bar', o.y);
 	}
 };
