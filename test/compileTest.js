@@ -82,4 +82,10 @@ module.exports = {
 		assert.eql(1, o.a);
 		assert.eql(2, o.b);
 	},
+
+	'hash.papua': function(b, assert) {
+		var o = papua.test('hash.papua');
+		assert.eql(8, o.x);
+		assert.eql(8, o.y);
+	},
 };

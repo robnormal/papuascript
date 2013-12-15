@@ -77,7 +77,6 @@ var N = require('./nodes.js');
 %left      ","
 
 %nonassoc  "INDENT" "OUTDENT"
-%right     "#"
 
 %start Root
 
@@ -114,7 +113,6 @@ LBRACE: '{';
 RBRACE: '}';
 LBRACKET: '[';
 RBRACKET: ']';
-HASH: '#';
 BSLASH: '\';
 ARROW: '->';
 CPSARROW: '<-';
@@ -245,16 +243,9 @@ Infixed
 	;
 
 /* HASH is the only binary op that can come after another, so... */
-UnhashedBinary
+Binary
 	: BINARY
 	| Infixed
-	;
-
-Binary
-	: UnhashedBinary
-	| HASH
-	| UnhashedBinary HASH
-		{ $$ = new N.Operation.withHash([$1]); }
 	;
 
 Binaried
