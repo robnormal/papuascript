@@ -94,4 +94,9 @@ module.exports = {
 		assert.eql(1, o.x);
 		assert.eql(2, o.y);
 	},
+
+	'index.papua': function(b, assert) {
+		var o = papua.test('index.papua');
+		assert.eql(7, o.a);
+	},
 };

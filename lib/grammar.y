@@ -197,7 +197,7 @@ Array
 Index
 	: DOT Id
 		{ $$ = new N.Access($2); }
-	| DOT NUM
+	| DOT INTEGER
 		{ $$ = new N.Index(new N.Literal($2, yylineno)); }
 	| LBRACKET Ternaried RBRACKET
 		{ $$ = new N.Index($2); }
