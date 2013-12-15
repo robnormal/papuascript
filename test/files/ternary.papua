@@ -1,0 +1,5 @@
+->
+  x = ?? true : 'foo' : 'bar'
+  y = ?? false : 'foo' : 'bar'
+
+  { x: x, y: y}
