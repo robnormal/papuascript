@@ -121,7 +121,6 @@ TERSTART: '??';
 COLON: ':';
 SEMICOLON: ';';
 COMMA: ',';
-AT: '@'; /* partial function */
 BACKTICK: '`';
 
 EOL
@@ -173,15 +172,10 @@ Atom
 	| Paren
 	| Array
 	| Object
-	| AT
-	;
-
-Parenable
-	: Ternaried
 	;
 
 Paren
-	: LPAREN Parenable RPAREN
+	: LPAREN Ternaried RPAREN
 		{ $$ = new N.Parenthetical($2); }
 	| NamedFunc
 	;
@@ -196,9 +190,9 @@ Array
 	;
 
 Commaed
-	: Parenable
+	: Ternaried
 		{ $$ = [$1]; }
-	| Commaed COMMA Parenable
+	| Commaed COMMA Ternaried
 		{ $$ = $1.concat($3); }
 	;
 
@@ -207,7 +201,7 @@ Index
 		{ $$ = new N.Access($2); }
 	| DOT NUM
 		{ $$ = new N.Index(new N.Literal($2, yylineno)); }
-	| LBRACKET Parenable RBRACKET
+	| LBRACKET Ternaried RBRACKET
 		{ $$ = new N.Index($2); }
 	;
 
@@ -373,7 +367,7 @@ ObjProp
 
 /* definition of a property in an object literal */
 ObjectPropDef
-	: ObjProp COLON Parenable
+	: ObjProp COLON Ternaried
 		{ $$ = [$1, $3]; }
 	;
 
