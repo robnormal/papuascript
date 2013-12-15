@@ -442,7 +442,7 @@ Return
 
 CondBlock
 	: Valued IBlock
-		{ $$ = [1, 2]; }
+		{ $$ = [$1, $2]; }
 	;
 
 /* The most basic form of *if* is a condition and an action. The following

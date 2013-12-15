@@ -88,4 +88,10 @@ module.exports = {
 		assert.eql(8, o.x);
 		assert.eql(8, o.y);
 	},
+
+	'if.papua': function(b, assert) {
+		var o = papua.test('if.papua');
+		assert.eql(1, o.x);
+		assert.eql(2, o.y);
+	},
 };
