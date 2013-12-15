@@ -1,0 +1,9 @@
+->
+  Foo = { alpha: 1, beta: 2 }
+
+  with (Foo) as F [alpha, beta]
+
+  { a: alpha
+  , b: beta
+  }
+

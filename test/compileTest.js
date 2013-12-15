@@ -75,5 +75,11 @@ module.exports = {
 		var o = papua.test('ternary.papua');
 		assert.eql('foo', o.x);
 		assert.eql('bar', o.y);
-	}
+	},
+
+	'with.papua': function(b, assert) {
+		var o = papua.test('with.papua');
+		assert.eql(1, o.a);
+		assert.eql(2, o.b);
+	},
 };
