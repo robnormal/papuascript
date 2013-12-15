@@ -175,8 +175,17 @@ module.exports = {
 
 	'dot preceded by whitespace becomes SPACEDOT': function(b, assert) {
 		var toks = getTokens('foo .bar 10');
-		assert.equal(toks[1][0], 'SPACEDOT', 'replaces dot with SPACEDOT');
-		assert.equal(toks[2][1], 'bar', 'removes dot');
+		assert.equal('SPACEDOT', toks[1][0], 'replaces dot with SPACEDOT');
+		assert.equal('bar', toks[2][1], 'removes dot');
 	},
 
+	'Identifier preceded by : becomes STRING': function(b, assert) {
+		var toks = getTokens('foo = :bar');
+		assert.eql('STRING', toks[2][0]);
+		assert.eql('"bar"', toks[2][1], 'acts as though identifier were in double quotes');
+
+		toks = getTokens('[:a, :b]');
+		assert.eql('STRING', toks[1][0]);
+		assert.eql('"a"', toks[1][1]);
+	}
 };
