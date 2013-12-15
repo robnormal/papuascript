@@ -11,13 +11,14 @@
     f = x
 
   constr = \ -> undefined
-  constr.prototype.j = 5
+  constr.prototype.y = 5
 
-  constr2 = \k ->
-    this.k := k
+  constr2 = \z ->
+    this.z := z
   constr2.prototype = new constr()
 
   cobj = new constr2 3
+
   obj1 = {}
   for k:v in cobj
     obj1[k] = v

@@ -309,7 +309,7 @@ Block
 
 IBlock
 	: INDENT Block OUTDENT
-		{ $$ = $2; }
+		{ $$ = new N.IBlock($2.nodes); }
 	;
 
 LBlock
