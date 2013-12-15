@@ -39,6 +39,7 @@ var N = require('./nodes.js');
 %token TERMINATOR
 %token THROW
 %token TRY
+%token UNARY
 %token UNDEFINED
 %token WS
 %token WITH
@@ -227,9 +228,15 @@ Invoked
 		{ $$ = N.FuncCall.addFactor($1, $2); }
 	;
 
-SDotted
+Unaried
 	: Called
-	| SDotted SPACEDOT Called
+	| UNARY Called
+		{ $$ = new N.Unary($1, $2, true); }
+	;
+
+SDotted
+	: Unaried
+	| SDotted SPACEDOT Unaried
 		{ $$ = N.Index.spaceDot($1, $3); }
 	;
 

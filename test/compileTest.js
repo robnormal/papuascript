@@ -45,11 +45,13 @@ module.exports = {
 		var o = papua.test('for.papua');
 
 		assert.eql(9, o.a);
-		assert.eql('x', o.b);
-		assert.eql(1, o.c);
 		assert.eql(2, o.d);
 		assert.eql(3, o.e);
 		assert.eql(9, o.f);
+		assert.eql(5, o.b.j);
+		assert.eql(3, o.b.k);
+		assert.eql(void 0, o.c.j);
+		assert.eql(3, o.c.k);
 	},
 
 	'cps.papua': function(b, assert) {
