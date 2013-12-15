@@ -176,7 +176,7 @@ if version >= 508 || !exists("did_papuascript_syn_inits")
 
   HiLink papuaParamPlaceholder         Special
 
-  HiLink papuaIdentifierString         Constant
+  HiLink papuaIdentifierString         String
   HiLink papuaScriptUpdate             Identifier
   HiLink papuaForMod Keyword
   HiLink papuaWithAs Keyword
