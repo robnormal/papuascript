@@ -234,7 +234,7 @@ Unaried
 SDotted
 	: Unaried
 	| SDotted SPACEDOT Unaried
-		{ $$ = N.Index.spaceDot($1, $3); }
+		{ $$ = N.Access.spaceDot($1, $3); }
 	;
 
 Infixed

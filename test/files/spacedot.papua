@@ -1,0 +1,6 @@
+->
+  x = 'blah' .match /ah/ .index
+
+  { x: x
+  }
+
