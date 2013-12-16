@@ -3,6 +3,10 @@
 
   x = mult 2 # 3 + 1
   y = 2 * # 3 + 1
+  
+  // this should process as a statement, not an expression...
+  for i = 0; i > 10; i++
+    i
 
   { x: x
   , y: y
