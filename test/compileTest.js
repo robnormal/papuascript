@@ -109,4 +109,9 @@ module.exports = {
 		var o = papua.test('spacedot.papua');
 		assert.eql(2, o.x);
 	},
+
+	'call.papua': function(b, assert) {
+		var o = papua.test('call.papua');
+		assert.eql(true, o.t);
+	},
 };

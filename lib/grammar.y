@@ -90,14 +90,14 @@ Root
 		{ $$ = new N.Script(null, null); }
 	| Block
 		{ return new N.Script($1, null); }
-	| Export Eol Body
+	| Export EOL Block
 		{ return new N.Script($3, $1); }
 	;
 
 Export
-	: EXPORT Identifier
+	: EXPORT Id
 		{ $$ = [$2]; }
-	| Export COMMA Identifier
+	| Export COMMA Id
 		{ $$ = $1.concat([$3]); }
 	;
 
@@ -210,18 +210,26 @@ Indexed
 	;
 
 NullaryCalled
-	: Indexed
-	| Indexed CALL_NULLARY
+	: Indexed CALL_NULLARY
 		{ $$ = new N.FuncCall([$1]); }
+	| NullaryCalled CALL_NULLARY
+		{ $$ = new N.FuncCall([$1]); }
+	| NullaryCalled Index
+		{ $$ = new N.Value($1).add($2); }
+	;
+
+MaybeNullaryCalled
+	: Indexed
+	| NullaryCalled
 	;
 
 Called
-	: NullaryCalled
+	: MaybeNullaryCalled
 	| Invoked
 	;
 
 Invoked
-	: Called NullaryCalled
+	: Called MaybeNullaryCalled
 		{ $$ = N.FuncCall.addFactor($1, $2); }
 	;
 
