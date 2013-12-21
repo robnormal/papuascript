@@ -280,6 +280,8 @@ Lineable
 	| AssignList
 	| Return
 	| Import
+	| Throw
+	| Func
 	;
 
 Line
@@ -329,18 +331,11 @@ Params
 	| NonemptyParams
 	;
 
-FuncBody
-	: ARROW IBlock
-		{ $$ = $2; }
-	| ARROW Lineable
-		{ $$ = new N.Block([$2]); }
-	;
-
 Func
-	: FuncBody
-		{ $$ = new N.Code([], $1); }
-	| BSLASH Params FuncBody
-		{ $$ = new N.Code($2, $3); }
+	: ARROW IBlock
+		{ $$ = new N.Code([], new N.Block([$2])); }
+	| BSLASH Params ARROW IBlock
+		{ $$ = new N.Code($2, new N.Block([$4])); }
 	;
 
 ParenedFunc
