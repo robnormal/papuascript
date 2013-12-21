@@ -1,0 +1,5 @@
+->
+  t = new Date().getTime()
+
+  { t: !!t
+  }

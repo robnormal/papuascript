@@ -1,0 +1,4 @@
+export alpha
+
+->
+  alpha.beta := 5

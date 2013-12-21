@@ -31,6 +31,7 @@ module.exports = {
 		assert.eql(4, o.j);
 	},
 
+	/*
 	'function.papua': function(b, assert) {
 		var o = papua.test('function.papua');
 
@@ -39,7 +40,9 @@ module.exports = {
 		assert.eql(6, o.c);
 		assert.eql(7, o.d);
 		assert.eql(0, o.e);
+		assert.eql(5, o.f);
 	},
+ */
 
 	'for.papua': function(b, assert) {
 		var o = papua.test('for.papua');
@@ -62,6 +65,7 @@ module.exports = {
 		assert.eql('Never mind', o.b);
 	},
 
+	/*
 	'object.papua': function(b, assert) {
 		var o = papua.test('object.papua');
 
@@ -69,7 +73,10 @@ module.exports = {
 		assert.eql(5, o.a());
 		assert.eql(2, o.b);
 		assert.eql(3, o.c);
+		assert.eql('zero', o.d[0]);
+		assert.eql('one', o.d[1]);
 	},
+ */
 
 	'ternary.papua': function(b, assert) {
 		var o = papua.test('ternary.papua');
@@ -113,5 +120,10 @@ module.exports = {
 	'call.papua': function(b, assert) {
 		var o = papua.test('call.papua');
 		assert.eql(true, o.t);
+	},
+
+	'try.papua': function(b, assert) {
+		var o = papua.test('try.papua');
+		assert.eql(4, o.x);
 	},
 };
