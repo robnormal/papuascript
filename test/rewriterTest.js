@@ -245,6 +245,21 @@ module.exports = {
 			'CPS IDENTIFIER <- IDENTIFIER TERMINATOR IDENTIFIER TERMINATOR CPSEND TERMINATOR'
 		);
 		assert.eql(getTags(toks), getTags(expected));
+	},
+
+	'Deals with multiline CPS statements properly': function(b, assert) {
+		var toks = getTokens(
+			'x <- a\n' +
+			'    b\n' +
+			'x\n'
+		);
+
+		B.resolveBlocks(toks);
+		var expected = mkTokens(
+			'CPS IDENTIFIER <- IDENTIFIER IDENTIFIER TERMINATOR IDENTIFIER TERMINATOR CPSEND TERMINATOR'
+		);
+		assert.eql(getTags(toks), getTags(expected));
 	}
 
 };
+
