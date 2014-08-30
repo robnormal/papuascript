@@ -88,6 +88,7 @@ module.exports = {
 		var o = papua.test('with.papua');
 		assert.eql(1, o.a);
 		assert.eql(2, o.b);
+		assert.eql(6, o.c);
 	},
 
 	'hash.papua': function(b, assert) {

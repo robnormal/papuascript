@@ -3,7 +3,10 @@
 
   with (Foo) as F [alpha, beta]
 
+  with (6) as six
+
   { a: alpha
   , b: beta
+  , c: six
   }
 

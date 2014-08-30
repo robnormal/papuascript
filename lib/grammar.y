@@ -631,9 +631,9 @@ For
 
 With
 	: WITH Paren
-		{ $$ = new N.Import($2, [], null); }
+		{ $$ = new N.Import($2, new N.Arr([], yylineno), null); }
 	| WITH Paren AS Id
-		{ $$ = new N.Import($2, [], $4); }
+		{ $$ = new N.Import($2, new N.Arr([], yylineno), $4); }
 	;
 
 WithThese
