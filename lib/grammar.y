@@ -285,8 +285,7 @@ Lineable
 	;
 
 Line
-	: EOL
-	| Lineable EOL
+	: Lineable EOL
 	;
 
 Statement
@@ -300,10 +299,15 @@ Statement
 	| Cps
 	;
 
-Block
+StatementEolStar
 	: Statement
+	| StatementEolStar EOL
+	;
+
+Block
+	: StatementEolStar
 		{ $$ = new N.Block([$1]); }
-	| Block Statement
+	| Block StatementEolStar
 		{ $$ = ($2 instanceof N.PNode) ? $1.push($2) : $1; }
 	;
 
@@ -333,9 +337,9 @@ Params
 
 Func
 	: ARROW IBlock
-		{ $$ = new N.Code([], new N.Block([$2])); }
+		{ $$ = new N.Code([], $2); }
 	| BSLASH Params ARROW IBlock
-		{ $$ = new N.Code($2, new N.Block([$4])); }
+		{ $$ = new N.Code($2, $4); }
 	;
 
 ParenedFunc
