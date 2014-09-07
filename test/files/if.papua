@@ -4,6 +4,8 @@
 
   if false
     y = 1
+  else if false
+    y = 3
   else
     y = 2
 

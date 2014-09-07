@@ -458,7 +458,7 @@ CondBlock
 IfElseIf
 	: IF CondBlock
 		{ $$ = new N.If($2[0], $2[1]); }
-	| IfBlock ELSE IF CondBlock
+	| IfElseIf ELSE IF CondBlock
 		{ $$ = $1.addElse(new N.If($4[0], $4[1])); }
 	;
 
