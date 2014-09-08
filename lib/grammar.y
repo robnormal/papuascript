@@ -219,19 +219,19 @@ NullaryCalled
 		{ $$ = new N.Value($1).add($2); }
 	;
 
-MaybeNullaryCalled
+FuncCallParameter
 	: Indexed
 	| NullaryCalled
 	| NamedFunc
 	;
 
 Called
-	: MaybeNullaryCalled
+	: FuncCallParameter
 	| Invoked
 	;
 
 Invoked
-	: Called MaybeNullaryCalled
+	: Called FuncCallParameter
 		{ $$ = N.FuncCall.addFactor($1, $2); }
 	;
 
