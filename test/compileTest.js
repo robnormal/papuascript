@@ -31,7 +31,6 @@ module.exports = {
 		assert.eql(4, o.j);
 	},
 
-	/*
 	'function.papua': function(b, assert) {
 		var o = papua.test('function.papua');
 
@@ -41,8 +40,9 @@ module.exports = {
 		assert.eql(7, o.d);
 		assert.eql(0, o.e);
 		assert.eql(5, o.f);
+
+		assert.eql(Function, o.g[0].constructor);
 	},
- */
 
 	'for.papua': function(b, assert) {
 		var o = papua.test('for.papua');

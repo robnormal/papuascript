@@ -222,12 +222,12 @@ NullaryCalled
 MaybeNullaryCalled
 	: Indexed
 	| NullaryCalled
+	| NamedFunc
 	;
 
 Called
 	: MaybeNullaryCalled
 	| Invoked
-	| NamedFunc
 	;
 
 Invoked
@@ -337,11 +337,18 @@ Params
 	| NonemptyParams
 	;
 
+FuncBody
+	: ARROW Lineable
+		{ $$ = new N.Block([$2]); }
+	| ARROW IBlock
+		{ $$ = $2; }
+	;
+
 Func
-	: ARROW IBlock
-		{ $$ = new N.Code([], $2); }
-	| BSLASH Params ARROW IBlock
-		{ $$ = new N.Code($2, $4); }
+	: FuncBody
+		{ $$ = new N.Code([], $1); }
+	| BSLASH Params FuncBody
+		{ $$ = new N.Code($2, $3); }
 	;
 
 ParenedFunc

@@ -113,7 +113,7 @@ module.exports = {
 		);
 
 		B.resolveBlocks(toks);
-		var exp = 'IDENTIFIER ( \\ IDENTIFIER -> INDENT IDENTIFIER TERMINATOR OUTDENT ) TERMINATOR';
+		var exp = 'IDENTIFIER ( \\ IDENTIFIER -> IDENTIFIER ) TERMINATOR';
 		var expected = getTags(mkTokens(exp));
 
 		assert.eql(
@@ -158,7 +158,7 @@ module.exports = {
 		var toks = getTokens('x = \\ -> b');
 		B.resolveBlocks(toks);
 		var expected = mkTokens(
-			'IDENTIFIER ASSIGN ( \\ -> INDENT IDENTIFIER TERMINATOR OUTDENT ) TERMINATOR'
+			'IDENTIFIER ASSIGN ( \\ -> IDENTIFIER ) TERMINATOR'
 		);
 		assert.eql(getTags(expected), getTags(toks));
 	},
