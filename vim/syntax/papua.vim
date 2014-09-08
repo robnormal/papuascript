@@ -72,12 +72,12 @@ syn match papuaExtendedOp +/[/*]\@!+
 " syn region  papuaScriptRegexpString   start=+/\(\*\|/\)\@!+ skip=+\\\\\|\\/+ end=+/[gim]\{,3}+ oneline
 syn match  papuaScriptRegexpString   /\v\/(\*|\/|\s)@!\S*\/[gim]{,3}/
 
-syn match papuaParamPlaceholder  /@/
+" syn match papuaParamPlaceholder  /@/
 
 syn keyword papuaScriptFunction                "\\" nextgroup=papuaFuncArgs skipwhite
 " syn region papuaFuncArg start=/\\/ end=/->/ matchgroup=papuaFuncArgs contains=@papuaExtendedOp
-syn match papuaFuncArgs /\v\\\@=(\w+\s+)*-\>/ contains=papuaExtendedOp
-syn match papuaFunctionName /@\w\+\s\+/ contains=papuaExtendedOp
+syn match papuaFuncArgs /\v\\\@=((\w|$)+\s+)*-\>/ contains=papuaExtendedOp
+syn match papuaFunctionName /\v\@(\w|\$)+\s+/ contains=papuaExtendedOp
 syn match papuaFuncArgs /\(^\s*\S\+\)\@<=\(\s\+\w\+\)\+\(\s*:\?=\($\|[^=]\)\)\@=/
 
 " variables before <- are function variables

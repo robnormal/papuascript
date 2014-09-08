@@ -127,4 +127,12 @@ module.exports = {
 		var o = papua.test('try.papua');
 		assert.eql(4, o.x);
 	},
+
+	'Called function literal should be parenthesized': function(b, assert) {
+		var
+			code_in  = '(-> 3)()',
+			code_out = papua.compile(code_in);
+
+		assert.eql('(', code_out[0], 'Function literals that are immediately called should be put in parentheses');
+	}
 };

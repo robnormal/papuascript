@@ -175,7 +175,6 @@ Atom
 Paren
 	: LPAREN Ternaried RPAREN
 		{ $$ = new N.Parenthetical($2); }
-	| NamedFunc
 	;
 
 Commaed
@@ -212,6 +211,8 @@ Indexed
 NullaryCalled
 	: Indexed CALL_NULLARY
 		{ $$ = new N.FuncCall([$1]); }
+	| NamedFunc CALL_NULLARY
+		{ $$ = new N.FuncCall([new N.Parenthetical($1)]); }
 	| NullaryCalled CALL_NULLARY
 		{ $$ = new N.FuncCall([$1]); }
 	| NullaryCalled Index
@@ -226,6 +227,7 @@ MaybeNullaryCalled
 Called
 	: MaybeNullaryCalled
 	| Invoked
+	| NamedFunc
 	;
 
 Invoked
