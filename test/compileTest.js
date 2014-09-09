@@ -41,7 +41,9 @@ module.exports = {
 		assert.eql(0, o.e);
 		assert.eql(5, o.f);
 
+		assert.eql('i', o.i.name);
 		assert.eql(Function, o.g[0].constructor);
+		assert.eql('k', o.h.name);
 	},
 
 	'for.papua': function(b, assert) {
