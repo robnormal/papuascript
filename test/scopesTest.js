@@ -1,6 +1,7 @@
 var H = require('../lib/helpers.js');
 var N = require('../lib/nodes.js');
 var papua = require('../lib/papua-lib.js');
+P = require('../lib/grammar.js'),
 
 module.exports = {
 	'Variables defined in Code do not show up in outer scope': function(b, assert) {
@@ -35,6 +36,13 @@ module.exports = {
 				assert.ok(true, 'Assigning function parameter attribute with "=" should raise error');
 			}
 		}
+	},
+
+	'Names of named functions should be variables in scope': function(b, assert) {
+		var code = '@it \\a -> a'
+		var res = P.parser.parse(code);
+
+		assert.eql(['it'], res.varsDefined(), 'Named function defines variable by that name');
 	}
 };
 
