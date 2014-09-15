@@ -14,10 +14,7 @@ elseif exists("b:current_syntax") && b:current_syntax == "papuascript"
 endif
 
 " papuaScript identifiers can have dollar signs.
-setlocal isident+=$
-
-" let s:cpo_save = &cpo
-" set cpo&vim
+setlocal iskeyword+=$
 
 syn keyword papuaScriptCommentTodo      TODO FIXME XXX TBD contained
 syn match   papuaScriptLineComment      +//.*+ contains=@Spell,papuaScriptCommentTodo
@@ -28,13 +25,10 @@ syn region  papuaScriptString               start=+'+  skip=+\\\\\|\\'+  end=+'+
 syn region  papuaScriptString               start=/%{/ skip=/\\\\\|\\}/  end=/}/  contains=papuaScriptSpecial,papuaExtendedOp
 
 
-" syn match papuaScriptMemberAssign /\(\([,{]\|^\)\s*\)\@<=\(\w\|\$\)\+\s*:\s\+\(\w\+\s\+in\)\@!/ contains=papuaExtendedOp display
-syn match papuaScriptMemberAssign /\v(([,{]|^)\s*)@<=(\w|\$)+\s*:($|\s+(\w+\s+in)@!)/ contains=papuaExtendedOp display
+syn match papuaScriptMemberAssign /\v(([,{]|^)\s*)@<=(\w|\$)+\s*:($|\s+((\w|\$)+\s+in)@!)/ contains=papuaExtendedOp display
 
-syn match papuaIdentifierString /\W\@<=:\w\+/
+syn match papuaIdentifierString /\v[^A-Za-z0-9_$]\@<=:(\w|\$)+/
 syn match papuaScriptUpdate /\v^\s*(\w|\$)+(.*:\=)@=/
-
-" syn region  papuaTernary             start=/??/ skip=/(.*)/  end=/:/
 
 syn match   papuaScriptSpecialCharacter "'\\.'"
 syn match   papuaScriptNumber               "-\=\<\d\+L\=\>\|0[xX][0-9a-fA-F]\+\>"
@@ -76,13 +70,12 @@ syn match  papuaScriptRegexpString   /\v\/(\*|\/|\s)@!\S*\/[gim]{,3}/
 
 syn keyword papuaScriptFunction                "\\" nextgroup=papuaFuncArgs skipwhite
 " syn region papuaFuncArg start=/\\/ end=/->/ matchgroup=papuaFuncArgs contains=@papuaExtendedOp
-syn match papuaFuncArgs /\v\\\@=((\w|$)+\s+)*-\>/ contains=papuaExtendedOp
+syn match papuaFuncArgs /\v\\\@=((\w|\$)+\s+)*-\>/ contains=papuaExtendedOp
 syn match papuaFunctionName /\v\@(\w|\$)+\s+/ contains=papuaExtendedOp
-syn match papuaFuncArgs /\(^\s*\S\+\)\@<=\(\s\+\w\+\)\+\(\s*:\?=\($\|[^=]\)\)\@=/
+syn match papuaFuncArgs /\v(^\s*\S+)\@<=(\s+(\w|\$)+)+(\s*:\?=($|[^=]))\@=/
 
 " variables before <- are function variables
-syn match papuaCpsArgs /\(\w\|\s\|\$\)\+\(<-\)\@=/ contains=@papuaExtendedOp display
-
+syn match papuaCpsArgs /\v(\w|\s|\$)+(\<-)\@=/ contains=@papuaExtendedOp display
 
 syn match papuaSpecialOp /[,;(){}[\]]/ display
 
@@ -103,10 +96,10 @@ syn region papuaOpFunc start=/`/ end=/`/
 " syn match papuaCpsNotation /<-\w*/ contains=@papuaExtendedOp display
 " hi def link papuaCpsNotation papuaExtendedOp
 
-syn match papuaMethodChain /\s\.\s*\w\+/ display
+syn match papuaMethodChain /\s\.\s*(\w|\$)\+/ display
 
 syn match papuaImportKeywords /\<with\>\|\<as\>/ contains=papuaExtendedOp contained display
-syn match papuaImport /\vwith\s+\(.*\)(\s+as\s+\w+)?/ contains=papuaImportKeywords,papuaParens display
+syn match papuaImport /\vwith\s+\(.*\)(\s+as\s+(\w|\$)+)?/ contains=papuaImportKeywords,papuaParens display
 
 syn sync fromstart
 syn sync maxlines=100
