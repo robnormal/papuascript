@@ -14,6 +14,7 @@ var N = require('./nodes.js');
 %token DEBUGGER
 %token DEFAULT
 %token ELSE
+%token EXPORT
 %token FINALLY
 %token FN_NAME
 %token FOR
