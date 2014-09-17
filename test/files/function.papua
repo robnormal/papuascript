@@ -17,6 +17,8 @@
   pair = \a b -> [a, b]
   func_pair = pair (\x -> 3) 5
 
+  k.attr x = x.length
+
   { a: f 1 2
   , b: g 4 3
   , c: h 2 3
@@ -26,5 +28,6 @@
   , g: func_pair
   , h: k
   , i: i
+  , j: k.attr 'abc'
   }
 
