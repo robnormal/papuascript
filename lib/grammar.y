@@ -652,7 +652,7 @@ With
 
 WithThese
 	: With Array 
-		{ $1.members = $2; $$ = $1; }
+		{ $1.setMembers($2); }
 	;
 
 Import
