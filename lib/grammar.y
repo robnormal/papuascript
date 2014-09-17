@@ -551,7 +551,7 @@ CondForWhile
 	: Valued
 		{ $$ = [$1, null]; }
 	| AssignList SEMICOLON Valued
-		{ $$ = [$1, $3]; }
+		{ $$ = [$3, $1]; }
 	;
 
 WhileCond

@@ -61,6 +61,14 @@ module.exports = {
 		assert.eql(3, o.c.z);
 	},
 
+	'while.papua': function(b, assert) {
+		var o = papua.test('while.papua');
+
+		assert.eql(10, o.a, 'While loop continues until condition is false');
+		assert.eql(1, o.b, 'While loop stops when condition after statement is false');
+		assert.eql(void 0, o.c, 'While loop never runs when initial condition is false');
+	},
+
 	'cps.papua': function(b, assert) {
 		var o = papua.test('cps.papua');
 		assert.eql('Hi, me! How ya doin?', o.a);
