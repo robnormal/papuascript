@@ -423,9 +423,9 @@ BlockAssignment
 
 FuncAssignment
 	: Invoked ASSIGN Valued
-		{ $$ = N.Code.fromFuncAssignment($1, $3); }
+		{ $$ = N.Assign.funcAssignment($1, $3); }
 	| Invoked ASSIGN IBlock
-		{ $$ = N.Code.fromFuncAssignment($1, $3); }
+		{ $$ = N.Assign.funcAssignment($1, $3); }
 	;
 
 Assignment
