@@ -1,0 +1,19 @@
+->
+  i = 0
+  while i < 10
+    i++
+
+  j = 10
+  while j--; j
+    x = j
+
+  k = 10
+  while k--; false
+    y = k
+    
+  { a: i
+  , b: x
+  , c: y
+  }
+
+
