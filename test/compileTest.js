@@ -37,13 +37,10 @@ module.exports = {
 		assert.eql(3, o.a);
 		assert.eql(1, o.b);
 		assert.eql(6, o.c);
-		assert.eql(7, o.d);
 		assert.eql(0, o.e);
 		assert.eql(5, o.f);
-
-		assert.eql('i', o.i.name);
 		assert.eql(Function, o.g[0].constructor);
-		assert.eql('k', o.h.name);
+		assert.eql(3, o.h);
 	},
 
 	'for.papua': function(b, assert) {
@@ -136,6 +133,14 @@ module.exports = {
 	'try.papua': function(b, assert) {
 		var o = papua.test('try.papua');
 		assert.eql(4, o.x);
+	},
+
+
+	'at.papua': function(b, assert) {
+		var o = papua.test('at.papua');
+		assert.eql(8, o.a);
+		assert.eql(5, o.b);
+		assert.eql('tea and krumpets or coffee', o.c);
 	},
 
 	'Called function literal should be parenthesized': function(b, assert) {

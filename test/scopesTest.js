@@ -36,13 +36,6 @@ module.exports = {
 				assert.ok(true, 'Assigning function parameter attribute with "=" should raise error');
 			}
 		}
-	},
-
-	'Names of named functions should be variables in scope': function(b, assert) {
-		var code = '@it \\a -> a'
-		var res = P.parser.parse(code);
-
-		assert.eql(['it'], res.varsDefined(), 'Named function defines variable by that name');
 	}
 };
 

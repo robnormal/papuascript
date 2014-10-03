@@ -1,0 +1,12 @@
+->
+  add x y = x + y
+
+  add5 = add 5 @
+  add2 = add @ 2
+
+  say a b c = a + ' and ' + b + ' or ' + c
+
+  { a: add5 3
+  , b: add2 3
+  , c: (say @ @ 'coffee') 'tea' 'krumpets'
+  }

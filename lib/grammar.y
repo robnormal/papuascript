@@ -122,6 +122,7 @@ COLON: ':';
 SEMICOLON: ';';
 COMMA: ',';
 BACKTICK: '`';
+AT: '@';
 
 EOL
 	: TERMINATOR
@@ -220,14 +221,19 @@ NullaryCalled
 		{ $$ = new N.Value($1).add($2); }
 	;
 
-FuncCallParameter
+UninvokedCallable
 	: Indexed
 	| NullaryCalled
 	| NamedFunc
 	;
 
+FuncCallParameter
+	: UninvokedCallable
+	| AT
+	;
+
 Called
-	: FuncCallParameter
+	: UninvokedCallable
 	| Invoked
 	;
 

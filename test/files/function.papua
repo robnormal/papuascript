@@ -6,28 +6,21 @@
 
   h a b = a * b
 
-  i = @i \a -> a
-
   j = [ 1, \x -> x - x ]
-
-  k = @k \ -> 5
 
   constant = \x -> \ -> x
 
   pair = \a b -> [a, b]
   func_pair = pair (\x -> 3) 5
 
-  k.attr x = x.length
+  j.attr x = x.length
 
   { a: f 1 2
   , b: g 4 3
   , c: h 2 3
-  , d: i 7
   , e: j[1] 12
   , f: (constant 5)()
   , g: func_pair
-  , h: k
-  , i: i
-  , j: k.attr 'abc'
+  , h: j.attr 'abc'
   }
 
