@@ -110,6 +110,12 @@ module.exports = {
 		assert.eql(2, o.y);
 	},
 
+	'ifcase.papua': function(b, assert) {
+		var o = papua.test('ifcase.papua');
+		assert.eql(2, o.x);
+		assert.eql(1, o.y);
+	},
+
 	'index.papua': function(b, assert) {
 		var o = papua.test('index.papua');
 		assert.eql(7, o.a);

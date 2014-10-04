@@ -1,0 +1,15 @@
+->
+  if case
+    4 < 2   -> x = 0
+    5 > 5   -> x = 1
+    default -> x = 2
+
+  y = if case
+    false   -> 0
+    true    -> 1
+    default -> 2
+
+  { x: x
+  , y: y
+  }
+

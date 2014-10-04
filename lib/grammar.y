@@ -273,6 +273,7 @@ Binaried
 
 BlockValued
 	: If
+  | IfCase
 	| Switch
 	| Try
 	| Cps
@@ -509,8 +510,6 @@ DefaultedIfCases
 		{ $1.push($2); $$ = $1; }
 	;
 
-/* The full complement of *if* expressions, including postfix one-liner
-/* *if* and *unless*. */
 IfCase
 	: IF CASE INDENT DefaultedIfCases OUTDENT
 		{ $$ = N.If.fromList($4); }
