@@ -12,7 +12,7 @@
     default
       c = 1
 
-  switch 'z'
+  switch 'y'
     case 'x', 'y', 'z'
       d = 3
     default
