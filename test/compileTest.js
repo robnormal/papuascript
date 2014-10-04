@@ -116,6 +116,13 @@ module.exports = {
 		assert.eql(1, o.y);
 	},
 
+	'switch.papua': function(b, assert) {
+		var o = papua.test('switch.papua');
+		assert.eql('box', o.b);
+		assert.eql(1, o.c);
+		assert.eql(3, o.d);
+	},
+
 	'index.papua': function(b, assert) {
 		var o = papua.test('index.papua');
 		assert.eql(7, o.a);

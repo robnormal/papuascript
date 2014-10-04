@@ -543,13 +543,14 @@ Cases
 
 Defaulted
 	: Cases
+		{ $$ = [$1]; }
 	| Cases DefaultCase
-		{ $$ = $1.concat([$2]); }
+		{ $$ = [$1, $2]; }
 	;
 
 Switch
 	: SWITCH Valued INDENT Defaulted OUTDENT
-		{ $$ = new N.Switch($2, $4, $6); }
+		{ $$ = new N.Switch($2, $4); }
 	;
 
 CondForWhile

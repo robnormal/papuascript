@@ -1,0 +1,25 @@
+->
+  a = 'apple'
+  switch a
+    case 'apple'
+      b = 'box'
+    case 'santa'
+      b = 'claus'
+
+  switch 1
+    case 2
+      c = 2
+    default
+      c = 1
+
+  switch 'z'
+    case 'x', 'y', 'z'
+      d = 3
+    default
+      d = 0
+
+  { b: b
+  , c: c
+  , d: d
+  }
+
