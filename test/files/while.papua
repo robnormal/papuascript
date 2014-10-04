@@ -4,11 +4,11 @@
     i++
 
   j = 10
-  while j--; j
+  while j--, j
     x = j
 
   k = 10
-  while k--; false
+  while k--, false
     y = k
     
   { a: i

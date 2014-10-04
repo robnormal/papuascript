@@ -556,7 +556,7 @@ Switch
 CondForWhile
 	: Valued
 		{ $$ = [$1, null]; }
-	| AssignList SEMICOLON Valued
+	| AssignList COMMA Valued
 		{ $$ = [$3, $1]; }
 	;
 
