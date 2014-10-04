@@ -23,9 +23,10 @@ syn region  papuaScriptComment               start="/\*"  end="\*/" contains=@Sp
 syn region  papuaScriptString               start=+"+  skip=+\\\\\|\\"+  end=+"+  contains=papuaScriptSpecial
 syn region  papuaScriptString               start=+'+  skip=+\\\\\|\\'+  end=+'+  contains=papuaScriptSpecial
 syn region  papuaScriptString               start=/%{/ skip=/\\\\\|\\}/  end=/}/  contains=papuaScriptSpecial,papuaExtendedOp
+syn match  papuaScriptString                /:\w\+/
 
 
-syn match papuaScriptMemberAssign /\v(([,{]|^)\s*)@<=(\w|\$)+\s*:($|\s+((\w|\$)+\s+in)@!)/ contains=papuaExtendedOp display
+syn match papuaScriptObjLiteralKey /\v(([,{]|^)\s*)@<=(\w|\$)+\s*:($|\s+((\w|\$)+\s+in)@!)/ contains=papuaExtendedOp display
 
 syn match papuaIdentifierString /\v[^A-Za-z0-9_$]\@<=:(\w|\$)+/
 syn match papuaScriptUpdate /\v^\s*(\w|\$)+(.*:\=)@=/
@@ -62,25 +63,17 @@ syn match papuaConstant /\<\u[A-Z0-9_]\+\>/ display
 syn match papuaExtendedOp /[+\-*#&|\^=!<>?]\|&&\|||\|\.\|--\|++\|\\\|:\w\@!/ display
 syn match papuaExtendedOp /%[^{]\@=/
 syn match papuaExtendedOp +/[/*]\@!+
-" syn region  papuaScriptRegexpString     start=+/[^/*]+me=e-1 skip=+\\\\\|\\/+ end=+/[gim]\{0,2\}\s*$+ end=+/[gim]\{0,2\}\s*[;.,)\]}]+me=e-1 oneline contains=papuaExtendedOp
-" syn region  papuaScriptRegexpString   start=+/\(\*\|/\)\@!+ skip=+\\\\\|\\/+ end=+/[gim]\{,3}+ oneline
-syn match  papuaScriptRegexpString   /\v\/(\*|\/|\s)@!\S*\/[gim]{,3}/
+syn match papuaScriptRegexpString   /\v\/(\*|\/|\s)@!\S*\/[gim]{,3}/
 
-" syn match papuaParamPlaceholder  /@/
+syn match papuaParamPlaceholder  /@/
 
-syn keyword papuaScriptFunction                "\\" nextgroup=papuaFuncArgs skipwhite
-" syn region papuaFuncArg start=/\\/ end=/->/ matchgroup=papuaFuncArgs contains=@papuaExtendedOp
 syn match papuaFuncArgs /\v\\\@=((\w|\$)+\s+)*-\>/ contains=papuaExtendedOp
-syn match papuaFunctionName /\v\@(\w|\$)+\s+/ contains=papuaExtendedOp
-syn match papuaFuncArgs /\v(^\s*\S+)\@<=(\s+(\w|\$)+)+(\s*:\?=($|[^=]))\@=/
+syn match papuaFuncArgs /\v(^\s*\S+)@<=(\s+(\w|\$)+)+(\s*:?\=([^=]|$))@=/
 
 " variables before <- are function variables
 syn match papuaCpsArgs /\v(\w|\s|\$)+(\<-)\@=/ contains=@papuaExtendedOp display
 
 syn match papuaSpecialOp /[,;(){}[\]]/ display
-
-" syn region  papuaScriptString               start=/%{/ skip=/\\\\\|\\}/  end=/}/        contains=papuaScriptSpecial,papuaExtendedOp
-
 
 " dot-notation for numeric indices
 " syn match papuaNumericAccess /\([^A-Za-z_]\d\+\|\s|^\)\@<!\.\d\+/ contains=papuaExtendedOp display
@@ -88,15 +81,7 @@ syn match papuaSpecialOp /[,;(){}[\]]/ display
 " Operator-fied function
 syn region papuaOpFunc start=/`/ end=/`/
 
-" Updated variables; not needed unless you want object literal members to have
-" be highlighted deifferently
-" syn match papuaUpdated /\w\+\(\(\.\w\+\)*\)\@=\s*:=/ contains=papuaExtendedOp
-
-" do-notation
-" syn match papuaCpsNotation /<-\w*/ contains=@papuaExtendedOp display
-" hi def link papuaCpsNotation papuaExtendedOp
-
-syn match papuaMethodChain /\s\.\s*(\w|\$)\+/ display
+syn match papuaMethodChain /\v\s\.\s*(\w|\$)+/ display
 
 syn match papuaImportKeywords /\<with\>\|\<as\>/ contains=papuaExtendedOp contained display
 syn match papuaImport /\vwith\s+\(.*\)(\s+as\s+(\w|\$)+)?/ contains=papuaImportKeywords,papuaParens display
@@ -159,7 +144,7 @@ if version >= 508 || !exists("did_papuascript_syn_inits")
   HiLink papuaCpsArgs                  Special
  
   HiLink papuaSpecialOp                SpecialChar
-  HiLink papuaScriptMemberAssign       Constant
+  HiLink papuaScriptObjLiteralKey      Constant
   HiLink papuaNumericAccess            Identifier
   HiLink papuaOpFunc                   papuaOperator
   HiLink papuaFunctionName             Constant
