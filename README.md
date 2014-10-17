@@ -7,8 +7,7 @@ basic elements of JavaScript, with a few differences intended to
 help keep track of side effects, and generally make
 function-oriented programming a little easier.
 
-Papuascript takes / steals many ideas from Haskell. It looks like
-Haskell. A lot.
+Papuascript takes many syntactic ideas from Haskell.
 
 # Features
 
@@ -20,37 +19,37 @@ Haskell. A lot.
   ambiguity.
 * Very concise function definition.
 * Significant whitespace, with simple rules.
-* TODO: Allows significant whitespace to be suspended, a la
-  Haskell's `{}` syntax
 * The `:=` operator is used for assigning values to variables
   defined in an outer scope, helping you keep track of side
   effects.
-* Statements whose purpose is side effects - assignments and
-  loops, for instance - have no return value.
+* Assignments have no return value. This is not a bug, it's
+  a feature. Seriously.
 * Nested functions can be made more readable using `<-`. This
   allows you to make code written in continuation-passing style
   look more like standard imperative code. This is similar to the
   "do" syntax in Haskell.
-* Assignments have no return value. This is not a bug, it's
-  a feature. Seriously.
+* TODO: Allow significant whitespace to be suspended, a la
+  Haskell's `{}` syntax
 
 # Some translations
 
  JavaScript                   | Papuascript
 ------------------------------|-----------------------------
-`foo(bar, spam)`              |`foo bar spam`               
-`foo()`                       |same                         
-`var foo = bar`               |`foo = bar`                  
-`a === b`                     |`a == b`                     
-`a == b`                      |no equivalent                
-`a = b = c`                   |`a = c, b = c`               
-`while (row = getRow()) {`    |`while row = getRow(); row`  
-`a ? b : c`                   |`?? a : b : c`               
-`void 0`                      |`undefined`                  
-`a[2]`                        |`a.2` or `a[2]`              
-`// comment`                  |same                         
-`/* comment */`               |same (but can be nested)     
-`var x, y`                    |same - use to set scope w/o assigning a value 
+`var a = 5`                   |`a = 5`
+`a = 5`                       |`a := 5` (only for variables in outer scope)
+`foo(bar, spam)`              |`foo bar spam`
+`foo()`                       |same
+`var foo = bar`               |`foo = bar`
+`a === b`                     |`a == b`
+`a == b`                      |no equivalent
+`a = b = c`                   |`a = c, b = c`
+`while (row = getRow()) {`    |`while row = getRow(); row`
+`a ? b : c`                   |`?? a : b : c`
+`void 0`                      |`undefined`
+`a[2]`                        |`a.2` or `a[2]`
+`// comment`                  |same
+`/* comment */`               |same (but can be nested)
+`var x, y`                    |same - use to set scope w/o assigning a value
 
 Javascript:
 ```javascript
@@ -125,7 +124,7 @@ line, according to the following rules:
 ```
 while foo == bar
     // this is a block
-    doStuff()   
+    doStuff()
     doOtherStuff()
     bar = newBar()
 
@@ -153,7 +152,7 @@ Function calls have higher precedence then operators.
 A dot `.` preceded immediately by a space has lower
 left-precedence than a function call. Thus,
 `foo bar .spam eggs` is equivalent to `(foo bar).spam eggs`.
-This is to allow for method-chaining without parentheses. 
+This is to allow for method-chaining without parentheses.
 
 ## Assignments are not expressions
 

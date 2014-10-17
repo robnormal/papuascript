@@ -252,7 +252,7 @@ actions =
       post <- web.getPost.pipe
 
       changes = if case
-        post['delete'] ->  db.deleteFood post['delete']
+        post[:delete] ->  db.deleteFood post['delete']
         post.create    -> createFood post
         post.update    -> updateFood post
         default        -> result() // if nothing to do, send back to main page
@@ -309,8 +309,8 @@ actions =
   , manageMeals: \match ->
       db_obj post <- combineStrict [dbM, web.getPost] .pipeArray
 
-      if post['delete']
-        db.deleteMeal post['delete']
+      if post[:delete]
+        db.deleteMeal post[:delete]
           .then # web.redirect '/meals'
 
       else if post.create
@@ -350,8 +350,8 @@ actions =
         (\meal ->
             if post.meal_name
               db.updateMealName meal post.meal_name
-            else if post['delete']
-              db.deleteMealFood meal post['delete']
+            else if post[:delete]
+              db.deleteMealFood meal post[:delete]
             else if post.create
               createMealFood meal post
             else if post.update
@@ -407,8 +407,8 @@ actions =
 
       db_obj post <- combineStrict [dbM, web.getPost] .pipeArray
 
-      if post['delete']
-        db.deletePlan post['delete']
+      if post[:delete]
+        db.deletePlan post[:delete]
           .then # web.redirect '/plans'
       else if post.create
         new_plan <- createPlan post .pipe
@@ -459,8 +459,8 @@ actions =
 
   , manageWeek: \match ->
       db_obj post <- combineStrict [dbM, web.getPost] .pipeArray
-      if post['delete']
-        db.deleteWeek post['delete']
+      if post[:delete]
+        db.deleteWeek post[:delete]
           .then (web.redirect '/weeks')
       else if post.create
         new_week <- createWeek post .pipe
