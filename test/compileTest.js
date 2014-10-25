@@ -72,7 +72,6 @@ module.exports = {
 		assert.eql('Never mind', o.b);
 	},
 
-	/*
 	'object.papua': function(b, assert) {
 		var o = papua.test('object.papua');
 
@@ -83,7 +82,6 @@ module.exports = {
 		assert.eql('zero', o.d[0]);
 		assert.eql('one', o.d[1]);
 	},
- */
 
 	'ternary.papua': function(b, assert) {
 		var o = papua.test('ternary.papua');
