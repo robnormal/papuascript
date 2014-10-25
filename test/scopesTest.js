@@ -36,6 +36,19 @@ module.exports = {
 				assert.ok(true, 'Assigning function parameter attribute with "=" should raise error');
 			}
 		}
+	},
+
+	'Named functions can be := assigned': function(b, assert) {
+		var
+			text = "var f, y\n" +
+		         "(->\n" +
+		         "    f x := x\n" +
+		         "    y := 0\n" +
+		         "  )()",
+			res = P.parser.parse(text),
+			code = res.body.nodes[1].factors[0].expr;
+
+		assert.eql(['f', 'y'], code.varsReferenced(false, [])[1]);
 	}
 };
 
