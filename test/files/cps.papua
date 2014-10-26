@@ -1,5 +1,9 @@
 ->
-  greetMe = \y -> y 'Hi, me!'
+  greetMe = \y z ->
+      if z
+          'ERROR'
+      else
+          y 'Hi, me!'
 
   f = \ ->
     x <- greetMe
@@ -9,8 +13,15 @@
     x <- greetMe
     'Never mind'
 
+  h =
+    x <- greetMe
+    greetMe \s ->
+        s.toUpperCase()
+    5
+
   { a: f()
   , b: g
+  , c: h
   }
 
 

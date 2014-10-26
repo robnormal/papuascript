@@ -70,6 +70,7 @@ module.exports = {
 		var o = papua.test('cps.papua');
 		assert.eql('Hi, me! How ya doin?', o.a);
 		assert.eql('Never mind', o.b);
+		assert.eql(5, o.c);
 	},
 
 	'object.papua': function(b, assert) {
