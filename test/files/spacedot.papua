@@ -1,6 +1,10 @@
 ->
   x = 'blah' .match /ah/ .index
+  y = 'blah'
+    .match /ah/
+    .index
 
   { x: x
+  , y: y
   }
 
