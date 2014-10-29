@@ -1,4 +1,4 @@
-# A JavaScript-y Javascript Alternative
+# A Function-oriented Dialect of JavaScript
 
 I wanted a better syntax for JavaScript, but alternatives like
 coffee-script are basically separate languages. That's not what
