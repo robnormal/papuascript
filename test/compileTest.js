@@ -148,6 +148,16 @@ module.exports = {
 		assert.eql(4, o.x);
 	},
 
+	'export.papua': function(b, assert) {
+		var js = papua.fileToJs(papua.test.pathToFile('export.papua'));
+
+		// these should be modified by eval-ing js
+		var alpha = 1, beta = {};
+		eval(js);
+
+		assert.eql(5, alpha);
+		assert.eql('beta', beta.name);
+	},
 
 	'at.papua': function(b, assert) {
 		var o = papua.test('at.papua');
