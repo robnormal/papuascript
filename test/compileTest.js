@@ -172,5 +172,17 @@ module.exports = {
 			code_out = papua.compile(code_in);
 
 		assert.eql('(', code_out[0], 'Function literals that are immediately called should be put in parentheses');
+	},
+
+	'Hyphen in parens works as negative signum': function(b, assert) {
+		var
+			negative  = 'a (-b)',
+			minus  = 'a -b',
+ 			// ignore whitespace in javascript
+			neg_out = papua.compile(negative).replace(/\s/g, ''),
+			minus_out = papua.compile(minus).replace(/\s/g, '');
+
+		assert.eql('a(-b);', neg_out);
+		assert.eql('a-b;', minus_out);
 	}
 };

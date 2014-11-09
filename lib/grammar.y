@@ -88,7 +88,7 @@ var N = require('./nodes.js');
 	 all parsing must end here. */
 Root
 	: /* empty */
-		{ $$ = new N.Script(null, null); }
+		{ return new N.Script(null, null); }
 	| Block
 		{ return new N.Script($1, null); }
 	| Export EOL Block
@@ -225,6 +225,8 @@ UninvokedCallable
 	: Indexed
 	| NullaryCalled
 	| NamedFunc
+	| LPAREN "-" FuncCallParameter RPAREN
+		{ $$ = new N.Unary('-', $3, true); }
 	;
 
 FuncCallParameter
