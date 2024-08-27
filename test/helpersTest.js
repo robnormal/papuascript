@@ -40,5 +40,8 @@ module.exports = {
 
 		assert.ok(m_diff.isJust());
 		assert.equal('a', m_diff.fromJust());
-	}
+  },
+  'id': function(b, assert) {
+    assert.equal(H.id(5), 5);
+  }
 }
