@@ -1,5 +1,0 @@
-export alpha, beta
-
-alpha := 5
-beta.name := 'beta'
-

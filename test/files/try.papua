@@ -1,8 +1,0 @@
-->
-  try
-    throw new Error()
-  catch e
-    x = 4
-
-  { x: x
-  }
